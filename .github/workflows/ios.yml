@@ -92,8 +92,8 @@ jobs:
           exec > >(tee -a $GITHUB_STEP_SUMMARY)
           echo "### ${{ matrix.variant }} bundle"
           echo '```'
-          find Payload -maxdepth 3 -name '*.appex' -o -maxdepth 2 -name '*.app' \
-            | sed 's|Payload/||'
+          find Payload -maxdepth 3 \( -name '*.app' -o -name '*.appex' \) \
+            | sed 's|Payload/||' | sort
           echo '```'
           echo "Entitlements referenced in the build:"
           echo '```'
