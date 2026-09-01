@@ -34,6 +34,18 @@ Since iOS 17 a widget must declare its background with the `containerBackground`
 
 Question 2, whether the app can push data across the App Group, is still open. The widget could not render its own content, so the push button had nothing to change. Rebuild, sideload again, and tap it.
 
+## How the widget actually gets its code
+
+Worth knowing before debugging an empty widget, because it is not what the file layout suggests.
+
+`ExpoWidgetsTarget.appex` contains `ExpoWidgets.bundle`, but that bundle is a generic runtime shell. It holds `@expo/ui`, the expo-widgets globals, and nothing of yours. Your widget component is not compiled into the extension.
+
+The layout function ships in the app's `main.jsbundle` and is handed to native at runtime. `createWidget(name, fn)` calls `new ExpoWidgetsModule.Widget(name, layout)`, and the `'widget'` directive lets that function be serialized across to the extension, which evaluates it as `__expoWidgetLayout`.
+
+The consequence: **the app must be launched at least once before the widget can render anything.** Registration happens when the module containing `createWidget` is first imported and run. A widget added to the home screen before the app has ever been opened has no layout to draw. `App.tsx` imports the widget module for exactly this reason, so opening the app registers it.
+
+Two debugging notes follow from this. Searching the appex for your own strings proves nothing, because they are never there. And `main.jsbundle` is Hermes bytecode, so `grep` finds nothing in it. Use `strings main.jsbundle | grep ...` instead.
+
 ## Result
 
 Status: question 1 answered, question 2 pending a rebuild.
