@@ -31,13 +31,23 @@ jobs:
           - variant: plain
             widget_enabled: "0"
 
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      # React Native's Swift packages need Swift tools 6.2, which ships with
+      # Xcode 26. Select the newest Xcode the image has rather than trusting the
+      # default, and record the versions so a toolchain regression is legible.
+      - name: Select the newest Xcode
+        run: |
+          ls -d /Applications/Xcode*.app
+          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          xcodebuild -version
+          swift --version
 
       - name: Install dependencies
         run: npm ci
