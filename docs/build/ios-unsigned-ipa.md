@@ -22,6 +22,8 @@ Local notifications work on a free build. Remote push does not.
 
 A paid membership costs 99 USD per year and solves three problems at once: App Groups for the widget, push notifications, and TestFlight so another person can install the app without a computer. Buy it when the widget or another person becomes real, not before.
 
-## Adding a lockfile
+## Dependency pinning
 
-The workflow currently runs `npm install` because no lockfile is committed. Commit `package-lock.json` and switch both jobs to `npm ci` for reproducible builds.
+Both jobs run `npm ci` against the committed `package-lock.json`, so a build installs exactly what was resolved here.
+
+`package.json` pins `react-dom` to react's version through an `overrides` entry. `@expo/ui` ships web components whose transitive `react-dom` peer resolves ahead of the react version Expo pins, and stock npm refuses the mismatch even though every consumer accepts `^19.0.0`. Holding `react-dom` at react's version fixes it without moving react off the SDK pin. Remove the override only after checking that `npm ci` still succeeds on a clean runner, because a local install can silently override a peer that CI rejects.
