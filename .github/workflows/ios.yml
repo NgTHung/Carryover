@@ -1,0 +1,98 @@
+name: iOS unsigned IPA
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm run typecheck
+
+  ipa:
+    # macOS minutes bill at ten times the Linux rate, so never start a runner
+    # for a tree that does not typecheck.
+    needs: typecheck
+
+    # Both variants build in parallel. The no-widget IPA is the control: if it
+    # sideloads and the widget one does not, the widget extension is the cause.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: widget
+            widget_enabled: "1"
+          - variant: plain
+            widget_enabled: "0"
+
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # No lockfile is committed yet. Switch to `npm ci` once one is.
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate the native project
+        env:
+          CARRYOVER_WIDGET: ${{ matrix.widget_enabled }}
+        run: npx expo prebuild --platform ios --clean
+
+      - name: Install pods
+        run: cd ios && pod install
+
+      - name: Build unsigned
+        run: |
+          cd ios
+          SCHEME="$(basename ./*.xcworkspace .xcworkspace)"
+          echo "Building scheme: $SCHEME"
+          xcodebuild \
+            -workspace "$SCHEME.xcworkspace" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Package .ipa
+        run: |
+          APP="$(find ios/build/Build/Products/Release-iphoneos -maxdepth 1 -name '*.app' | head -1)"
+          test -n "$APP" || { echo "No .app produced"; exit 1; }
+          echo "Packaging $APP"
+          mkdir -p Payload
+          cp -R "$APP" Payload/
+          zip -qry "carryover-${{ matrix.variant }}.ipa" Payload
+
+      # Proves whether the widget extension actually survived into the bundle.
+      # A widget that never reaches the IPA is a build problem, not a signing one.
+      - name: Report bundle contents
+        run: |
+          echo "### ${{ matrix.variant }} bundle" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          find Payload -maxdepth 3 -name '*.appex' -o -maxdepth 2 -name '*.app' \
+            | sed 's|Payload/||' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "Entitlements referenced in the build:" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          find ios -name '*.entitlements' -exec echo '--- {}' \; -exec cat {} \; \
+            >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "none found" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: carryover-${{ matrix.variant }}-ipa
+          path: carryover-${{ matrix.variant }}.ipa
+          if-no-files-found: error
