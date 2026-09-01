@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "domains": {
+    "app": {
+      "prefixes": ["UI", "DATA", "BUDGET", "CAPTURE", "SPLIT"]
+    },
+    "build": {
+      "prefixes": ["BUILD", "WIDGET"]
+    },
+    "milestones": {
+      "prefixes": ["MILESTONE"]
+    }
+  },
+  "task_types": {
+    "Milestone": {"criteria": "exit", "role": "milestone"},
+    "Epic": {"criteria": "exit"},
+    "Feature": {"criteria": "acceptance"},
+    "Bug": {"criteria": "acceptance"},
+    "Refactor": {"criteria": "acceptance"},
+    "TechDebt": {"criteria": "acceptance"},
+    "TestDebt": {"criteria": "acceptance"},
+    "Design": {"criteria": "acceptance"},
+    "Docs": {"criteria": "acceptance"},
+    "Spike": {"criteria": "acceptance"}
+  },
+  "tags": {
+    "policy": "open"
+  }
+}
