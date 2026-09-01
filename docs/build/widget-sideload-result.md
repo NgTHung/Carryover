@@ -22,18 +22,30 @@ The build requires exactly one gated capability. Both generated entitlements fil
 
 So the App Group is the single capability standing between this build and a free-account sideload.
 
+## What the phone answered
+
+Question 1 is settled: **yes, a sideloaded IPA carries a working widget extension.**
+
+The widget build installed, the app launched, and the Carryover widget appeared in the widget gallery and could be placed on the home screen. It first drew WidgetKit's placeholder text, "Please adopt containerBackground API", which is the strongest possible evidence for question 1. That message comes from WidgetKit itself after it has loaded and executed the extension, so the extension was installed, signed acceptably, and running.
+
+The App Group entitlement did not block installation. That was the single gated capability in the build and the expected reason for a failure, and it did not stop the sideload.
+
+Since iOS 17 a widget must declare its background with the `containerBackground` modifier or WidgetKit refuses to draw its content. The first build did not, so it drew the placeholder instead. `containerBackground(color, 'widget')` from `@expo/ui/swift-ui/modifiers` fixes it, and the widget now commits to one dark ground with explicit foreground colours.
+
+Question 2, whether the app can push data across the App Group, is still open. The widget could not render its own content, so the push button had nothing to change. Rebuild, sideload again, and tap it.
+
 ## Result
 
-Status: built, not yet sideloaded.
+Status: question 1 answered, question 2 pending a rebuild.
 
 | Question | Result | Evidence |
 | --- | --- | --- |
 | Widget extension reaches the bundle | yes | `PlugIns/ExpoWidgetsTarget.appex` in the IPA |
 | Build requests only the App Group | yes | both `.entitlements` files, after the strip script |
-| Plain variant installs and launches | | |
-| Widget variant installs and launches | | |
-| Widget appears in the gallery | | |
-| Widget renders the fixture figure | | |
+| Widget variant installs and launches | yes | installed by sideload, app opened |
+| Widget appears in the gallery | yes | placed on the home screen |
+| App Group entitlement blocks signing | no | the only gated capability, and it did not stop install |
+| Widget renders the fixture figure | pending | first build drew the containerBackground placeholder |
 | `updateSnapshot` succeeds | | |
 | Widget number changes after push | | |
 

@@ -17,7 +17,7 @@ There is no Mac in this toolchain, and every iOS binary must be compiled by Xcod
 
 ## Acceptance Criteria
 
-- [ ] Pushing to any branch produces a downloadable unsigned IPA artifact.
+- [x] Pushing to any branch produces a downloadable unsigned IPA artifact.
 - [x] The workflow contains no signing identity, provisioning profile, or repository secret.
 - [x] The Xcode scheme is discovered from the generated workspace rather than hardcoded, so a rename does not break the build.
 - [x] A Linux typecheck job runs before any macOS job starts.
