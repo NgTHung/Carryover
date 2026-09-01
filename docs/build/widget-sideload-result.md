@@ -10,12 +10,26 @@ A widget extension and the data it renders are two separate problems, and they f
 
 **Question 2. Can the app push data to it?** The spike screen has a button that calls `updateSnapshot` with a random value and then reloads the widget. If the widget number changes, the App Group data path works on your signing setup. If the call throws, the error text appears on screen.
 
+## What CI already answered
+
+These were settled by inspecting the built IPA, before any phone was involved.
+
+The widget extension reaches the bundle. `carryover-widget.ipa` contains `Payload/Carryover.app/PlugIns/ExpoWidgetsTarget.appex` with bundle identifier `com.bbq.carryover.widgets` and `NSExtensionPointIdentifier` of `com.apple.widgetkit-extension`. The plain variant contains no `PlugIns` directory. The widget build is 11MB against 8.9MB for plain. A widget that fails to appear on device is therefore a signing or installation problem, not a build problem.
+
+The build requires exactly one gated capability. Both generated entitlements files request `com.apple.security.application-groups` for `group.com.bbq.carryover` and nothing else.
+
+`expo-widgets` also wrote `aps-environment` despite `enablePushNotifications: false`. Push is paid-only and v1 uses local notifications, so that entitlement raised the signing bar for nothing. `scripts/strip-push-entitlement.mjs` removes it after every prebuild. A config plugin cannot do this, because expo-widgets writes the file after config plugins run and a `withEntitlementsPlist` mod sees an empty object.
+
+So the App Group is the single capability standing between this build and a free-account sideload.
+
 ## Result
 
-Status: not yet run.
+Status: built, not yet sideloaded.
 
 | Question | Result | Evidence |
 | --- | --- | --- |
+| Widget extension reaches the bundle | yes | `PlugIns/ExpoWidgetsTarget.appex` in the IPA |
+| Build requests only the App Group | yes | both `.entitlements` files, after the strip script |
 | Plain variant installs and launches | | |
 | Widget variant installs and launches | | |
 | Widget appears in the gallery | | |

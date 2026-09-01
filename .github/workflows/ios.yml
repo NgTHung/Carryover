@@ -55,7 +55,7 @@ jobs:
       - name: Generate the native project
         env:
           CARRYOVER_WIDGET: ${{ matrix.widget_enabled }}
-        run: npx expo prebuild --platform ios --clean
+        run: npm run prebuild
 
       - name: Install pods
         run: cd ios && pod install
@@ -89,16 +89,17 @@ jobs:
       # A widget that never reaches the IPA is a build problem, not a signing one.
       - name: Report bundle contents
         run: |
-          echo "### ${{ matrix.variant }} bundle" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          exec > >(tee -a $GITHUB_STEP_SUMMARY)
+          echo "### ${{ matrix.variant }} bundle"
+          echo '```'
           find Payload -maxdepth 3 -name '*.appex' -o -maxdepth 2 -name '*.app' \
-            | sed 's|Payload/||' >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "Entitlements referenced in the build:" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+            | sed 's|Payload/||'
+          echo '```'
+          echo "Entitlements referenced in the build:"
+          echo '```'
           find ios -name '*.entitlements' -exec echo '--- {}' \; -exec cat {} \; \
-            >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "none found" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+            2>/dev/null || echo "none found"
+          echo '```'
 
       - uses: actions/upload-artifact@v4
         with:
