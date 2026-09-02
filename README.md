@@ -19,7 +19,7 @@ npm install
 npm run typecheck
 ```
 
-You cannot build for iOS locally. Push, and the `iOS unsigned IPA` workflow builds both variants on a macOS runner and uploads them as artifacts.
+You cannot build for iOS locally. Push, and the `iOS unsigned IPA` workflow builds on a macOS runner and uploads the IPA as an artifact. The widget extension is excluded until stage 6; dispatch the workflow with the `widget` input to build one.
 
 ## Layout
 

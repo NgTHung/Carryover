@@ -2,7 +2,24 @@ name: iOS unsigned IPA
 
 on:
   push:
+    # Documentation and task files cannot change the binary. Building them costs
+    # macOS minutes that bill at ten times the Linux rate.
+    paths-ignore:
+      - '**.md'
+      - '.tasks/**'
+      - 'docs/**'
   workflow_dispatch:
+    inputs:
+      widget:
+        description: 'Build with the widget extension'
+        type: boolean
+        default: false
+
+# A second push supersedes the first. Without this, an abandoned run keeps a
+# macOS runner busy for its full eight minutes.
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   typecheck:
@@ -12,6 +29,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
       - run: npm ci
       - run: npm run typecheck
 
@@ -20,17 +38,6 @@ jobs:
     # for a tree that does not typecheck.
     needs: typecheck
 
-    # Both variants build in parallel. The no-widget IPA is the control: if it
-    # sideloads and the widget one does not, the widget extension is the cause.
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - variant: widget
-            widget_enabled: "1"
-          - variant: plain
-            widget_enabled: "0"
-
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
@@ -38,6 +45,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
       # React Native's Swift packages need Swift tools 6.2, which ships with
       # Xcode 26. Select the newest Xcode the image has rather than trusting the
@@ -52,9 +60,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # The widget is deferred to build:WIDGET-002. Every push builds without the
+      # extension; dispatch the workflow with the widget input to build one.
       - name: Generate the native project
         env:
-          CARRYOVER_WIDGET: ${{ matrix.widget_enabled }}
+          CARRYOVER_WIDGET: ${{ inputs.widget && '1' || '0' }}
         run: npm run prebuild
 
       - name: Install pods
@@ -83,14 +93,14 @@ jobs:
           echo "Packaging $APP"
           mkdir -p Payload
           cp -R "$APP" Payload/
-          zip -qry "carryover-${{ matrix.variant }}.ipa" Payload
+          zip -qry carryover.ipa Payload
 
-      # Proves whether the widget extension actually survived into the bundle.
-      # A widget that never reaches the IPA is a build problem, not a signing one.
+      # Records what actually reached the bundle, so a missing extension or a
+      # stray entitlement is a build fact rather than a signing guess.
       - name: Report bundle contents
         run: |
           exec > >(tee -a $GITHUB_STEP_SUMMARY)
-          echo "### ${{ matrix.variant }} bundle"
+          echo "### Bundle"
           echo '```'
           find Payload -maxdepth 3 \( -name '*.app' -o -name '*.appex' \) \
             | sed 's|Payload/||' | sort
@@ -103,6 +113,6 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: carryover-${{ matrix.variant }}-ipa
-          path: carryover-${{ matrix.variant }}.ipa
+          name: carryover-ipa
+          path: carryover.ipa
           if-no-files-found: error

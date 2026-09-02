@@ -6,11 +6,15 @@ Carryover is built for iOS without a Mac. Every iOS binary must be compiled by X
 
 Push to any branch. The `iOS unsigned IPA` workflow runs `expo prebuild` to generate the native project, installs pods, builds with signing disabled, wraps the `.app` in a `Payload/` directory, and uploads the result as a workflow artifact. Download the artifact, unzip it, and sideload the IPA with AltStore, SideStore, or Sideloadly.
 
-The workflow builds two variants in parallel. The `widget` variant includes the widget extension. The `plain` variant sets `CARRYOVER_WIDGET=0` and drops the plugin entirely. The plain build is a control: if it installs and the widget build does not, the widget extension caused the failure rather than the pipeline.
+The build excludes the widget extension. WIDGET-001 settled that a sideloaded IPA can carry a working widget, so the two-variant control build has done its job and stage 6 owns the rest. To build one, dispatch the workflow manually and set the `widget` input, which passes `CARRYOVER_WIDGET=1` through to `app.config.js`.
+
+Commits that touch only Markdown, `docs/`, or `.tasks/` do not build. Pushing twice cancels the first run.
 
 ## Cost
 
-macOS runner minutes bill at ten times the Linux rate, so a private repository on the free tier gets roughly 200 macOS minutes per month. A build takes about eight minutes and the matrix runs two, so budget around sixteen minutes per push. Make the repository public for unlimited free minutes, or push deliberately rather than continuously.
+macOS runner minutes bill at ten times the Linux rate, so a private repository on the free tier gets roughly 200 macOS minutes per month. A build takes about four minutes, so budget that per code push. Make the repository public for unlimited free minutes, or push deliberately rather than continuously.
+
+Most of that four minutes is `xcodebuild` compiling the React Native pods from scratch. `expo prebuild --clean` regenerates `ios/`, so nothing from the previous run is reusable and there is no derived-data cache to hit.
 
 The typecheck job runs on Linux and is effectively free. Let it catch what it can before a macOS runner starts.
 

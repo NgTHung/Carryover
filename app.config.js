@@ -1,10 +1,11 @@
 // Continuous native generation: ios/ is regenerated on every prebuild, so this
 // file is the only place iOS configuration exists.
 //
-// CARRYOVER_WIDGET=0 drops the widget plugin. The build:WIDGET-001 spike needs a
-// widget-free IPA to prove the pipeline before the widget can be blamed for a
-// signing failure.
-const widgetEnabled = process.env.CARRYOVER_WIDGET !== '0';
+// The widget is off until build:WIDGET-002. WIDGET-001 proved the extension
+// installs but left a stale-render question open, so building it on every push
+// spends macOS minutes on a target nothing consumes yet. Set CARRYOVER_WIDGET=1
+// to opt back in.
+const widgetEnabled = process.env.CARRYOVER_WIDGET === '1';
 
 const BUNDLE_ID = 'com.bbq.carryover';
 
