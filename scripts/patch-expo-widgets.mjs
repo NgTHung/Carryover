@@ -139,6 +139,14 @@ public enum WidgetsStorage {
   ],
 ]);
 
+patch('node_modules/expo-widgets/ios/Widgets/EntryView.swift', [
+  [
+    `createRedBox(message: "No layout found for \\(WidgetsStorage.appGroupIdentifier ?? "")::\\(entry.name)")`,
+    `createRedBox(message: "No layout found.\\nname: \\(entry.name)\\nresolved: \\(WidgetsStorage.appGroupIdentifier ?? "nil")\\nconfigured: \\(WidgetsStorage.configuredAppGroupIdentifier ?? "nil")\\ngranted: \\(WidgetsStorage.grantedAppGroups().joined(separator: ", "))")`,
+    1,
+  ],
+]);
+
 patch('node_modules/expo-widgets/ios/Widgets/TimelineProvider.swift', [
   [
     `    let groupIdentifier =
@@ -158,6 +166,24 @@ patch('node_modules/expo-widgets/ios/WidgetsModule.swift', [
     }
 
     Constant("widgetsDirectory") { () -> String? in`,
+    1,
+  ],
+]);
+
+patch('node_modules/expo-widgets/ios/Widgets/RedBoxView.swift', [
+  [
+    `    if #available(iOS 17.0, *), kind == .widget {
+      ZStack { content }.containerRelativeFrame([.horizontal, .vertical])
+    } else {`,
+    `    // ${MARKER}: WidgetKit refuses to draw a widget that has not declared a
+    // container background, and substitutes "Please adopt containerBackground
+    // API" for the content. The red box had none, so every widget error was
+    // invisible and every failure looked like the same missing-modifier bug.
+    if #available(iOS 17.0, *), kind == .widget {
+      ZStack { content }
+        .containerRelativeFrame([.horizontal, .vertical])
+        .containerBackground(.red, for: .widget)
+    } else {`,
     1,
   ],
 ]);
