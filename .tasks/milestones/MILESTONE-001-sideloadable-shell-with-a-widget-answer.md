@@ -16,6 +16,6 @@ Stage 0. Prove that a Mac-free pipeline puts a running app on the phone, and set
 
 - [ ] A GitHub Actions macOS runner produces an unsigned IPA on every push without any signing secret in the repository.
 - [ ] Both the widget and no-widget variants build, so a failure can be attributed to the widget extension rather than the pipeline.
-- [ ] The IPA installs by sideload and the app launches on the phone.
-- [ ] docs/build/widget-sideload-result.md records whether the widget installs and whether it receives pushed data, with the signing tool and account type.
-- [ ] The result names what changes in the roadmap, in particular whether the paid membership moves earlier.
+- [x] The IPA installs by sideload and the app launches on the phone.
+- [x] docs/build/widget-sideload-result.md records whether the widget installs and whether it receives pushed data, with the signing tool and account type.
+- [x] The result names what changes in the roadmap, in particular whether the paid membership moves earlier.

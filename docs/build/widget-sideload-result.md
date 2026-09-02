@@ -48,7 +48,45 @@ Two debugging notes follow from this. Searching the appex for your own strings p
 
 ## Result
 
-Status: question 1 answered, question 2 pending a rebuild.
+Status: answered. A sideloaded IPA carries a working widget extension. It cannot receive data, because free-account signing does not provision the App Group. The widget needs the paid membership.
+
+Signing tool: SideStore. Account type: free Apple ID. Both "Use main profile" and "Register App ID for Each Extension" were tried, with identical results.
+
+| Question | Result |
+| --- | --- |
+| Widget extension reaches the bundle | yes |
+| Build requests only the App Group | yes |
+| Widget installs, appears in the gallery, executes | yes |
+| App Group container resolves | **no** |
+| App Group carries data to the extension | **no** |
+
+## Why the widget shows a container background error
+
+The message is a symptom three steps removed from the cause. The chain, read from the Swift that expo-widgets ships:
+
+`widgetsDirectory` calls `FileManager.containerURL(forSecurityApplicationGroupIdentifier:)`, which returns nil without the entitlement. That is why the container check reports no path, and it is the reliable signal because it fails closed.
+
+`WidgetsStorage` holds `UserDefaults(suiteName: appGroupIdentifier)`. That initialiser does not fail when the entitlement is missing. It returns a store backed by a process-local file, so the app writes a timeline and reads the same timeline back without ever touching the shared container. A round trip inside the app therefore proves nothing about the App Group, and this check fails open.
+
+The two results together are only consistent with the fallback: one identifier produced nil from `containerURL` and a working store from `UserDefaults(suiteName:)` on the same device in the same run.
+
+The widget extension is a separate process with its own empty fallback store. `EntryView` looks for `__expo_widgets_<name>_layout`, finds nothing, and renders `createRedBox("No layout found for ...")`. That red box carries no `containerBackground`, so WidgetKit refuses to draw it and substitutes its own placeholder text.
+
+So the widget never rendered the Carryover component at any point. Adopting `containerBackground` was correct and necessary, and it changed nothing, because the view on screen belonged to the library rather than to this app.
+
+## Roadmap consequence
+
+The widget stays at stage 6, as originally planned, and it now has a known price rather than an unknown risk. Buy the 99 USD membership when the widget is the next thing worth building. That same purchase covers TestFlight for another person and remote push, neither of which v1 needs.
+
+Nothing before stage 6 depends on this. Ship the daily local notification as the glanceable surface in the meantime. It reads the same snapshot, works on a free account, and needs no extension.
+
+Do not spend more time on the widget under free signing. The blocker is an Apple entitlement, not a bug in this project or in expo-widgets, and no amount of configuration works around it.
+
+## Notes for whoever revisits this
+
+Test the App Group with `widgetsDirectory`, never with a timeline round trip. One fails closed and the other fails open.
+
+If the widget draws a red box after the membership is bought, that is progress and not a regression. The red box means the extension is reading the shared store and reporting what it found.
 
 | Question | Result | Evidence |
 | --- | --- | --- |
