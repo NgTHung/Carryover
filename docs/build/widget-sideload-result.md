@@ -84,6 +84,18 @@ WidgetKit's "Please adopt containerBackground API" was a symptom three steps fro
 
 Twice this was called a paid-membership problem. It never was. The capability was present and under a different name, and the evidence for the wrong conclusion came from a check that fails open.
 
+## Where this stopped
+
+The widget does not render, and the cause was not settled.
+
+A bright container background and a background on the library's red box both failed to appear on device, across several builds and two signers. Neither visual change showed, which points at the extension running stale code rather than at the group plumbing. Widget extensions are cached hard, and the layout string itself lives in the shared store, so an old install's layout can keep drawing after the app is replaced.
+
+Retry from a clean device before changing any code. Remove the widget, delete the app, reboot the phone, reinstall, open the app, then re-add the widget. If a colour change still does not appear, the extension is not receiving new code and that is an install problem.
+
+Under the FlareStore certificate the widget drew black, which is the previous ground colour, so a stale layout is the most likely explanation. Under iloader it drew WidgetKit's placeholder, meaning no layout at all.
+
+The FlareStore profile grants App Groups and `aps-environment` set to `production`, so it is a genuine paid-team profile and the widget was legitimately provisioned under it. Push is granted but not usable, because sending needs an APNs key for an App ID owned by the signing service.
+
 ## What still needs the paid membership
 
 TestFlight, so another person can install without a computer and without a weekly refresh. Remote push. Neither is needed for v1.

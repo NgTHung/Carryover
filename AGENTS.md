@@ -53,7 +53,7 @@ Avoid large modules:
 
 ### Change size guidance
 ---
-Unless the change is mechanical, the total number of changed lines should not exceed 800. For complex logic changes keep it under 500. If the change is larger, split it into reviewable stages and land the smallest coherent stage first.
+Unless the change is mechanical, the total number of changed lines should not exceed 800. For complex logic changes keep it under 500. If the change is larger, split it into reviewable stages and land the smallest coherent stage first. Do not push commit without user consent.
 
 ### TypeScript rules
 Enable `strict`. Do not add `any`. Do not use non-null assertions in application code.
