@@ -6,7 +6,7 @@
   "scripts": {
     "start": "expo start",
     "ios": "expo run:ios",
-    "prebuild": "expo prebuild --platform ios --clean && node scripts/strip-push-entitlement.mjs",
+    "prebuild": "node scripts/patch-expo-widgets.mjs && expo prebuild --platform ios --clean && node scripts/strip-push-entitlement.mjs",
     "typecheck": "tsc --noEmit",
     "doctor": "expo-doctor"
   },

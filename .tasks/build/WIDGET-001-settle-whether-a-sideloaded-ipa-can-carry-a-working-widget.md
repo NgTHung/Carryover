@@ -1,7 +1,7 @@
 ---
 id: "WIDGET-001"
 title: "Settle whether a sideloaded IPA can carry a working widget"
-status: Done
+status: In Progress
 priority: "High"
 type: "Spike"
 milestone: "0.1.0"

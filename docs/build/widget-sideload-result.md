@@ -48,7 +48,26 @@ Two debugging notes follow from this. Searching the appex for your own strings p
 
 ## Result
 
-Status: answered. A sideloaded IPA carries a working widget extension. It cannot receive data, because free-account signing does not provision the App Group. The widget needs the paid membership.
+Status: **superseded, see the correction below.** The earlier conclusion that this needs a paid membership was wrong.
+
+## Correction: the App Group is renamed, not missing
+
+SideStore rewrites bundle identifiers on install so App IDs stay unique per account:
+
+| | Built | Installed |
+| --- | --- | --- |
+| App | `com.bbq.carryover` | `com.bbq.carryover.<rand12>` |
+| Extension | `com.bbq.carryover.widgets` | `com.bbq.carryover.<rand12>.widgets` |
+
+It rewrites the entitlements to match. It does not rewrite `ExpoWidgetsAppGroupIdentifier`, because that is a custom Info.plist key invented by expo-widgets and no signing tool knows it exists. It stays `group.com.bbq.carryover` in both the app and the extension.
+
+So both processes ask for a group name that was never granted. `containerURL` returns nil, `UserDefaults(suiteName:)` falls back to a process-local store, and the extension finds no layout. Every symptom follows from a stale identifier rather than from a missing capability.
+
+The App Group is very likely present under its rewritten name. This is a lookup bug, not an Apple restriction, and it is fixable without the paid membership.
+
+The fix is to resolve the group from the running binary's own entitlements instead of trusting the Info.plist, in both the app and the extension. `WidgetsStorage.appGroupIdentifier` is a `public static var`, so it is reassignable, but `TimelineProvider` reads the Info.plist key directly, so the extension needs the same treatment.
+
+This is arguably an upstream bug. Any signing flow that rewrites identifiers breaks expo-widgets in exactly this way, and sideloading is the normal case for a Mac-free project.
 
 Signing tool: SideStore. Account type: free Apple ID. Both "Use main profile" and "Register App ID for Each Extension" were tried, with identical results.
 
