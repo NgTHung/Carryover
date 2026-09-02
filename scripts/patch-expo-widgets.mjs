@@ -50,7 +50,6 @@ patch(storage, [
   public static var appGroupIdentifier: String? = Bundle.main.object(forInfoDictionaryKey: "ExpoWidgetsAppGroupIdentifier") as? String
   static let defaults = UserDefaults(suiteName: appGroupIdentifier)`,
     `import Foundation
-import Security
 
 // ${MARKER}
 public enum WidgetsStorage {
@@ -66,15 +65,34 @@ public enum WidgetsStorage {
       return configured
     }
 
-    guard let task = SecTaskCreateFromSelf(nil),
-          let granted = SecTaskCopyValueForEntitlement(
-            task, "com.apple.security.application-groups" as CFString, nil
-          ) as? [String]
+    return grantedAppGroups().first(where: containerExists) ?? configured
+  }
+
+  /// SecTask entitlement APIs are macOS only, so read the profile this binary
+  /// was signed with. The app and the extension each carry their own copy, so
+  /// both processes resolve the same granted group.
+  private static func grantedAppGroups() -> [String] {
+    guard let url = Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision"),
+          let data = try? Data(contentsOf: url),
+          let text = String(data: data, encoding: .isoLatin1),
+          let start = text.range(of: "<?xml"),
+          let end = text.range(of: "</plist>")
     else {
-      return configured
+      return []
     }
 
-    return granted.first(where: containerExists) ?? configured
+    // The profile is CMS signed, so slice the plain plist out of the envelope.
+    guard let plistData = String(text[start.lowerBound..<end.upperBound]).data(using: .isoLatin1),
+          let plist = try? PropertyListSerialization.propertyList(
+            from: plistData, options: [], format: nil
+          ) as? [String: Any],
+          let entitlements = plist["Entitlements"] as? [String: Any],
+          let groups = entitlements["com.apple.security.application-groups"] as? [String]
+    else {
+      return []
+    }
+
+    return groups
   }
 
   private static func containerExists(_ identifier: String) -> Bool {
