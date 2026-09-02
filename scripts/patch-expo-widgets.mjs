@@ -142,7 +142,8 @@ public enum WidgetsStorage {
 patch('node_modules/expo-widgets/ios/Widgets/EntryView.swift', [
   [
     `createRedBox(message: "No layout found for \\(WidgetsStorage.appGroupIdentifier ?? "")::\\(entry.name)")`,
-    `createRedBox(message: "No layout found.\\nname: \\(entry.name)\\nresolved: \\(WidgetsStorage.appGroupIdentifier ?? "nil")\\nconfigured: \\(WidgetsStorage.configuredAppGroupIdentifier ?? "nil")\\ngranted: \\(WidgetsStorage.grantedAppGroups().joined(separator: ", "))")`,
+    `// ${MARKER}
+      createRedBox(message: "No layout found.\\nname: \\(entry.name)\\nresolved: \\(WidgetsStorage.appGroupIdentifier ?? "nil")\\nconfigured: \\(WidgetsStorage.configuredAppGroupIdentifier ?? "nil")\\ngranted: \\(WidgetsStorage.grantedAppGroups().joined(separator: ", "))")`,
     1,
   ],
 ]);
