@@ -19,3 +19,9 @@ npm-debug.*
 .vscode/
 
 /.tasks/.taskroot.lock
+
+# Signing material. Never commit these.
+*.p12
+*.mobileprovision
+*.cer
+*.certSigningRequest
