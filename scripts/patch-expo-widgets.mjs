@@ -62,7 +62,11 @@ public enum WidgetsStorage {
     if let configured, containerExists(configured) {
       return configured
     }
-    return grantedAppGroups().first(where: containerExists) ?? configured
+    // Sort before choosing. The app and the extension read separate profiles,
+    // and a signer that grants several generic groups can list them in
+    // different orders, which would leave the two processes on different
+    // containers with no shared store between them.
+    return grantedAppGroups().sorted().first(where: containerExists) ?? configured
   }
 
   public static func containerExists(_ identifier: String) -> Bool {

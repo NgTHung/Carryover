@@ -21,10 +21,16 @@ import { createWidget, type WidgetEnvironment } from 'expo-widgets';
 
 import { FIXTURE_SNAPSHOT, formatVndCompact } from '../src/budget/snapshot';
 
-const GROUND = '#0D1614';
-const INK = '#E4EAE7';
-const MUTED = '#97AAA5';
-const ALERT = '#E08A58';
+// Diagnostic colours, not the final design. The previous ground was #0D1614,
+// which reads as black, so a widget drawing this layout was indistinguishable
+// from a widget drawing nothing. A bright ground makes that unambiguous.
+//
+// The first label uses a named colour and the rest use hex, so a widget that
+// shows only the named one tells us hex colours are the problem.
+const GROUND = '#46C4A4';
+const INK = '#08120F';
+const MUTED = '#123B32';
+const ALERT = '#7A2E0B';
 
 export type CarryoverWidgetProps = {
   perDay?: number;
@@ -50,7 +56,7 @@ const CarryoverWidgetView = (
       modifiers={[containerBackground(GROUND, 'widget')]}
     >
       <Text
-        modifiers={[font({ size: 11, weight: 'medium' }), foregroundStyle(MUTED)]}
+        modifiers={[font({ size: 11, weight: 'bold' }), foregroundStyle('black')]}
       >
         TODAY
       </Text>
