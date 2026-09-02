@@ -45,19 +45,18 @@ export default function App() {
   const runDiagnostics = async () => {
     const results: Check[] = [];
 
-    // The container path is the App Group itself. A path that does not name the
-    // group means the entitlement did not survive signing.
+    // iOS returns a UUID path such as /private/var/.../AppGroup/<uuid>/, so the
+    // group identifier never appears in it. Only emptiness is evidence; asserting
+    // the identifier here would fail on a working group.
     try {
       const dir = widgetsDirectory as unknown;
-      const dirText = describe(dir);
-      const looksReal =
-        typeof dir === 'string' &&
-        dir.length > 0 &&
-        dir.includes('group.com.bbq.carryover');
+      const resolved = typeof dir === 'string' && dir.length > 0;
       results.push({
         name: 'App Group container',
-        status: looksReal ? 'pass' : 'fail',
-        detail: dirText,
+        status: resolved ? 'pass' : 'fail',
+        detail: resolved
+          ? `${describe(dir)}\n\n(A UUID path is normal. The group id never appears here.)`
+          : `${describe(dir)}\n\nNo container path, so the entitlement did not survive signing.`,
       });
     } catch (error) {
       results.push({
@@ -141,14 +140,17 @@ export default function App() {
 
         {ran ? (
           <Text style={styles.step}>
-            Both pass: the App Group works and the widget should render. Check
-            the home screen now, it was told to reload.
+            The timeline check is the one that decides. It moves real data over
+            the same channel the extension reads, so trust it over the container
+            path.
             {'\n\n'}
-            Both fail: the App Group is not provisioned on this signing setup,
-            which is the answer the spike was after.
+            Timeline passes: the App Group works. The widget was told to reload,
+            so check the home screen. If it still will not draw, the fault is in
+            expo-widgets rather than in signing.
             {'\n\n'}
-            Container passes but the timeline fails: the group exists and the
-            fault is in expo-widgets.
+            Timeline fails: read its error. Thrown means the group is missing.
+            Entries read back without the probe means the group is readable but
+            writes are not landing.
           </Text>
         ) : null}
 
