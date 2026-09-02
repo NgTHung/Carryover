@@ -1,6 +1,6 @@
 # Widget sideload result
 
-This document records what the stage 0 spike found. Fill it in after you sideload the build. Until then the questions below are open, and no product work should assume an answer.
+A sideloaded IPA can drive a home screen widget on a free Apple account, but only with iloader and only with the App Group resolved at runtime. This document records how that was established and the two reasoning traps that produced wrong answers along the way.
 
 ## The questions
 
@@ -48,88 +48,42 @@ Two debugging notes follow from this. Searching the appex for your own strings p
 
 ## Result
 
-Status: **superseded, see the correction below.** The earlier conclusion that this needs a paid membership was wrong.
+**A sideloaded IPA can drive a home screen widget on a free Apple account.** Two things are required together, and either alone fails.
 
-## Correction: the App Group is renamed, not missing
+### 1. Sideload with iloader
 
-SideStore rewrites bundle identifiers on install so App IDs stay unique per account:
+iloader registers the App Group. AltStore and SideStore do not, so the widget cannot work under them no matter how the app is built. This is a project constraint rather than a preference.
+
+Every sideloader rewrites bundle identifiers so App IDs stay unique per Apple account, appending the team identifier:
 
 | | Built | Installed |
 | --- | --- | --- |
-| App | `com.bbq.carryover` | `com.bbq.carryover.<rand12>` |
-| Extension | `com.bbq.carryover.widgets` | `com.bbq.carryover.<rand12>.widgets` |
+| App | `com.bbq.carryover` | `com.bbq.carryover.<TEAM>` |
+| Extension | `com.bbq.carryover.widgets` | `com.bbq.carryover.<TEAM>.widgets` |
+| App Group | `group.com.bbq.carryover` | `group.com.bbq.carryover.<TEAM>` |
 
-It rewrites the entitlements to match. It does not rewrite `ExpoWidgetsAppGroupIdentifier`, because that is a custom Info.plist key invented by expo-widgets and no signing tool knows it exists. It stays `group.com.bbq.carryover` in both the app and the extension.
+The team identifier is stable for an Apple ID, so the rewritten names are stable across installs. Do not hardcode one. It changes with the account, and it would break the moment a paid membership or a different Apple ID is used.
 
-So both processes ask for a group name that was never granted. `containerURL` returns nil, `UserDefaults(suiteName:)` falls back to a process-local store, and the extension finds no layout. Every symptom follows from a stale identifier rather than from a missing capability.
+### 2. Resolve the App Group at runtime
 
-The App Group is very likely present under its rewritten name. This is a lookup bug, not an Apple restriction, and it is fixable without the paid membership.
+`expo-widgets` reads the group name from `ExpoWidgetsAppGroupIdentifier`, a custom Info.plist key written at build time. No signing tool rewrites it, because no signing tool knows it exists. So even under iloader, the app and the extension ask for `group.com.bbq.carryover` while the grant is `group.com.bbq.carryover.<TEAM>`.
 
-The fix is to resolve the group from the running binary's own entitlements instead of trusting the Info.plist, in both the app and the extension. `WidgetsStorage.appGroupIdentifier` is a `public static var`, so it is reassignable, but `TimelineProvider` reads the Info.plist key directly, so the extension needs the same treatment.
+`scripts/patch-expo-widgets.mjs` makes both processes read the granted groups from their own `embedded.mobileprovision` and prefer one whose container resolves, falling back to the configured value. A normal Xcode build is unaffected, because the configured name resolves there and is used as-is.
 
-This is arguably an upstream bug. Any signing flow that rewrites identifiers breaks expo-widgets in exactly this way, and sideloading is the normal case for a Mac-free project.
+`TimelineProvider` read the Info.plist key directly in two more places, bypassing `WidgetsStorage`, so it goes through the resolver as well.
 
-Signing tool: SideStore. Account type: free Apple ID. Both "Use main profile" and "Register App ID for Each Extension" were tried, with identical results.
+## How the earlier conclusions went wrong
 
-| Question | Result |
-| --- | --- |
-| Widget extension reaches the bundle | yes |
-| Build requests only the App Group | yes |
-| Widget installs, appears in the gallery, executes | yes |
-| App Group container resolves | **no** |
-| App Group carries data to the extension | **no** |
+Recorded because the reasoning traps here are easy to fall back into.
 
-## Why the widget shows a container background error
+`UserDefaults(suiteName:)` does not fail when the entitlement is missing. It returns a store backed by a process-local file, so the app writes a timeline and reads the same timeline back without ever touching the shared container. A round trip inside the app proves nothing. It fails open.
 
-The message is a symptom three steps removed from the cause. The chain, read from the Swift that expo-widgets ships:
+`FileManager.containerURL(forSecurityApplicationGroupIdentifier:)` returns nil when the group is not granted. It fails closed, so it is the honest probe. Use it, not a round trip.
 
-`widgetsDirectory` calls `FileManager.containerURL(forSecurityApplicationGroupIdentifier:)`, which returns nil without the entitlement. That is why the container check reports no path, and it is the reliable signal because it fails closed.
+WidgetKit's "Please adopt containerBackground API" was a symptom three steps from the cause. With no layout in the shared store, `EntryView` renders `createRedBox(...)`, that red box carries no container background, and WidgetKit substitutes its own placeholder. The Carryover component never rendered at any point, which is why adopting the modifier changed nothing visible. The modifier is still required.
 
-`WidgetsStorage` holds `UserDefaults(suiteName: appGroupIdentifier)`. That initialiser does not fail when the entitlement is missing. It returns a store backed by a process-local file, so the app writes a timeline and reads the same timeline back without ever touching the shared container. A round trip inside the app therefore proves nothing about the App Group, and this check fails open.
+Twice this was called a paid-membership problem. It never was. The capability was present and under a different name, and the evidence for the wrong conclusion came from a check that fails open.
 
-The two results together are only consistent with the fallback: one identifier produced nil from `containerURL` and a working store from `UserDefaults(suiteName:)` on the same device in the same run.
+## What still needs the paid membership
 
-The widget extension is a separate process with its own empty fallback store. `EntryView` looks for `__expo_widgets_<name>_layout`, finds nothing, and renders `createRedBox("No layout found for ...")`. That red box carries no `containerBackground`, so WidgetKit refuses to draw it and substitutes its own placeholder text.
-
-So the widget never rendered the Carryover component at any point. Adopting `containerBackground` was correct and necessary, and it changed nothing, because the view on screen belonged to the library rather than to this app.
-
-## Roadmap consequence
-
-The widget stays at stage 6, as originally planned, and it now has a known price rather than an unknown risk. Buy the 99 USD membership when the widget is the next thing worth building. That same purchase covers TestFlight for another person and remote push, neither of which v1 needs.
-
-Nothing before stage 6 depends on this. Ship the daily local notification as the glanceable surface in the meantime. It reads the same snapshot, works on a free account, and needs no extension.
-
-Do not spend more time on the widget under free signing. The blocker is an Apple entitlement, not a bug in this project or in expo-widgets, and no amount of configuration works around it.
-
-## Notes for whoever revisits this
-
-Test the App Group with `widgetsDirectory`, never with a timeline round trip. One fails closed and the other fails open.
-
-If the widget draws a red box after the membership is bought, that is progress and not a regression. The red box means the extension is reading the shared store and reporting what it found.
-
-| Question | Result | Evidence |
-| --- | --- | --- |
-| Widget extension reaches the bundle | yes | `PlugIns/ExpoWidgetsTarget.appex` in the IPA |
-| Build requests only the App Group | yes | both `.entitlements` files, after the strip script |
-| Widget variant installs and launches | yes | installed by sideload, app opened |
-| Widget appears in the gallery | yes | placed on the home screen |
-| App Group entitlement blocks signing | no | the only gated capability, and it did not stop install |
-| Widget renders the fixture figure | pending | first build drew the containerBackground placeholder |
-| `updateSnapshot` succeeds | | |
-| Widget number changes after push | | |
-
-Signing tool used:
-
-Apple account type (free or paid):
-
-Error text, if any:
-
-## What each outcome means
-
-If the plain variant installs and the widget variant does not, the widget extension is the cause. Check the entitlements dump in the workflow step summary. An App Group entitlement that a free personal team cannot provision is the most likely reason.
-
-If both install but the widget never appears in the gallery, the extension did not reach the bundle. That is a build problem. The workflow step summary lists every `.appex` in the packaged IPA, so check there before blaming signing.
-
-If the widget appears and shows the fixture but the push fails, question 1 is answered yes and question 2 is answered no. The widget is viable, but it cannot receive data until the App Group is provisioned, which means the paid membership.
-
-If both work on a free account, that is a better result than expected and the 99 USD purchase can wait until TestFlight or push notifications are needed.
+TestFlight, so another person can install without a computer and without a weekly refresh. Remote push. Neither is needed for v1.

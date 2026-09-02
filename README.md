@@ -8,7 +8,7 @@ The app targets iOS, is built with Expo and React Native, and is distributed as 
 
 Stage 0. The pipeline and the widget install spike. No product code yet.
 
-The immediate open question is whether a sideloaded IPA can carry a working home screen widget on a free Apple account. Nothing downstream should assume an answer. See [the result document](docs/build/widget-sideload-result.md).
+A sideloaded IPA can drive a home screen widget on a free Apple account. **Sideload with iloader.** AltStore and SideStore do not register the App Group, so the widget cannot work under them. The app also resolves its App Group at runtime, because every sideloader rewrites the identifier and nothing rewrites the Info.plist key that expo-widgets reads. See [the result document](docs/build/widget-sideload-result.md).
 
 ## Getting started
 

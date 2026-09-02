@@ -16,11 +16,13 @@ The typecheck job runs on Linux and is effectively free. Let it catch what it ca
 
 ## What free signing cannot do
 
-A free Apple ID signs an app for seven days, after which it stops launching until you refresh it. It also cannot provision several capabilities that Apple gates behind the paid Developer Program. App Groups is one of them, and the widget needs an App Group to receive data from the app.
+A free Apple ID signs an app for seven days, after which it stops launching until you refresh it.
+
+App Groups do work on a free account, so the widget does not need the paid membership. It needs the right sideloader. **Use iloader.** AltStore and SideStore do not register the App Group, and the widget cannot work under them. See the [widget sideload result](widget-sideload-result.md) for the evidence and for the runtime resolution the app needs on top.
 
 Local notifications work on a free build. Remote push does not.
 
-A paid membership costs 99 USD per year and solves three problems at once: App Groups for the widget, push notifications, and TestFlight so another person can install the app without a computer. Buy it when the widget or another person becomes real, not before.
+A paid membership costs 99 USD per year and buys TestFlight, so another person can install without a computer or a weekly refresh, plus remote push. Neither is needed for v1.
 
 ## Dependency pinning
 
