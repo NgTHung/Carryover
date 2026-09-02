@@ -1,20 +1,16 @@
 /**
- * Makes expo-widgets resolve its App Group from the running binary instead of
- * from a build-time Info.plist key.
+ * Makes expo-widgets resolve its App Group from the running binary, and exposes
+ * the signing facts needed to debug when it cannot.
  *
  * Sideloading rewrites bundle identifiers and entitlements so App IDs stay
- * unique per account: com.bbq.carryover becomes com.bbq.carryover.<random>, and
- * the extension follows. It does not rewrite ExpoWidgetsAppGroupIdentifier,
+ * unique per Apple account: com.bbq.carryover becomes com.bbq.carryover.<team>,
+ * and the extension follows. Nothing rewrites ExpoWidgetsAppGroupIdentifier,
  * because that key is expo-widgets' own invention and no signing tool knows it
  * exists. Both processes then ask for a group that was never granted, so
- * containerURL returns nil, UserDefaults(suiteName:) silently falls back to a
+ * containerURL returns nil, UserDefaults(suiteName:) falls back to a
  * process-local store, and the extension finds no layout to draw.
  *
- * Reading the granted groups from the binary's entitlements fixes every signing
- * flow that rewrites identifiers, which is the normal case for a project with
- * no Mac.
- *
- * The patch asserts the exact upstream source it expects and fails loudly if
+ * The patch asserts the exact upstream source it expects and fails the build if
  * expo-widgets changes, so an upgrade cannot silently drop it.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -43,8 +39,7 @@ function patch(file, edits) {
   console.log(`[patch-expo-widgets] patched ${file}`);
 }
 
-const storage = 'node_modules/expo-widgets/ios/WidgetsStorage.swift';
-patch(storage, [
+patch('node_modules/expo-widgets/ios/WidgetsStorage.swift', [
   [
     `public enum WidgetsStorage {
   public static var appGroupIdentifier: String? = Bundle.main.object(forInfoDictionaryKey: "ExpoWidgetsAppGroupIdentifier") as? String
@@ -55,48 +50,84 @@ patch(storage, [
 public enum WidgetsStorage {
   public static var appGroupIdentifier: String? = resolveAppGroupIdentifier()
 
+  public static var configuredAppGroupIdentifier: String? {
+    Bundle.main.object(forInfoDictionaryKey: "ExpoWidgetsAppGroupIdentifier") as? String
+  }
+
   /// Signing tools rewrite identifiers but not the Info.plist key, so the
   /// configured name can point at a group that was never granted. Prefer a
   /// granted group whose container actually resolves.
   private static func resolveAppGroupIdentifier() -> String? {
-    let configured = Bundle.main.object(forInfoDictionaryKey: "ExpoWidgetsAppGroupIdentifier") as? String
-
+    let configured = configuredAppGroupIdentifier
     if let configured, containerExists(configured) {
       return configured
     }
-
     return grantedAppGroups().first(where: containerExists) ?? configured
+  }
+
+  public static func containerExists(_ identifier: String) -> Bool {
+    FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: identifier) != nil
+  }
+
+  public static func containerPath(_ identifier: String?) -> String? {
+    guard let identifier else { return nil }
+    return FileManager.default
+      .containerURL(forSecurityApplicationGroupIdentifier: identifier)?.path
   }
 
   /// SecTask entitlement APIs are macOS only, so read the profile this binary
   /// was signed with. The app and the extension each carry their own copy, so
   /// both processes resolve the same granted group.
-  private static func grantedAppGroups() -> [String] {
+  public static func embeddedProfile() -> [String: Any]? {
     guard let url = Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision"),
           let data = try? Data(contentsOf: url),
           let text = String(data: data, encoding: .isoLatin1),
           let start = text.range(of: "<?xml"),
-          let end = text.range(of: "</plist>")
+          let end = text.range(of: "</plist>"),
+          // The profile is CMS signed, so slice the plain plist out of the envelope.
+          let plistData = String(text[start.lowerBound..<end.upperBound]).data(using: .isoLatin1)
     else {
-      return []
+      return nil
     }
+    return try? PropertyListSerialization.propertyList(
+      from: plistData, options: [], format: nil
+    ) as? [String: Any]
+  }
 
-    // The profile is CMS signed, so slice the plain plist out of the envelope.
-    guard let plistData = String(text[start.lowerBound..<end.upperBound]).data(using: .isoLatin1),
-          let plist = try? PropertyListSerialization.propertyList(
-            from: plistData, options: [], format: nil
-          ) as? [String: Any],
-          let entitlements = plist["Entitlements"] as? [String: Any],
+  public static func grantedAppGroups() -> [String] {
+    guard let entitlements = embeddedProfile()?["Entitlements"] as? [String: Any],
           let groups = entitlements["com.apple.security.application-groups"] as? [String]
     else {
       return []
     }
-
     return groups
   }
 
-  private static func containerExists(_ identifier: String) -> Bool {
-    FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: identifier) != nil
+  /// Everything the spike screen needs to explain a widget that will not draw.
+  public static func signingFacts() -> [String: Any] {
+    let profile = embeddedProfile()
+    let entitlements = (profile?["Entitlements"] as? [String: Any]) ?? [:]
+
+    var entitlementText: [String: String] = [:]
+    for (key, value) in entitlements {
+      entitlementText[key] = String(describing: value)
+        .replacingOccurrences(of: "\\n", with: " ")
+    }
+
+    let granted = grantedAppGroups()
+    return [
+      "bundleIdentifier": Bundle.main.bundleIdentifier ?? "(nil)",
+      "configuredAppGroup": configuredAppGroupIdentifier ?? "(nil)",
+      "resolvedAppGroup": appGroupIdentifier ?? "(nil)",
+      "grantedAppGroups": granted,
+      "grantedAppGroupsResolving": granted.filter(containerExists),
+      "containerPath": containerPath(appGroupIdentifier) ?? "(nil)",
+      "profileFound": profile != nil,
+      "profileName": profile?["Name"] as? String ?? "(nil)",
+      "teamIdentifier": (profile?["TeamIdentifier"] as? [String])?.first ?? "(nil)",
+      "entitlementKeys": Array(entitlements.keys).sorted(),
+      "entitlements": entitlementText,
+    ]
   }
 
   static let defaults = UserDefaults(suiteName: appGroupIdentifier)`,
@@ -104,14 +135,26 @@ public enum WidgetsStorage {
   ],
 ]);
 
-const timeline = 'node_modules/expo-widgets/ios/Widgets/TimelineProvider.swift';
-patch(timeline, [
+patch('node_modules/expo-widgets/ios/Widgets/TimelineProvider.swift', [
   [
     `    let groupIdentifier =
       Bundle.main.object(forInfoDictionaryKey: "ExpoWidgetsAppGroupIdentifier") as? String`,
     `    // ${MARKER}: use the resolved group, not the build-time key.
     let groupIdentifier = WidgetsStorage.appGroupIdentifier`,
     2,
+  ],
+]);
+
+patch('node_modules/expo-widgets/ios/WidgetsModule.swift', [
+  [
+    `    Constant("widgetsDirectory") { () -> String? in`,
+    `    // ${MARKER}
+    Constant("signingFacts") { () -> [String: Any] in
+      WidgetsStorage.signingFacts()
+    }
+
+    Constant("widgetsDirectory") { () -> String? in`,
+    1,
   ],
 ]);
 
