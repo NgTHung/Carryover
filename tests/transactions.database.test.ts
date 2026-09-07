@@ -156,13 +156,12 @@ test('normal transaction reads hide a soft-deleted row', async () => {
       status: 'draft',
       occurredAt,
     });
-    database
-      .prepare('UPDATE transactions SET deleted_at = ? WHERE id = ?')
-      .run(occurredAt.getTime(), draft.id);
+    await data.softDeleteTransaction(draft.id);
 
     assert.equal(await data.readTransaction(draft.id), undefined);
     assert.equal((await data.readTransactions()).length, 0);
     assert.equal((await data.readTransaction(draft.id, { includeDeleted: true }))?.id, draft.id);
+    await assert.rejects(data.softDeleteTransaction(draft.id), /not found/i);
   } finally {
     database.close();
   }

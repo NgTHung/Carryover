@@ -295,6 +295,24 @@ export function createTransactionData<TResultKind extends 'sync' | 'async'>(
       const updated = await updateTransactionRow(db, categoryData, candidate);
       return toTransaction(updated);
     },
+
+    async softDeleteTransaction(transactionId: unknown): Promise<void> {
+      const parsedId = transactionIdSchema.parse(transactionId);
+      const updated = await db
+        .update(transactions)
+        .set({ deletedAt: new Date(), updatedAt: new Date() })
+        .where(
+          and(
+            eq(transactions.id, parsedId),
+            activeRowFilter(transactions.deletedAt)
+          )
+        )
+        .returning()
+        .get();
+      if (updated === undefined) {
+        throw transactionNotFound(parsedId);
+      }
+    },
   };
 }
 
