@@ -14,6 +14,7 @@ import { createAccountData } from './accounts';
 import { createCategoryData } from './categories';
 import { createLedgerReads } from './ledger-reads';
 import { ledgerTables } from './schema';
+import { createTransactionData } from './transactions';
 
 export const sqlite = openDatabaseSync('carryover.db');
 sqlite.execSync('PRAGMA foreign_keys = ON;');
@@ -23,4 +24,5 @@ export const ledgerDb = drizzle(sqlite, { schema: ledgerTables });
 export const accountData = createAccountData(ledgerDb);
 export const categoryData = createCategoryData(ledgerDb);
 export const ledgerReads = createLedgerReads(ledgerDb);
+export const transactionData = createTransactionData(ledgerDb, categoryData);
 export { migrations as ledgerMigrations };
