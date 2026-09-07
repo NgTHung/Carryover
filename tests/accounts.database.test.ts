@@ -171,6 +171,33 @@ test('invalid or inactive transfer accounts do not write a transfer', async () =
   }
 });
 
+test('deleting an account preserves its transfer effects on active balances', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const bankId = accountId(database, 'Bank');
+    const cashId = accountId(database, 'Cash');
+    const data = createAccountData(createProxyDatabase(database));
+
+    await data.updateOpeningBalance({ accountId: bankId, openingBalance: 1_000_000 });
+    await data.recordTransfer({
+      fromAccountId: bankId,
+      toAccountId: cashId,
+      amount: 200_000,
+      occurredAt,
+    });
+    database
+      .prepare('UPDATE accounts SET deleted_at = ? WHERE id = ?')
+      .run(occurredAt.getTime(), cashId);
+
+    const balances = await data.readAccountBalances();
+    assert.equal(balances.length, 1);
+    assert.equal(balances[0]?.accountId, bankId);
+    assert.equal(balances[0]?.balance, 800_000);
+  } finally {
+    database.close();
+  }
+});
+
 test('account balance reads have no stored running-total column', () => {
   const database = openMigratedDatabase();
   try {

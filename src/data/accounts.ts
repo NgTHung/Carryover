@@ -1,8 +1,8 @@
 /**
  * Account and transfer persistence for the ledger.
  *
- * Account balances are read-time projections of active ledger rows. This keeps
- * an edit or out-of-order transfer from leaving a stored running total stale.
+ * Account balances are read-time projections of ledger rows. Deleted accounts
+ * remain in the projection so their past transfers still affect active accounts.
  */
 import { and, eq, inArray } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
@@ -107,18 +107,20 @@ export function createAccountData<TResultKind extends 'sync' | 'async'>(
     },
 
     async readAccountBalances(): Promise<AccountBalance[]> {
-      const accountRows = await db
+      const allAccountRows = await db
         .select({
           accountId: accounts.id,
           name: accounts.name,
           kind: accounts.kind,
           isDefault: accounts.isDefault,
           openingBalance: accounts.openingBalance,
+          deletedAt: accounts.deletedAt,
         })
         .from(accounts)
-        .where(activeRowFilter(accounts.deletedAt))
         .all();
-      const accountIds = new Set(accountRows.map((account) => account.accountId));
+      const activeAccountRows = allAccountRows.filter(
+        (account) => account.deletedAt === null
+      );
 
       const transactionRows = await db
         .select({
@@ -129,9 +131,7 @@ export function createAccountData<TResultKind extends 'sync' | 'async'>(
         .from(transactions)
         .where(activeRowFilter(transactions.deletedAt))
         .all();
-      const balanceTransactions: BalanceTransaction[] = transactionRows.filter(
-        (transaction) => accountIds.has(transaction.accountId)
-      );
+      const balanceTransactions: BalanceTransaction[] = transactionRows;
 
       const transferRows = await db
         .select({
@@ -142,13 +142,10 @@ export function createAccountData<TResultKind extends 'sync' | 'async'>(
         .from(transfers)
         .where(activeRowFilter(transfers.deletedAt))
         .all();
-      const balanceTransfers: BalanceTransfer[] = transferRows.filter(
-        (transfer) =>
-          accountIds.has(transfer.fromAccountId) && accountIds.has(transfer.toAccountId)
-      );
+      const balanceTransfers: BalanceTransfer[] = transferRows;
 
       const derived = deriveAccountBalances({
-        accounts: accountRows,
+        accounts: allAccountRows,
         transactions: balanceTransactions,
         transfers: balanceTransfers,
       });
@@ -156,7 +153,7 @@ export function createAccountData<TResultKind extends 'sync' | 'async'>(
         derived.map((account) => [account.accountId, account.balance])
       );
 
-      return accountRows.map((account) => {
+      return activeAccountRows.map(({ deletedAt: _deletedAt, ...account }) => {
         const balance = balanceById.get(account.accountId);
         if (balance === undefined) {
           throw new Error(`Could not derive account ${account.accountId}`);
