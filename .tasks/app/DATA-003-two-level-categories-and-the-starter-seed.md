@@ -1,7 +1,7 @@
 ---
 id: "DATA-003"
 title: "Two-level categories and the starter seed"
-status: To Do
+status: In Progress
 priority: "High"
 type: "Feature"
 milestone: "0.2.0"
