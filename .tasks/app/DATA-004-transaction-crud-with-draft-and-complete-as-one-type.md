@@ -1,7 +1,7 @@
 ---
 id: "DATA-004"
 title: "Transaction CRUD with draft and complete as one type"
-status: To Do
+status: In Progress
 priority: "High"
 type: "Feature"
 milestone: "0.2.0"
