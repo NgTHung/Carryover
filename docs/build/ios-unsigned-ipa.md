@@ -18,6 +18,12 @@ Most of that four minutes is `xcodebuild` compiling the React Native pods from s
 
 The typecheck job runs on Linux and is effectively free. Let it catch what it can before a macOS runner starts.
 
+## Testing workflow
+
+Run npm test and npm run typecheck locally before pushing. The existing SQLite tests already run on Linux. BUILD-002 migrates them to Jest and adds React Native Testing Library; Linux CI runs the same fast checks before the macOS build.
+
+BUILD-003 adds an on-demand Maestro workflow with its own Simulator .app and the widget disabled. The device IPA cannot run in a Simulator. Run Maestro against the candidate revision before releases; do not add its Simulator build to every code push. Native device build checks keep their existing triggers. See [App stack and testing](../app-stack-and-testing.md) for test ownership and device checks.
+
 ## What free signing cannot do
 
 A free Apple ID signs an app for seven days, after which it stops launching until you refresh it.

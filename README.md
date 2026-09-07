@@ -6,7 +6,9 @@ The app targets iOS, is built with Expo and React Native, and is distributed as 
 
 ## Status
 
-Stage 0. The pipeline and the widget install spike. No product code yet.
+Stage 1 schema work is under review. DATA-001 is reopened to fix default soft-delete reads and SQL money bounds. Zod validation and Zustand UI state are specified for upcoming implementation in [State and validation](docs/state-and-validation.md).
+
+The agreed navigation, UI, and test stack is recorded in [App stack and testing](docs/app-stack-and-testing.md). Setup tasks track Expo Router, NativeWind with Tailwind Variants, Reanimated, and Jest with React Native Testing Library. Hermes remains the default engine; Maestro will run on demand in macOS CI.
 
 A sideloaded IPA can drive a home screen widget on a free Apple account. **Sideload with iloader.** AltStore and SideStore do not register the App Group, so the widget cannot work under them. The app also resolves its App Group at runtime, because every sideloader rewrites the identifier and nothing rewrites the Info.plist key that expo-widgets reads. See [the result document](docs/build/widget-sideload-result.md).
 
@@ -16,10 +18,13 @@ You need Node. This machine uses `nub`, which bundles its own Node and provides 
 
 ```bash
 npm install
+npm test
 npm run typecheck
 ```
 
 You cannot build for iOS locally. Push, and the `iOS unsigned IPA` workflow builds on a macOS runner and uploads the IPA as an artifact. The widget extension is excluded until stage 6; dispatch the workflow with the `widget` input to build one.
+
+The current SQLite tests run locally on Linux. BUILD-002 adds Jest and component tests to that fast loop. BUILD-003 adds a separate iOS Simulator build for Maestro on demand and before releases, without adding it to every push.
 
 ## Layout
 
@@ -27,6 +32,8 @@ You cannot build for iOS locally. Push, and the `iOS unsigned IPA` workflow buil
 App.tsx                     stage 0 spike screen
 widgets/                    the home screen widget component
 src/budget/snapshot.ts      the snapshot contract every surface reads
+docs/state-and-validation.md data ownership and validation boundaries
+docs/DESIGN.md              the product design language
 docs/spec/                  the settled product contract
 docs/build/                 pipeline and sideload documentation
 .tasks/                     task files, validated by taskroot
@@ -35,7 +42,7 @@ docs/build/                 pipeline and sideload documentation
 
 ## Working on this
 
-Read `AGENTS.md` before changing code and `CONTEXT.md` before naming anything. The money invariants in `AGENTS.md` are not style preferences, and breaking one corrupts data quietly.
+Read `AGENTS.md` before changing code, `CONTEXT.md` before naming anything, and `docs/state-and-validation.md` before adding data or state modules. Read `docs/DESIGN.md` before changing a screen. The money invariants in `AGENTS.md` are not style preferences, and breaking one corrupts data quietly.
 
 Task work goes through `taskroot`:
 

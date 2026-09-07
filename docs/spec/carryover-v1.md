@@ -42,6 +42,8 @@ A second axis records quality as need, want, or regret. It is a fixed enum so it
 
 Participants are local contacts with a nullable user id. Nobody else needs an account for v1, and the nullable field is the hook that lets a real account claim the history later.
 
+The payer lives on the transaction as `payer_contact_id`, nullable, where null means you. Invariant 3 sends the remainder dong to the payer and `settlements.direction` already supports `i_paid_them`, so a payer was assumed before it could be named. It sits on the transaction rather than on a split row because exactly one participant paid, and it is nullable so the common case stays free of a join.
+
 The budget charges your own share only. The rest is a receivable shown beside the discretionary figure and never counted as spending.
 
 Balances per contact are derived from unsettled shares. A settlement is its own record, applied oldest first, so partial payments and netting work by construction. A repayment is never income. Treating it as income double counts and corrupts every comparison between periods.
@@ -58,6 +60,12 @@ Photos are downscaled at capture, kept on device indefinitely, and excluded from
 
 Storage is `expo-sqlite` with Drizzle. Queries are aggregate shaped, and every serious React Native sync engine sits on SQLite, so this keeps the sync option open.
 
+Zod validates inputs at the data boundary, with shared money schemas and a draft/complete discriminated union. SQLite constraints also enforce integer storage, sign, and the safe-integer ceiling, so a write that bypasses application validation cannot store an amount the app cannot read.
+
+Zustand owns UI state shared across screens, including the selected period, filters, and capture UI state not already represented by a route. Expo Router owns navigation history and route parameters. SQLite owns saved ledger data and captured drafts. The app's snapshot store receives the exact artifact written to shared storage and performs no budget arithmetic. TanStack Query is deferred. See [State and validation](../state-and-validation.md) for ownership, failure handling, and task assignments.
+
+Use Expo Router for navigation, stable NativeWind with compatible Tailwind CSS and Tailwind Variants for styling, and Reanimated directly for animation. Keep Hermes bundled with Expo and React Native. Moti is deferred. Jest and React Native Testing Library run locally and in Linux CI; Maestro runs on an iOS Simulator in macOS CI on demand and before releases. Native build checks remain on code pushes, with the widget excluded by default. See [App stack and testing](../app-stack-and-testing.md) for the implementation contract.
+
 v1 ships backup only, as JSON export and restore. Real multi-device sync is the eventual target and is deliberately deferred. JSON rather than a raw database copy because it survives migrations, you can read it when something looks wrong, and it forces a serializable shape for every entity, which is the homework sync will demand anyway.
 
 UUID keys, `updated_at`, and soft deletes exist from the first migration. Retrofitting them later is the expensive path.
@@ -70,14 +78,17 @@ Nine tables. Every one carries a UUID `id`, `created_at`, `updated_at`, and `del
 
 ```
 accounts       name, kind(bank|cash), is_default, opening_balance
-categories     parent_id(null = group), name, sort, kind(spend|reserve)
+categories     parent_id(null = group), name, sort, kind(spend|reserve),
+               is_suggestion
 transactions   account_id, direction(expense|income|adjustment|transfer),
                amount(int VND, always positive),
                category_id(leaf; null for income/adjustment),
                quality(need|want|regret|null),
-               occurred_at, status(draft|complete), photo_key, note
+               payer_contact_id(nullable; null = you),
+               occurred_at, status(draft|complete), photo_key, note,
+               source_label(nullable; for income)
 contacts       name, user_id(nullable)
-splits         transaction_id, contact_id, share_amount
+splits         transaction_id, contact_id(nullable; null = you), share_amount
 settlements    contact_id, amount, occurred_at,
                direction(they_paid_me|i_paid_them), note
 commitments    name, amount, due_day(1-31), category_id, active
@@ -134,9 +145,9 @@ Each stage depends on the one above it. Weeks assume roughly 10 to 15 hours each
 
 Stage 0, half a day. Repo, Expo app, and CI producing an unsigned IPA on the first commit, plus the widget install spike.
 
-Stage 1, weeks 1 to 4. Schema and migrations, accounts, the two-level category editor with the starter seed, transaction CRUD, and the list screen.
+Stage 1, weeks 1 to 4. Schema and migrations, shared Zod validation, accounts, the two-level category editor with the starter seed, transaction CRUD, and the list screen with Zustand for shared period and filter state.
 
-Stage 2, weeks 4 to 6. The budget engine as a tested pure function, home screen, commitments, reconcile, and month summary. Start using the app daily here. Real data will change the categories before anything is built on top of them.
+Stage 2, weeks 4 to 6. The budget engine as a tested pure function, snapshot publication to shared storage and Zustand, home screen, commitments, reconcile, and month summary. Start using the app daily here. Real data will change the categories before anything is built on top of them.
 
 Stage 3, weeks 6 to 8. Camera, draft creation, photo downscaling, draft inbox, fill-in screen, and the daily local notification.
 
