@@ -1,7 +1,7 @@
 ---
 id: "DATA-004"
 title: "Transaction CRUD with draft and complete as one type"
-status: Done
+status: In Progress
 priority: "High"
 type: "Feature"
 milestone: "0.2.0"
@@ -17,6 +17,8 @@ last_updated: 2026-09-07
 A draft and a complete transaction share one table and one type, separated by `status`. Model them as a discriminated union, not a bag of optional fields, so code that reads an amount cannot compile against a draft that has none.
 
 Define the domain union with Zod and infer its TypeScript type. Validate create, edit, and completion through the same data boundary, using the shared money schemas from DATA-001. For edits, validate the resulting transaction before writing. Screens reuse these schemas for feedback; database constraints and checks for an active leaf remain in the data layer. Follow `docs/state-and-validation.md`.
+
+Reject stale writes so overlapping edits cannot restore an older amount or draft status. An edit that keeps an existing category reference can still change other historical fields after that category is deleted.
 
 Every transaction write that supplies a category must call DATA-003's active-leaf validator. DATA-003 owns the category relationship check; this task owns using it for transaction create, edit, and completion.
 
@@ -36,4 +38,6 @@ Deletes are soft. History stays freely editable, which is only safe because conf
 - [x] `payer_contact_id` round-trips, and a null reads back as you.
 - [x] Delete is a soft delete and the row reads back as absent from normal queries.
 - [x] `tests/` covers create, edit, complete a draft, and soft delete.
-- [x] Tests reject invalid create, edit, and completion inputs without changing the stored row. Blank or omitted draft amounts stay null, and fractional, zero, negative, or unsafe amounts are refused without rounding.
+- [ ] Tests reject invalid create, edit, and completion inputs without changing the stored row. Blank or omitted draft amounts stay null, and malformed, fractional, zero, negative, or unsafe amounts produce Zod validation failures without throwing outside Zod, rounding, or truncating.
+- [ ] Overlapping edits detect a stale write before it can restore an older amount or draft status.
+- [ ] Editing fields other than the category preserves a deleted historical category reference.
