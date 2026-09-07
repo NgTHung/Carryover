@@ -1,7 +1,7 @@
 ---
 id: "DATA-004"
 title: "Transaction CRUD with draft and complete as one type"
-status: In Progress
+status: Done
 priority: "High"
 type: "Feature"
 milestone: "0.2.0"
@@ -28,12 +28,12 @@ Deletes are soft. History stays freely editable, which is only safe because conf
 
 ## Acceptance Criteria
 
-- [ ] Draft and complete are one Zod discriminated union on `status`, with an inferred TypeScript type and a required amount on the complete variant.
-- [ ] A complete transaction requires an amount; a complete expense also requires a leaf category. A draft requires neither, and income has no category.
-- [ ] Amounts are positive integers and direction carries the sign, checked by a test per direction.
-- [ ] Income stores an optional source label and no category.
-- [ ] Transaction create, edit, and completion use DATA-003's active-leaf validator and reject missing, deleted, or group category IDs without changing the stored transaction.
-- [ ] `payer_contact_id` round-trips, and a null reads back as you.
-- [ ] Delete is a soft delete and the row reads back as absent from normal queries.
-- [ ] `tests/` covers create, edit, complete a draft, and soft delete.
-- [ ] Tests reject invalid create, edit, and completion inputs without changing the stored row. Blank or omitted draft amounts stay null, and fractional, zero, negative, or unsafe amounts are refused without rounding.
+- [x] Draft and complete are one Zod discriminated union on `status`, with an inferred TypeScript type and a required amount on the complete variant.
+- [x] A complete transaction requires an amount; a complete expense also requires a leaf category. A draft requires neither, and income has no category.
+- [x] Amounts are positive integers and direction carries the sign, checked by a test per direction.
+- [x] Income stores an optional source label and no category.
+- [x] Transaction create, edit, and completion use DATA-003's active-leaf validator and reject missing, deleted, or group category IDs without changing the stored transaction.
+- [x] `payer_contact_id` round-trips, and a null reads back as you.
+- [x] Delete is a soft delete and the row reads back as absent from normal queries.
+- [x] `tests/` covers create, edit, complete a draft, and soft delete.
+- [x] Tests reject invalid create, edit, and completion inputs without changing the stored row. Blank or omitted draft amounts stay null, and fractional, zero, negative, or unsafe amounts are refused without rounding.
