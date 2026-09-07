@@ -20,6 +20,9 @@ const positiveVndAmountTextSchema = z
   .trim()
   .regex(/^\d+$/, 'amount must contain whole dong only')
   .superRefine((value, context) => {
+    if (!/^\d+$/.test(value)) {
+      return;
+    }
     const amount = BigInt(value);
     if (amount <= 0n) {
       context.addIssue({

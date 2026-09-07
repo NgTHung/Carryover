@@ -127,6 +127,13 @@ test('amount input rejects zero, negative, fractional, and unsafe values without
   assert.equal(positiveVndInputSchema.parse((MAX_VND_AMOUNT).toString()), MAX_VND_AMOUNT);
 });
 
+test('malformed amount text returns Zod validation failures', () => {
+  for (const value of ['12.5', '-1', '1,000', 'abc']) {
+    assert.equal(positiveVndInputSchema.safeParse(value).success, false);
+    assert.equal(draftVndInputSchema.safeParse(value).success, false);
+  }
+});
+
 test('income, adjustment, and transfer cannot carry a category', () => {
   for (const direction of ['income', 'adjustment', 'transfer'] as const) {
     assert.throws(() =>
