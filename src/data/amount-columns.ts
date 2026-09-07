@@ -7,9 +7,9 @@
 import { customType } from 'drizzle-orm/sqlite-core';
 
 import {
-  assertNonNegativeVndAmount,
-  assertPositiveVndAmount,
-} from '../money/currency';
+  nonNegativeVndAmountSchema,
+  positiveVndAmountSchema,
+} from './money-validation';
 
 type VndCustomType = {
   data: number;
@@ -18,14 +18,14 @@ type VndCustomType = {
 
 const positiveVndColumn = customType<VndCustomType>({
   dataType: () => 'integer',
-  toDriver: (value) => assertPositiveVndAmount(value),
-  fromDriver: (value) => assertPositiveVndAmount(value),
+  toDriver: (value) => positiveVndAmountSchema.parse(value),
+  fromDriver: (value) => positiveVndAmountSchema.parse(value),
 });
 
 const nonNegativeVndColumn = customType<VndCustomType>({
   dataType: () => 'integer',
-  toDriver: (value) => assertNonNegativeVndAmount(value),
-  fromDriver: (value) => assertNonNegativeVndAmount(value),
+  toDriver: (value) => nonNegativeVndAmountSchema.parse(value),
+  fromDriver: (value) => nonNegativeVndAmountSchema.parse(value),
 });
 
 export function vndAmount(name?: string) {

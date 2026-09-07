@@ -7,7 +7,8 @@
  */
 export const CURRENCY_EXPONENT = 0;
 
-const CURRENCY_SCALE = 10 ** CURRENCY_EXPONENT;
+export const CURRENCY_SCALE = 10 ** CURRENCY_EXPONENT;
+export const MAX_VND_AMOUNT = Number.MAX_SAFE_INTEGER;
 
 export function assertVndInteger(value: number, field = 'amount'): number {
   if (!Number.isSafeInteger(value)) {

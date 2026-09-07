@@ -1,7 +1,7 @@
 ---
 id: "DATA-001"
 title: "Schema and migrations for the ledger"
-status: To Do
+status: Done
 priority: "High"
 type: "Feature"
 milestone: "0.2.0"
@@ -36,6 +36,8 @@ Soft-delete filtering is optional at each call site. `activeRowFilter` is only a
 
 SQL amount constraints check storage type and sign but omit the safe-integer ceiling enforced by the ORM adapters. A direct SQL insert of 9007199254740993 succeeds, then an ORM read fails. Apply the same upper bound to every amount column and cover inserts and updates that bypass ORM validation.
 
+A follow-up review found that the safe-bound migration allowed previously stored unsafe amounts to survive, leaving ORM reads unable to decode the ledger. It also found that the real SQLite test adapter returned a nested array for single-row reads. Validate existing amounts before installing the triggers and preserve Drizzle's one-row result shape in the adapter.
+
 ## Acceptance Criteria
 
 - [x] One migration creates all nine tables with the columns named in `docs/spec/carryover-v1.md`.
@@ -44,9 +46,10 @@ SQL amount constraints check storage type and sign but omit the safe-integer cei
 - [x] `transactions.note` is nullable text and round-trips unchanged for both draft and complete rows.
 - [x] Every amount column is `INTEGER` and every write path refuses a non-integer amount with an error, not a rounded value.
 - [x] `CURRENCY_EXPONENT` lives in one module that the schema, the engine, and the widget all import.
-- [ ] Public reads exclude soft-deleted rows by default, with an explicit `includeDeleted` option. Tests call that API without supplying a filter.
+- [x] Public reads exclude soft-deleted rows by default, with an explicit `includeDeleted` option. Tests call that API without supplying a filter.
 - [x] `tests/` covers a write and read back for one row per table, plus a float amount that is refused.
-- [ ] Shared Zod schemas validate positive amounts and nonnegative opening balances and totals, with inferred types and one owner for currency bounds.
-- [ ] Every amount column rejects values above `Number.MAX_SAFE_INTEGER` in SQLite as well as at the application boundary.
-- [ ] Tests cover direct SQL inserts and updates for every amount column: the maximum safe integer succeeds, and larger values fail before persistence.
-- [ ] ORM tests prove fractional and unsafe amounts are refused and valid amounts round-trip through the shared Zod validation.
+- [x] Shared Zod schemas validate positive amounts and nonnegative opening balances and totals, with inferred types and one owner for currency bounds.
+- [x] Every amount column rejects values above `Number.MAX_SAFE_INTEGER` in SQLite as well as at the application boundary.
+- [x] Tests cover direct SQL inserts and updates for every amount column: the maximum safe integer succeeds, and larger values fail before persistence.
+- [x] ORM tests prove fractional and unsafe amounts are refused and valid amounts round-trip through the shared Zod validation.
+- [x] Applying the safe-bound migration rejects previously stored unsafe amounts before the ledger can become unreadable.

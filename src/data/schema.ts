@@ -14,7 +14,7 @@ import {
 } from 'drizzle-orm/sqlite-core';
 import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
 
-import { CURRENCY_EXPONENT } from '../money/currency';
+import { CURRENCY_EXPONENT, MAX_VND_AMOUNT } from '../money/currency';
 import { nonNegativeVndAmount, vndAmount } from './amount-columns';
 
 const UUID_DEFAULT = sql`(
@@ -30,6 +30,8 @@ const UUID_DEFAULT = sql`(
 
 const nowMilliseconds = () =>
   sql`(cast((julianday('now') - 2440587.5) * 86400000 as integer))`;
+
+const maxVndSql = sql.raw(MAX_VND_AMOUNT.toString());
 
 function commonColumns() {
   return {
@@ -50,8 +52,8 @@ function integerVndCheck(
   nullable: boolean
 ) {
   const value = nullable
-    ? sql`${column} IS NULL OR typeof(${column}) = 'integer'`
-    : sql`typeof(${column}) = 'integer'`;
+    ? sql`${column} IS NULL OR (typeof(${column}) = 'integer' AND ${column} <= ${maxVndSql})`
+    : sql`typeof(${column}) = 'integer' AND ${column} <= ${maxVndSql}`;
   return check(
     `${tableName}_${column.name}_integer_vnd_e${CURRENCY_EXPONENT}`,
     value
@@ -64,15 +66,15 @@ function positiveVndCheck(
   nullable: boolean
 ) {
   const value = nullable
-    ? sql`${column} IS NULL OR (typeof(${column}) = 'integer' AND ${column} > 0)`
-    : sql`typeof(${column}) = 'integer' AND ${column} > 0`;
+    ? sql`${column} IS NULL OR (typeof(${column}) = 'integer' AND ${column} > 0 AND ${column} <= ${maxVndSql})`
+    : sql`typeof(${column}) = 'integer' AND ${column} > 0 AND ${column} <= ${maxVndSql}`;
   return check(`${tableName}_${column.name}_positive_vnd`, value);
 }
 
 function nonNegativeVndCheck(tableName: string, column: AnySQLiteColumn) {
   return check(
     `${tableName}_${column.name}_non_negative_vnd`,
-    sql`typeof(${column}) = 'integer' AND ${column} >= 0`
+    sql`typeof(${column}) = 'integer' AND ${column} >= 0 AND ${column} <= ${maxVndSql}`
   );
 }
 

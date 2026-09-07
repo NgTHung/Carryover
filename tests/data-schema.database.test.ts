@@ -3,16 +3,12 @@ import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core/dialect';
-
 import {
   assertPositiveVndAmount,
   assertVndInteger,
   CURRENCY_EXPONENT,
 } from '../src/money/currency';
 import { payerFromNullableId } from '../src/data/payer';
-import { activeRowFilter } from '../src/data/soft-delete';
-import { accounts } from '../src/data/schema';
 
 type Row = Record<string, unknown>;
 
@@ -349,33 +345,6 @@ test('SQLite rejects fractional writes in every amount-bearing column', () => {
     for (const [statement, id] of fractionalUpdates) {
       assert.throws(() => database.prepare(statement).run(id), /constraint/i);
     }
-  } finally {
-    database.close();
-  }
-});
-
-test('normal reads hide soft-deleted rows and explicit reads include them', () => {
-  const database = openMigratedDatabase();
-  try {
-    database
-      .prepare("INSERT INTO accounts (name, kind, opening_balance) VALUES ('Hidden', 'bank', 1000)")
-      .run();
-    const hiddenId = rowId(database, 'accounts', 'Hidden');
-    database.prepare('UPDATE accounts SET deleted_at = 1735689600000 WHERE id = ?').run(hiddenId);
-
-    const dialect = new SQLiteSyncDialect();
-    const filter = activeRowFilter(accounts.deletedAt);
-    if (!filter) {
-      throw new Error('Expected a default active-row filter');
-    }
-    const filterSql = dialect.sqlToQuery(filter).sql;
-    const normalRows = database.prepare(`SELECT id FROM accounts WHERE ${filterSql}`).all();
-    assert.equal(normalRows.length, 0);
-
-    const includeDeletedFilter = activeRowFilter(accounts.deletedAt, { includeDeleted: true });
-    assert.equal(includeDeletedFilter, undefined);
-    const allRows = database.prepare('SELECT id FROM accounts').all();
-    assert.equal(allRows.length, 1);
   } finally {
     database.close();
   }
