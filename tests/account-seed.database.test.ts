@@ -1,6 +1,7 @@
 import { strict as assert } from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 
 import { openMigratedDatabase } from './support/sqlite-proxy';
 
@@ -16,9 +17,22 @@ const seedMigration = readFileSync(
   'utf8'
 );
 
+function openDatabaseBeforeAccountSeed(): DatabaseSync {
+  const database = new DatabaseSync(':memory:');
+  database.exec('PRAGMA foreign_keys = ON;');
+  for (const migration of ['0000_initial-ledger.sql', '0001_safe-amount-bounds.sql']) {
+    database.exec(readFileSync(resolve(process.cwd(), 'drizzle', migration), 'utf8'));
+  }
+  return database;
+}
+
 test('the first-run migration seeds bank and cash with bank as default', () => {
-  const database = openMigratedDatabase();
+  const database = openDatabaseBeforeAccountSeed();
   try {
+    for (const statement of seedMigration.split('--> statement-breakpoint')) {
+      database.prepare(statement).run();
+    }
+
     const accounts = database
       .prepare(
         'SELECT name, kind, is_default, opening_balance FROM accounts WHERE deleted_at IS NULL ORDER BY kind'
