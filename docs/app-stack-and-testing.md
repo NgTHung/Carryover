@@ -32,16 +32,25 @@ See [State and validation](state-and-validation.md) for ledger ownership, Zod sc
 
 ## Local checks
 
-The current npm test command runs six node:test cases through tsx against real in-memory SQLite. BUILD-002 replaces the runner with Jest while preserving those assertions. Until that task lands, the current commands remain:
+Jest runs pure logic, real SQLite, and React Native component projects. The database project keeps six regression cases against real in-memory SQLite. Fast checks require Node 22.13 or newer, and they do not require Xcode or a native build.
 
 ```bash
 npm test
+npm run test:logic
+npm run test:database
+npm run test:component
+npm run test:watch
 npm run typecheck
 ```
 
-Use a Node test environment for pure money functions, validation, stores, and database integration. Use jest-expo with @testing-library/react-native for component interactions, route behavior, and loading or error states. Keep all tests in tests/, outside src/app.
+Use a Node test environment for pure money functions, validation, stores, and database integration. Use the jest-expo preset with @testing-library/react-native for component interactions, route behavior, and loading or error states. Keep all tests in tests/, outside src/app.
 
-Database integration tests apply the actual migrations to real SQLite. Component tests may mock native edges, but mocks cannot prove SQL constraints, migration behavior, or native rendering. Typechecking and the fast suites require no Xcode, simulator, device, or native build. Document focused and watch commands when BUILD-002 lands.
+Database integration tests apply the actual migrations to real SQLite. Component tests mock native edges only at the component boundary, and those mocks cannot prove SQL constraints or migration behavior. Use Jest project selection and test-name matching for focused checks:
+
+```bash
+npm test -- --selectProjects database -t "fractional writes"
+npm run test:watch
+```
 
 ## CI and release checks
 

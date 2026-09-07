@@ -1,7 +1,7 @@
 import { strict as assert } from 'node:assert';
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
-import { test } from 'node:test';
+import { resolve } from 'node:path';
 
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core/dialect';
 
@@ -17,7 +17,7 @@ import { accounts } from '../src/data/schema';
 type Row = Record<string, unknown>;
 
 const migrationSql = readFileSync(
-  new URL('../drizzle/0000_initial-ledger.sql', import.meta.url),
+  resolve(process.cwd(), 'drizzle/0000_initial-ledger.sql'),
   'utf8'
 );
 
@@ -73,7 +73,7 @@ test('migration creates the nine tables and their shared columns', () => {
       .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'")
       .all() as Row[];
     assert.deepEqual(
-      tables.map((row) => row.name).sort(),
+      [...tables.map((row) => row.name)].sort(),
       [...tableNames].sort()
     );
 
@@ -81,9 +81,9 @@ test('migration creates the nine tables and their shared columns', () => {
       const columns = database.prepare(`PRAGMA table_info(${table})`).all() as Row[];
       const names = columns.map((column) => column.name);
       assert.deepEqual(
-        names.filter((name) =>
+        [...names.filter((name) =>
           ['id', 'created_at', 'updated_at', 'deleted_at'].includes(String(name))
-        ),
+        )],
         ['id', 'created_at', 'updated_at', 'deleted_at']
       );
       for (const columnName of ['id', 'created_at', 'updated_at', 'deleted_at']) {

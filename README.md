@@ -14,7 +14,7 @@ A sideloaded IPA can drive a home screen widget on a free Apple account. **Sidel
 
 ## Getting started
 
-You need Node. This machine uses `nub`, which bundles its own Node and provides npm shims.
+You need Node 22.13 or newer. This machine uses `nub`, which bundles its own Node and provides npm shims.
 
 ```bash
 npm install
@@ -24,7 +24,7 @@ npm run typecheck
 
 You cannot build for iOS locally. Push, and the `iOS unsigned IPA` workflow builds on a macOS runner and uploads the IPA as an artifact. The widget extension is excluded until stage 6; dispatch the workflow with the `widget` input to build one.
 
-The current SQLite tests run locally on Linux. BUILD-002 adds Jest and component tests to that fast loop. BUILD-003 adds a separate iOS Simulator build for Maestro on demand and before releases, without adding it to every push.
+Jest logic, real SQLite, and component tests run locally on Linux. BUILD-003 adds a separate iOS Simulator build for Maestro on demand and before releases, without adding it to every push.
 
 ## Layout
 
