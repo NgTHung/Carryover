@@ -19,7 +19,11 @@ import {
 } from '@expo/ui/swift-ui/modifiers';
 import { createWidget, type WidgetEnvironment } from 'expo-widgets';
 
-import { FIXTURE_SNAPSHOT, formatVndCompact } from '../src/budget/snapshot';
+import { FIXTURE_SNAPSHOT } from '../src/budget/snapshot';
+import {
+  CURRENCY_EXPONENT,
+  formatVndCompact,
+} from '../src/money/currency';
 
 const GROUND = '#0D1614';
 const INK = '#E4EAE7';
@@ -57,7 +61,7 @@ const CarryoverWidgetView = (
       <Text
         modifiers={[font({ size: 30, weight: 'bold' }), foregroundStyle(INK)]}
       >
-        {formatVndCompact(perDay)}
+        {formatVndCompact(perDay, CURRENCY_EXPONENT)}
       </Text>
       <Text modifiers={[font({ size: 12 }), foregroundStyle(MUTED)]}>
         {`${runwayDays}d runway`}

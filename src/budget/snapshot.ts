@@ -1,3 +1,15 @@
+import {
+  CURRENCY_EXPONENT,
+  formatVnd,
+  formatVndCompact,
+} from '../money/currency';
+
+export {
+  CURRENCY_EXPONENT,
+  formatVnd,
+  formatVndCompact,
+} from '../money/currency';
+
 /**
  * The budget snapshot every surface reads.
  *
@@ -9,12 +21,6 @@
  * widget install; app:BUDGET-001 supplies the real implementation behind this
  * same type.
  */
-
-/**
- * VND has no minor unit, so an amount is a whole dong. Naming the exponent
- * keeps the assumption visible instead of scattering bare 1s and 100s.
- */
-export const CURRENCY_EXPONENT = 0;
 
 export type BudgetSnapshot = {
   balanceTotal: number;
@@ -55,28 +61,3 @@ export const FIXTURE_SNAPSHOT: BudgetSnapshot = {
   unloggedDrafts: 2,
   updatedAt: new Date(0).toISOString(),
 };
-
-/**
- * Amounts are integers, so formatting is grouping plus a symbol. Values are
- * rounded to whole dong because a fractional dong cannot exist.
- */
-export function formatVnd(amount: number): string {
-  const grouped = Math.round(amount)
-    .toString()
-    .replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  return `₫${grouped}`;
-}
-
-/**
- * Short form for small surfaces where the full figure does not fit.
- */
-export function formatVndCompact(amount: number): string {
-  const rounded = Math.round(amount);
-  if (Math.abs(rounded) >= 1_000_000) {
-    return `₫${(rounded / 1_000_000).toFixed(1).replace(/\.0$/, '')}tr`;
-  }
-  if (Math.abs(rounded) >= 1_000) {
-    return `₫${Math.round(rounded / 1_000)}k`;
-  }
-  return `₫${rounded}`;
-}
