@@ -9,7 +9,7 @@ depends_on: ["DATA-001", "DATA-003"]
 risk: "High"
 impact: "The transactions table is the ledger. Its shape decides whether a draft can ever be mistaken for a complete transaction, which is what turns an unknown into a silent zero."
 tags: ["data", "transactions"]
-last_updated: 2026-09-06
+last_updated: 2026-09-07
 ---
 
 ## Summary
@@ -17,6 +17,8 @@ last_updated: 2026-09-06
 A draft and a complete transaction share one table and one type, separated by `status`. Model them as a discriminated union, not a bag of optional fields, so code that reads an amount cannot compile against a draft that has none.
 
 Define the domain union with Zod and infer its TypeScript type. Validate create, edit, and completion through the same data boundary, using the shared money schemas from DATA-001. For edits, validate the resulting transaction before writing. Screens reuse these schemas for feedback; database constraints and checks for an active leaf remain in the data layer. Follow `docs/state-and-validation.md`.
+
+Every transaction write that supplies a category must call DATA-003's active-leaf validator. DATA-003 owns the category relationship check; this task owns using it for transaction create, edit, and completion.
 
 Direction is `expense`, `income`, `adjustment`, or `transfer`, and it carries the sign. The amount is always positive. Income has no category and a free-text source label instead, because categorising income doubles the taxonomy for almost no insight.
 
@@ -30,6 +32,7 @@ Deletes are soft. History stays freely editable, which is only safe because conf
 - [ ] A complete transaction requires an amount; a complete expense also requires a leaf category. A draft requires neither, and income has no category.
 - [ ] Amounts are positive integers and direction carries the sign, checked by a test per direction.
 - [ ] Income stores an optional source label and no category.
+- [ ] Transaction create, edit, and completion use DATA-003's active-leaf validator and reject missing, deleted, or group category IDs without changing the stored transaction.
 - [ ] `payer_contact_id` round-trips, and a null reads back as you.
 - [ ] Delete is a soft delete and the row reads back as absent from normal queries.
 - [ ] `tests/` covers create, edit, complete a draft, and soft delete.
