@@ -1,7 +1,7 @@
 ---
 id: "DATA-002"
 title: "Accounts, transfers, and the bank default"
-status: To Do
+status: In Progress
 priority: "Medium"
 type: "Feature"
 milestone: "0.2.0"
@@ -9,7 +9,7 @@ depends_on: ["DATA-001"]
 risk: "Medium"
 impact: "Account balances feed the carryover balance, which feeds every figure on the home screen and the widget."
 tags: ["data", "accounts"]
-last_updated: 2026-09-06
+last_updated: 2026-09-07
 ---
 
 ## Summary
