@@ -145,6 +145,32 @@ test('category writes reject missing, deleted, and group IDs before changing the
   }
 });
 
+test('invalid create amounts do not add a row', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const proxy = createProxyDatabase(database);
+    const data = createTransactionData(proxy, createCategoryData(proxy));
+    const before = (database.prepare('SELECT COUNT(*) AS count FROM transactions').get() as { count: number }).count;
+
+    for (const amount of [0, -1, 12.5, (BigInt(Number.MAX_SAFE_INTEGER) + 1n).toString()]) {
+      await assert.rejects(
+        data.createTransaction({
+          accountId: bankId(database),
+          direction: 'expense',
+          status: 'draft',
+          amount,
+          occurredAt,
+        })
+      );
+    }
+
+    const after = (database.prepare('SELECT COUNT(*) AS count FROM transactions').get() as { count: number }).count;
+    assert.equal(after, before);
+  } finally {
+    database.close();
+  }
+});
+
 test('normal transaction reads hide a soft-deleted row', async () => {
   const database = openMigratedDatabase();
   try {
