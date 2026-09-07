@@ -122,6 +122,33 @@ test('transfers derive both account balances without changing spending or income
   }
 });
 
+test('an expense paid by a contact does not change your account balance', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const bankId = accountId(database, 'Bank');
+    const data = createAccountData(createProxyDatabase(database));
+    await data.updateOpeningBalance({ accountId: bankId, openingBalance: 1_000_000 });
+    const contact = database
+      .prepare("INSERT INTO contacts (name) VALUES ('Lan') RETURNING id")
+      .get() as IdRow;
+    if (typeof contact.id !== 'string') {
+      throw new Error('Expected contact id');
+    }
+
+    database
+      .prepare(
+        "INSERT INTO transactions (account_id, direction, amount, payer_contact_id, occurred_at, status) VALUES (?, 'expense', 200000, ?, ?, 'complete')"
+      )
+      .run(bankId, contact.id, occurredAt.getTime());
+
+    const balances = await data.readAccountBalances();
+    const bank = balances.find((account) => account.accountId === bankId);
+    assert.equal(bank?.balance, 1_000_000);
+  } finally {
+    database.close();
+  }
+});
+
 test('invalid or inactive transfer accounts do not write a transfer', async () => {
   const database = openMigratedDatabase();
   try {

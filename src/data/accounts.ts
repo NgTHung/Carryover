@@ -127,11 +127,26 @@ export function createAccountData<TResultKind extends 'sync' | 'async'>(
           accountId: transactions.accountId,
           direction: transactions.direction,
           amount: transactions.amount,
+          payerContactId: transactions.payerContactId,
         })
         .from(transactions)
         .where(activeRowFilter(transactions.deletedAt))
         .all();
-      const balanceTransactions: BalanceTransaction[] = transactionRows;
+      const balanceTransactions: BalanceTransaction[] = transactionRows.map(
+        (transaction) => {
+          const base = {
+            accountId: transaction.accountId,
+            amount: transaction.amount,
+          };
+          return transaction.direction === 'expense'
+            ? {
+                ...base,
+                direction: transaction.direction,
+                payerContactId: transaction.payerContactId,
+              }
+            : { ...base, direction: transaction.direction };
+        }
+      );
 
       const transferRows = await db
         .select({

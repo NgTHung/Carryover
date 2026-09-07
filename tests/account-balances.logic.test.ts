@@ -12,9 +12,25 @@ test('account balances derive opening balance, transactions, and transfers', () 
       { accountId: cashId, openingBalance: 100_000 },
     ],
     transactions: [
-      { accountId: bankId, direction: 'expense', amount: 250_000 },
+      {
+        accountId: bankId,
+        direction: 'expense',
+        amount: 250_000,
+        payerContactId: null,
+      },
+      {
+        accountId: bankId,
+        direction: 'expense',
+        amount: 600_000,
+        payerContactId: '33333333-3333-4333-8333-333333333333',
+      },
       { accountId: bankId, direction: 'income', amount: 50_000 },
-      { accountId: cashId, direction: 'expense', amount: null },
+      {
+        accountId: cashId,
+        direction: 'expense',
+        amount: null,
+        payerContactId: null,
+      },
       { accountId: bankId, direction: 'transfer', amount: 500_000 },
     ],
     transfers: [
@@ -35,7 +51,12 @@ test('transfer arithmetic preserves the combined balance and allows overdraft ba
       { accountId: cashId, openingBalance: 0 },
     ],
     transactions: [
-      { accountId: bankId, direction: 'expense', amount: 150 },
+      {
+        accountId: bankId,
+        direction: 'expense',
+        amount: 150,
+        payerContactId: null,
+      },
     ],
     transfers: [
       { fromAccountId: bankId, toAccountId: cashId, amount: 25 },
