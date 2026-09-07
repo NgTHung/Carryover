@@ -16,6 +16,9 @@ export function openMigratedDatabase(): DatabaseSync {
   database.exec(
     readFileSync(resolve(process.cwd(), 'drizzle/0001_safe-amount-bounds.sql'), 'utf8')
   );
+  database.exec(
+    readFileSync(resolve(process.cwd(), 'drizzle/0002_seed-accounts.sql'), 'utf8')
+  );
   return database;
 }
 

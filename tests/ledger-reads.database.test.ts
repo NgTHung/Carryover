@@ -18,11 +18,11 @@ test('public ledger reads hide deleted rows unless explicitly included', async (
 
     const reads = createLedgerReads(createProxyDatabase(database));
     const activeRows = await reads.accounts().all();
-    assert.equal(activeRows.length, 1);
-    assert.equal(String(activeRows[0]?.name), 'Visible');
+    const activeNames = activeRows.map((row) => String(row.name));
+    assert.equal(activeNames.sort().join('|'), 'Bank|Cash|Visible');
 
     const allRows = await reads.accounts({ includeDeleted: true }).all();
-    assert.equal(allRows.length, 2);
+    assert.equal(allRows.length, 4);
     const allNames = allRows.map((row) => String(row.name));
     assert.ok(allNames.includes('Hidden'));
     assert.ok(allNames.includes('Visible'));

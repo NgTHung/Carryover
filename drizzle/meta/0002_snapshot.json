@@ -1,0 +1,932 @@
+{
+  "id": "45b554de-9c5f-4a8a-8be1-c4ac05580cd8",
+  "prevId": "c8c8dc8f-f31a-4e52-b99d-6285f5452ac4",
+  "version": "6",
+  "dialect": "sqlite",
+  "tables": {
+    "accounts": {
+      "name": "accounts",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(\n  lower(\n    hex(randomblob(4)) || '-' ||\n    hex(randomblob(2)) || '-4' ||\n    substr(hex(randomblob(2)), 2) || '-' ||\n    substr('89ab', (random() & 3) + 1, 1) ||\n    substr(hex(randomblob(2)), 2) || '-' ||\n    hex(randomblob(6))\n  )\n)"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast((julianday('now') - 2440587.5) * 86400000 as integer))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast((julianday('now') - 2440587.5) * 86400000 as integer))"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "is_default": {
+          "name": "is_default",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "opening_balance": {
+          "name": "opening_balance",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "accounts_opening_balance_non_negative_vnd": {
+          "name": "accounts_opening_balance_non_negative_vnd",
+          "value": "typeof(\"accounts\".\"opening_balance\") = 'integer' AND \"accounts\".\"opening_balance\" >= 0 AND \"accounts\".\"opening_balance\" <= 9007199254740991"
+        },
+        "accounts_kind_value": {
+          "name": "accounts_kind_value",
+          "value": "\"accounts\".\"kind\" IN ('bank', 'cash')"
+        }
+      }
+    },
+    "categories": {
+      "name": "categories",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(\n  lower(\n    hex(randomblob(4)) || '-' ||\n    hex(randomblob(2)) || '-4' ||\n    substr(hex(randomblob(2)), 2) || '-' ||\n    substr('89ab', (random() & 3) + 1, 1) ||\n    substr(hex(randomblob(2)), 2) || '-' ||\n    hex(randomblob(6))\n  )\n)"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast((julianday('now') - 2440587.5) * 86400000 as integer))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast((julianday('now') - 2440587.5) * 86400000 as integer))"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "parent_id": {
+          "name": "parent_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "sort": {
+          "name": "sort",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "is_suggestion": {
+          "name": "is_suggestion",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "categories_parent_id_categories_id_fk": {
+          "name": "categories_parent_id_categories_id_fk",
+          "tableFrom": "categories",
+          "columnsFrom": [
+            "parent_id"
+          ],
+          "tableTo": "categories",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "categories_sort_integer": {
+          "name": "categories_sort_integer",
+          "value": "typeof(\"categories\".\"sort\") = 'integer'"
+        },
+        "categories_kind_value": {
+          "name": "categories_kind_value",
+          "value": "\"categories\".\"kind\" IN ('spend', 'reserve')"
+        }
+      }
+    },
+    "commitments": {
+      "name": "commitments",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(\n  lower(\n    hex(randomblob(4)) || '-' ||\n    hex(randomblob(2)) || '-4' ||\n    substr(hex(randomblob(2)), 2) || '-' ||\n    substr('89ab', (random() & 3) + 1, 1) ||\n    substr(hex(randomblob(2)), 2) || '-' ||\n    hex(randomblob(6))\n  )\n)"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast((julianday('now') - 2440587.5) * 86400000 as integer))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast((julianday('now') - 2440587.5) * 86400000 as integer))"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "amount": {
+          "name": "amount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "due_day": {
+          "name": "due_day",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "category_id": {
+          "name": "category_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "active": {
+          "name": "active",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "commitments_category_id_categories_id_fk": {
+          "name": "commitments_category_id_categories_id_fk",
+          "tableFrom": "commitments",
+          "columnsFrom": [
+            "category_id"
+          ],
+          "tableTo": "categories",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "commitments_amount_positive_vnd": {
+          "name": "commitments_amount_positive_vnd",
+          "value": "typeof(\"commitments\".\"amount\") = 'integer' AND \"commitments\".\"amount\" > 0 AND \"commitments\".\"amount\" <= 9007199254740991"
+        },
+        "commitments_due_day_range": {
+          "name": "commitments_due_day_range",
+          "value": "typeof(\"commitments\".\"due_day\") = 'integer' AND \"commitments\".\"due_day\" BETWEEN 1 AND 31"
+        }
+      }
+    },
+    "contacts": {
+      "name": "contacts",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(\n  lower(\n    hex(randomblob(4)) || '-' ||\n    hex(randomblob(2)) || '-4' ||\n    substr(hex(randomblob(2)), 2) || '-' ||\n    substr('89ab', (random() & 3) + 1, 1) ||\n    substr(hex(randomblob(2)), 2) || '-' ||\n    hex(randomblob(6))\n  )\n)"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast((julianday('now') - 2440587.5) * 86400000 as integer))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast((julianday('now') - 2440587.5) * 86400000 as integer))"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "month_config": {
+      "name": "month_config",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(\n  lower(\n    hex(randomblob(4)) || '-' ||\n    hex(randomblob(2)) || '-4' ||\n    substr(hex(randomblob(2)), 2) || '-' ||\n    substr('89ab', (random() & 3) + 1, 1) ||\n    substr(hex(randomblob(2)), 2) || '-' ||\n    hex(randomblob(6))\n  )\n)"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast((julianday('now') - 2440587.5) * 86400000 as integer))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast((julianday('now') - 2440587.5) * 86400000 as integer))"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "period": {
+          "name": "period",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "opening_balance": {
+          "name": "opening_balance",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "income_total": {
+          "name": "income_total",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "reserved_total": {
+          "name": "reserved_total",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "horizon_date": {
+          "name": "horizon_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "month_config_period_unique": {
+          "name": "month_config_period_unique",
+          "columns": [
+            "period"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "month_config_opening_balance_non_negative_vnd": {
+          "name": "month_config_opening_balance_non_negative_vnd",
+          "value": "typeof(\"month_config\".\"opening_balance\") = 'integer' AND \"month_config\".\"opening_balance\" >= 0 AND \"month_config\".\"opening_balance\" <= 9007199254740991"
+        },
+        "month_config_income_total_non_negative_vnd": {
+          "name": "month_config_income_total_non_negative_vnd",
+          "value": "typeof(\"month_config\".\"income_total\") = 'integer' AND \"month_config\".\"income_total\" >= 0 AND \"month_config\".\"income_total\" <= 9007199254740991"
+        },
+        "month_config_reserved_total_non_negative_vnd": {
+          "name": "month_config_reserved_total_non_negative_vnd",
+          "value": "typeof(\"month_config\".\"reserved_total\") = 'integer' AND \"month_config\".\"reserved_total\" >= 0 AND \"month_config\".\"reserved_total\" <= 9007199254740991"
+        }
+      }
+    },
+    "settlements": {
+      "name": "settlements",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(\n  lower(\n    hex(randomblob(4)) || '-' ||\n    hex(randomblob(2)) || '-4' ||\n    substr(hex(randomblob(2)), 2) || '-' ||\n    substr('89ab', (random() & 3) + 1, 1) ||\n    substr(hex(randomblob(2)), 2) || '-' ||\n    hex(randomblob(6))\n  )\n)"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast((julianday('now') - 2440587.5) * 86400000 as integer))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast((julianday('now') - 2440587.5) * 86400000 as integer))"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "contact_id": {
+          "name": "contact_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "amount": {
+          "name": "amount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "direction": {
+          "name": "direction",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "settlements_contact_id_contacts_id_fk": {
+          "name": "settlements_contact_id_contacts_id_fk",
+          "tableFrom": "settlements",
+          "columnsFrom": [
+            "contact_id"
+          ],
+          "tableTo": "contacts",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "settlements_amount_positive_vnd": {
+          "name": "settlements_amount_positive_vnd",
+          "value": "typeof(\"settlements\".\"amount\") = 'integer' AND \"settlements\".\"amount\" > 0 AND \"settlements\".\"amount\" <= 9007199254740991"
+        },
+        "settlements_direction_value": {
+          "name": "settlements_direction_value",
+          "value": "\"settlements\".\"direction\" IN ('they_paid_me', 'i_paid_them')"
+        }
+      }
+    },
+    "splits": {
+      "name": "splits",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(\n  lower(\n    hex(randomblob(4)) || '-' ||\n    hex(randomblob(2)) || '-4' ||\n    substr(hex(randomblob(2)), 2) || '-' ||\n    substr('89ab', (random() & 3) + 1, 1) ||\n    substr(hex(randomblob(2)), 2) || '-' ||\n    hex(randomblob(6))\n  )\n)"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast((julianday('now') - 2440587.5) * 86400000 as integer))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast((julianday('now') - 2440587.5) * 86400000 as integer))"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "transaction_id": {
+          "name": "transaction_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "contact_id": {
+          "name": "contact_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "share_amount": {
+          "name": "share_amount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "splits_transaction_id_transactions_id_fk": {
+          "name": "splits_transaction_id_transactions_id_fk",
+          "tableFrom": "splits",
+          "columnsFrom": [
+            "transaction_id"
+          ],
+          "tableTo": "transactions",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "splits_contact_id_contacts_id_fk": {
+          "name": "splits_contact_id_contacts_id_fk",
+          "tableFrom": "splits",
+          "columnsFrom": [
+            "contact_id"
+          ],
+          "tableTo": "contacts",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "splits_share_amount_positive_vnd": {
+          "name": "splits_share_amount_positive_vnd",
+          "value": "typeof(\"splits\".\"share_amount\") = 'integer' AND \"splits\".\"share_amount\" > 0 AND \"splits\".\"share_amount\" <= 9007199254740991"
+        }
+      }
+    },
+    "transactions": {
+      "name": "transactions",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(\n  lower(\n    hex(randomblob(4)) || '-' ||\n    hex(randomblob(2)) || '-4' ||\n    substr(hex(randomblob(2)), 2) || '-' ||\n    substr('89ab', (random() & 3) + 1, 1) ||\n    substr(hex(randomblob(2)), 2) || '-' ||\n    hex(randomblob(6))\n  )\n)"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast((julianday('now') - 2440587.5) * 86400000 as integer))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast((julianday('now') - 2440587.5) * 86400000 as integer))"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "direction": {
+          "name": "direction",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "amount": {
+          "name": "amount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "category_id": {
+          "name": "category_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "quality": {
+          "name": "quality",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "payer_contact_id": {
+          "name": "payer_contact_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'draft'"
+        },
+        "photo_key": {
+          "name": "photo_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "source_label": {
+          "name": "source_label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "transactions_account_id_accounts_id_fk": {
+          "name": "transactions_account_id_accounts_id_fk",
+          "tableFrom": "transactions",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "tableTo": "accounts",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "transactions_category_id_categories_id_fk": {
+          "name": "transactions_category_id_categories_id_fk",
+          "tableFrom": "transactions",
+          "columnsFrom": [
+            "category_id"
+          ],
+          "tableTo": "categories",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "transactions_payer_contact_id_contacts_id_fk": {
+          "name": "transactions_payer_contact_id_contacts_id_fk",
+          "tableFrom": "transactions",
+          "columnsFrom": [
+            "payer_contact_id"
+          ],
+          "tableTo": "contacts",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "transactions_amount_integer_vnd_e0": {
+          "name": "transactions_amount_integer_vnd_e0",
+          "value": "\"transactions\".\"amount\" IS NULL OR (typeof(\"transactions\".\"amount\") = 'integer' AND \"transactions\".\"amount\" <= 9007199254740991)"
+        },
+        "transactions_amount_positive_vnd": {
+          "name": "transactions_amount_positive_vnd",
+          "value": "\"transactions\".\"amount\" IS NULL OR (typeof(\"transactions\".\"amount\") = 'integer' AND \"transactions\".\"amount\" > 0 AND \"transactions\".\"amount\" <= 9007199254740991)"
+        },
+        "transactions_complete_requires_amount": {
+          "name": "transactions_complete_requires_amount",
+          "value": "\"transactions\".\"status\" <> 'complete' OR \"transactions\".\"amount\" IS NOT NULL"
+        },
+        "transactions_direction_value": {
+          "name": "transactions_direction_value",
+          "value": "\"transactions\".\"direction\" IN ('expense', 'income', 'adjustment', 'transfer')"
+        },
+        "transactions_quality_value": {
+          "name": "transactions_quality_value",
+          "value": "\"transactions\".\"quality\" IS NULL OR \"transactions\".\"quality\" IN ('need', 'want', 'regret')"
+        },
+        "transactions_status_value": {
+          "name": "transactions_status_value",
+          "value": "\"transactions\".\"status\" IN ('draft', 'complete')"
+        }
+      }
+    },
+    "transfers": {
+      "name": "transfers",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(\n  lower(\n    hex(randomblob(4)) || '-' ||\n    hex(randomblob(2)) || '-4' ||\n    substr(hex(randomblob(2)), 2) || '-' ||\n    substr('89ab', (random() & 3) + 1, 1) ||\n    substr(hex(randomblob(2)), 2) || '-' ||\n    hex(randomblob(6))\n  )\n)"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast((julianday('now') - 2440587.5) * 86400000 as integer))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast((julianday('now') - 2440587.5) * 86400000 as integer))"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "from_account_id": {
+          "name": "from_account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "to_account_id": {
+          "name": "to_account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "amount": {
+          "name": "amount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "transfers_from_account_id_accounts_id_fk": {
+          "name": "transfers_from_account_id_accounts_id_fk",
+          "tableFrom": "transfers",
+          "columnsFrom": [
+            "from_account_id"
+          ],
+          "tableTo": "accounts",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "transfers_to_account_id_accounts_id_fk": {
+          "name": "transfers_to_account_id_accounts_id_fk",
+          "tableFrom": "transfers",
+          "columnsFrom": [
+            "to_account_id"
+          ],
+          "tableTo": "accounts",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "transfers_amount_positive_vnd": {
+          "name": "transfers_amount_positive_vnd",
+          "value": "typeof(\"transfers\".\"amount\") = 'integer' AND \"transfers\".\"amount\" > 0 AND \"transfers\".\"amount\" <= 9007199254740991"
+        },
+        "transfers_accounts_differ": {
+          "name": "transfers_accounts_differ",
+          "value": "\"transfers\".\"from_account_id\" <> \"transfers\".\"to_account_id\""
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}
