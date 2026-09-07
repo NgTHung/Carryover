@@ -7,19 +7,28 @@
     "start": "expo start",
     "ios": "expo run:ios",
     "prebuild": "node scripts/patch-expo-widgets.mjs && expo prebuild --platform ios --clean && node scripts/strip-push-entitlement.mjs",
+    "test": "tsx --test tests/**/*.test.ts",
     "typecheck": "tsc --noEmit",
-    "doctor": "expo-doctor"
+    "doctor": "expo-doctor",
+    "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
     "@expo/ui": "~57.0.14",
+    "drizzle-orm": "^0.45.2",
     "expo": "~57.0.18",
+    "expo-sqlite": "~57.0.2",
     "expo-status-bar": "~57.0.1",
     "expo-widgets": "~57.0.15",
     "react": "19.2.3",
     "react-native": "0.86.3"
   },
   "devDependencies": {
+    "@types/node": "^26.4.1",
     "@types/react": "~19.2.2",
+    "babel-plugin-inline-import": "^3.0.0",
+    "drizzle-kit": "^0.31.10",
+    "expo-doctor": "^1.20.4",
+    "tsx": "^4.23.13",
     "typescript": "~6.0.3"
   },
   "overrides": {
