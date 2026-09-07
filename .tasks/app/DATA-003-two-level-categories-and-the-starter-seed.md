@@ -1,7 +1,7 @@
 ---
 id: "DATA-003"
 title: "Two-level categories and the starter seed"
-status: In Progress
+status: Done
 priority: "High"
 type: "Feature"
 milestone: "0.2.0"
@@ -24,9 +24,9 @@ This task owns the category contracts, active-leaf validation, historical catego
 
 ## Acceptance Criteria
 
-- [ ] A category domain value is either a group with no group reference or a leaf carrying a typed group reference, enforced by the type and by a test.
-- [ ] Zod validates category input shape; the data layer checks that a selected parent exists and is an active group before writing.
-- [ ] The category data boundary exposes a shared active-leaf validator that rejects missing, deleted, and group category IDs. DATA-004 owns calling it from transaction writes.
-- [ ] The starter seed from `docs/spec/carryover-v1.md` loads on first run, with Rent and Bills marked `reserve`.
-- [ ] Seeded categories carry a suggestion flag and delete in one bulk action. A suggested group with an active user-created leaf is retained as a normal group so no active leaf loses its group.
-- [ ] A leaf with transactions soft-deletes, and an explicit historical category-reference read still resolves that leaf and its group for the transaction.
+- [x] A category domain value is either a group with no group reference or a leaf carrying a typed group reference, enforced by the type and by a test.
+- [x] Zod validates category input shape; the data layer checks that a selected parent exists and is an active group before writing.
+- [x] The category data boundary exposes a shared active-leaf validator that rejects missing, deleted, and group category IDs. DATA-004 owns calling it from transaction writes.
+- [x] The starter seed from `docs/spec/carryover-v1.md` loads on first run, with Rent and Bills marked `reserve`.
+- [x] Seeded categories carry a suggestion flag and delete in one bulk action. A suggested group with an active user-created leaf is retained as a normal group so no active leaf loses its group.
+- [x] A leaf with transactions soft-deletes, and an explicit historical category-reference read still resolves that leaf and its group for the transaction.
