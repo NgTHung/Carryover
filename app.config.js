@@ -26,6 +26,11 @@ const widgetPlugin = [
   },
 ];
 
+const plugins = ['expo-sqlite'];
+if (widgetEnabled) {
+  plugins.push(widgetPlugin);
+}
+
 module.exports = {
   expo: {
     name: 'Carryover',
@@ -44,6 +49,6 @@ module.exports = {
       bundleIdentifier: BUNDLE_ID,
       supportsTablet: false,
     },
-    plugins: widgetEnabled ? [widgetPlugin] : [],
+    plugins,
   },
 };
