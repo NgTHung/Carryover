@@ -16,6 +16,10 @@ const seedMigration = readFileSync(
   resolve(process.cwd(), 'drizzle/0002_seed-accounts.sql'),
   'utf8'
 );
+const repairMigration = readFileSync(
+  resolve(process.cwd(), 'drizzle/0003_repair-cash-account.sql'),
+  'utf8'
+);
 
 function openDatabaseBeforeAccountSeed(): DatabaseSync {
   const database = new DatabaseSync(':memory:');
@@ -62,6 +66,27 @@ test('the account seed does not duplicate active rows if applied again', () => {
       .prepare("SELECT COUNT(*) AS count FROM accounts WHERE deleted_at IS NULL")
       .get() as { count: unknown };
     assert.equal(result.count, 2);
+  } finally {
+    database.close();
+  }
+});
+
+test('the repair migration adds cash after the broken Expo seed was recorded', () => {
+  const database = openDatabaseBeforeAccountSeed();
+  try {
+    database.prepare(seedMigration).run();
+    database.prepare(repairMigration).run();
+
+    const accounts = database
+      .prepare(
+        'SELECT name, is_default FROM accounts WHERE deleted_at IS NULL ORDER BY kind'
+      )
+      .all() as Array<{ name: unknown; is_default: unknown }>;
+    assert.equal(accounts.length, 2);
+    assert.equal(accounts[0]?.name, 'Bank');
+    assert.equal(accounts[0]?.is_default, 1);
+    assert.equal(accounts[1]?.name, 'Cash');
+    assert.equal(accounts[1]?.is_default, 0);
   } finally {
     database.close();
   }
