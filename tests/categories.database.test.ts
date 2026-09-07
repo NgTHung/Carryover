@@ -192,3 +192,29 @@ test('bulk suggestion deletion retains a group adopted by a user leaf', async ()
     database.close();
   }
 });
+
+test('overlapping leaf creation and suggestion deletion cannot orphan the leaf', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const data = createCategoryData(createProxyDatabase(database));
+    const foodId = categoryId(database, 'Food');
+
+    const [customLeaf] = await Promise.all([
+      data.createCategory({
+        level: 'leaf',
+        name: 'Bakery',
+        sort: 10,
+        groupId: foodId,
+      }),
+      data.deleteSuggestedCategories(),
+    ]);
+
+    assert.equal(customLeaf.level, 'leaf');
+    assert.equal(
+      await data.requireActiveLeafCategory(customLeaf.id).then((row) => row.name),
+      'Bakery'
+    );
+  } finally {
+    database.close();
+  }
+});

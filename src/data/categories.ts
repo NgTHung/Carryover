@@ -18,7 +18,12 @@ import type {
   CategoryLeaf,
 } from './category-types';
 import { activeRowFilter } from './soft-delete';
-import { categories, ledgerTables } from './schema';
+import {
+  categories,
+  ledgerTables,
+  nowMillisecondsSql,
+  uuidV4Sql,
+} from './schema';
 
 type LedgerDatabase<TResultKind extends 'sync' | 'async'> = BaseSQLiteDatabase<
   TResultKind,
@@ -150,23 +155,33 @@ export function createCategoryData<TResultKind extends 'sync' | 'async'>(
         return toCategoryGroup(inserted);
       }
 
-      const group = await findGroup(db, parsed.groupId, { activeOnly: true });
-      if (group === undefined) {
-        throw categoryGroupNotFound(parsed.groupId);
-      }
       const inserted = await db
         .insert(categories)
-        .values({
-          parentId: group.id,
-          name: parsed.name,
-          sort: parsed.sort,
-          kind: group.kind,
-          isSuggestion: false,
-        })
+        // One statement prevents suggestion deletion from invalidating the group before the write.
+        .select(sql`
+          SELECT
+            ${uuidV4Sql},
+            ${nowMillisecondsSql()},
+            ${nowMillisecondsSql()},
+            NULL,
+            ${categories.id},
+            ${parsed.name},
+            ${parsed.sort},
+            ${categories.kind},
+            0
+          FROM ${categories}
+          WHERE ${categories.id} = ${parsed.groupId}
+            AND ${categories.parentId} IS NULL
+            AND ${categories.deletedAt} IS NULL
+        `)
         .returning()
         .get();
       if (inserted === undefined) {
-        throw new Error('Category leaf insert returned no row');
+        throw categoryGroupNotFound(parsed.groupId);
+      }
+      const group = await findGroup(db, parsed.groupId, { activeOnly: true });
+      if (group === undefined) {
+        throw categoryGroupNotFound(parsed.groupId);
       }
       return toCategoryLeaf(inserted, group);
     },

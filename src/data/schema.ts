@@ -17,7 +17,7 @@ import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
 import { CURRENCY_EXPONENT, MAX_VND_AMOUNT } from '../money/currency';
 import { nonNegativeVndAmount, vndAmount } from './amount-columns';
 
-const UUID_DEFAULT = sql`(
+export const uuidV4Sql = sql`(
   lower(
     hex(randomblob(4)) || '-' ||
     hex(randomblob(2)) || '-4' ||
@@ -28,20 +28,20 @@ const UUID_DEFAULT = sql`(
   )
 )`;
 
-const nowMilliseconds = () =>
+export const nowMillisecondsSql = () =>
   sql`(cast((julianday('now') - 2440587.5) * 86400000 as integer))`;
 
 const maxVndSql = sql.raw(MAX_VND_AMOUNT.toString());
 
 function commonColumns() {
   return {
-    id: text('id').primaryKey().notNull().default(UUID_DEFAULT),
+    id: text('id').primaryKey().notNull().default(uuidV4Sql),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .notNull()
-      .default(nowMilliseconds()),
+      .default(nowMillisecondsSql()),
     updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
       .notNull()
-      .default(nowMilliseconds()),
+      .default(nowMillisecondsSql()),
     deletedAt: integer('deleted_at', { mode: 'timestamp_ms' }),
   };
 }
