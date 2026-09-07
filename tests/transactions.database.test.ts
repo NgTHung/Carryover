@@ -309,3 +309,125 @@ test('completeDraft promotes only drafts and leaves rejected rows unchanged', as
     database.close();
   }
 });
+
+test('overlapping edits reject the stale write without restoring older fields', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const proxy = createProxyDatabase(database);
+    const data = createTransactionData(proxy, createCategoryData(proxy));
+    const leafId = categoryId(database, 'Groceries');
+    const draft = await data.createTransaction({
+      accountId: bankId(database),
+      direction: 'expense',
+      status: 'draft',
+      amount: 45_000,
+      categoryId: leafId,
+      occurredAt,
+    });
+
+    const results = await Promise.allSettled([
+      data.editTransaction({
+        transactionId: draft.id,
+        changes: { amount: 50_000 },
+      }),
+      data.editTransaction({
+        transactionId: draft.id,
+        changes: { note: 'Changed concurrently' },
+      }),
+    ]);
+
+    assert.equal(results.filter((result) => result.status === 'fulfilled').length, 1);
+    const rejected = results.find((result) => result.status === 'rejected');
+    assert.equal(rejected?.status, 'rejected');
+    if (rejected?.status === 'rejected') {
+      assert.match(String(rejected.reason), /changed during update/i);
+    }
+
+    const stored = await data.readTransaction(draft.id);
+    if (results[0]?.status === 'fulfilled') {
+      assert.equal(stored?.amount, 50_000);
+      assert.equal(stored?.note, null);
+    } else {
+      assert.equal(stored?.amount, 45_000);
+      assert.equal(stored?.note, 'Changed concurrently');
+    }
+  } finally {
+    database.close();
+  }
+});
+
+test('an edit overlapping completion cannot restore draft status', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const proxy = createProxyDatabase(database);
+    const data = createTransactionData(proxy, createCategoryData(proxy));
+    const leafId = categoryId(database, 'Groceries');
+    const draft = await data.createTransaction({
+      accountId: bankId(database),
+      direction: 'expense',
+      status: 'draft',
+      categoryId: leafId,
+      occurredAt,
+    });
+
+    const results = await Promise.allSettled([
+      data.completeDraft({
+        transactionId: draft.id,
+        amount: 60_000,
+      }),
+      data.editTransaction({
+        transactionId: draft.id,
+        changes: { note: 'Changed concurrently' },
+      }),
+    ]);
+
+    assert.equal(results.filter((result) => result.status === 'fulfilled').length, 1);
+    const rejected = results.find((result) => result.status === 'rejected');
+    assert.equal(rejected?.status, 'rejected');
+    if (rejected?.status === 'rejected') {
+      assert.match(String(rejected.reason), /changed during update/i);
+    }
+
+    const stored = await data.readTransaction(draft.id);
+    if (results[0]?.status === 'fulfilled') {
+      assert.equal(stored?.status, 'complete');
+      assert.equal(stored?.amount, 60_000);
+      assert.equal(stored?.note, null);
+    } else {
+      assert.equal(stored?.status, 'draft');
+      assert.equal(stored?.amount, null);
+      assert.equal(stored?.note, 'Changed concurrently');
+    }
+  } finally {
+    database.close();
+  }
+});
+
+test('editing another field preserves a deleted historical category', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const proxy = createProxyDatabase(database);
+    const categories = createCategoryData(proxy);
+    const data = createTransactionData(proxy, categories);
+    const leafId = categoryId(database, 'Groceries');
+    const transaction = await data.createTransaction({
+      accountId: bankId(database),
+      direction: 'expense',
+      status: 'complete',
+      amount: 45_000,
+      categoryId: leafId,
+      occurredAt,
+    });
+    await categories.softDeleteLeaf(leafId);
+
+    const edited = await data.editTransaction({
+      transactionId: transaction.id,
+      changes: { note: 'Corrected after category deletion' },
+    });
+
+    assert.equal(edited.categoryId, leafId);
+    assert.equal(edited.note, 'Corrected after category deletion');
+  } finally {
+    database.close();
+  }
+});

@@ -45,6 +45,10 @@ function transactionInsertFailed(): Error {
   return new Error('Transaction insert returned no row');
 }
 
+function transactionChanged(transactionId: string): Error {
+  return new Error(`Transaction ${transactionId} changed during update`);
+}
+
 function categoryWriteFailed(categoryId: string): Error {
   return new Error(`Active category leaf ${categoryId} was not found`);
 }
@@ -166,11 +170,16 @@ async function findTransaction<TResultKind extends 'sync' | 'async'>(
 async function updateTransactionRow<TResultKind extends 'sync' | 'async'>(
   db: LedgerDatabase<TResultKind>,
   categoryData: CategoryData<TResultKind>,
-  transaction: Transaction
+  transaction: Transaction,
+  validateCategory: boolean
 ): Promise<TransactionRow> {
-  if (transaction.categoryId !== null) {
+  if (validateCategory && transaction.categoryId !== null) {
     await categoryData.requireActiveLeafCategory(transaction.categoryId);
   }
+
+  const updatedAt = new Date(
+    Math.max(Date.now(), transaction.updatedAt.getTime() + 1)
+  );
 
   const updated = await db
     .update(transactions)
@@ -186,13 +195,14 @@ async function updateTransactionRow<TResultKind extends 'sync' | 'async'>(
       photoKey: transaction.photoKey,
       note: transaction.note,
       sourceLabel: transaction.sourceLabel,
-      updatedAt: new Date(),
+      updatedAt,
     })
     .where(
       and(
         eq(transactions.id, transaction.id),
+        eq(transactions.updatedAt, transaction.updatedAt),
         activeRowFilter(transactions.deletedAt),
-        transaction.categoryId === null
+        !validateCategory || transaction.categoryId === null
           ? undefined
           : activeCategoryCondition(transaction.categoryId)
       )
@@ -201,9 +211,14 @@ async function updateTransactionRow<TResultKind extends 'sync' | 'async'>(
     .get();
 
   if (updated === undefined) {
-    throw transaction.categoryId === null
-      ? transactionNotFound(transaction.id)
-      : categoryWriteFailed(transaction.categoryId);
+    if (validateCategory && transaction.categoryId !== null) {
+      await categoryData.requireActiveLeafCategory(transaction.categoryId);
+    }
+    const current = await findTransaction(db, transaction.id);
+    if (current === undefined) {
+      throw transactionNotFound(transaction.id);
+    }
+    throw transactionChanged(transaction.id);
   }
   return updated;
 }
@@ -269,7 +284,12 @@ export function createTransactionData<TResultKind extends 'sync' | 'async'>(
         throw transactionNotFound(parsed.transactionId);
       }
       const candidate = mergeTransactionChanges(existing, parsed.changes);
-      const updated = await updateTransactionRow(db, categoryData, candidate);
+      const updated = await updateTransactionRow(
+        db,
+        categoryData,
+        candidate,
+        parsed.changes.categoryId !== undefined
+      );
       return toTransaction(updated);
     },
 
@@ -293,7 +313,12 @@ export function createTransactionData<TResultKind extends 'sync' | 'async'>(
         amount: parsed.amount,
         categoryId,
       });
-      const updated = await updateTransactionRow(db, categoryData, candidate);
+      const updated = await updateTransactionRow(
+        db,
+        categoryData,
+        candidate,
+        true
+      );
       return toTransaction(updated);
     },
 
