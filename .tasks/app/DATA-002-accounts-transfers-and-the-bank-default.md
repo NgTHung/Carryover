@@ -1,7 +1,7 @@
 ---
 id: "DATA-002"
 title: "Accounts, transfers, and the bank default"
-status: In Progress
+status: Done
 priority: "Medium"
 type: "Feature"
 milestone: "0.2.0"
@@ -22,9 +22,9 @@ Transfers move money between your own accounts. Withdrawing cash is not spending
 
 ## Acceptance Criteria
 
-- [ ] First run seeds a bank account and a cash account, with bank marked default.
-- [ ] Opening balance is editable and stored as integer VND.
-- [ ] Account and transfer inputs use Zod schemas that reuse DATA-001 money validation. Tests reject invalid inputs before any account or transfer is changed.
-- [ ] The account balance is derived from opening balance plus transactions, with no stored running total.
-- [ ] A transfer records a from account, a to account, and a positive amount.
-- [ ] `tests/` asserts a transfer changes both account balances and moves neither spending nor income.
+- [x] First run seeds a bank account and a cash account, with bank marked default.
+- [x] Opening balance is editable and stored as integer VND.
+- [x] Account and transfer inputs use Zod schemas that reuse DATA-001 money validation. Tests reject invalid inputs before any account or transfer is changed.
+- [x] The account balance is derived from opening balance plus transactions, with no stored running total.
+- [x] A transfer records a from account, a to account, and a positive amount.
+- [x] `tests/` asserts a transfer changes both account balances and moves neither spending nor income.
