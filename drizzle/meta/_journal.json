@@ -29,6 +29,13 @@
       "when": 1788786489338,
       "tag": "0003_repair-cash-account",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1788788371286,
+      "tag": "0004_seed-categories",
+      "breakpoints": true
     }
   ]
 }

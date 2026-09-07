@@ -22,6 +22,9 @@ export function openMigratedDatabase(): DatabaseSync {
   database.exec(
     readFileSync(resolve(process.cwd(), 'drizzle/0003_repair-cash-account.sql'), 'utf8')
   );
+  database.exec(
+    readFileSync(resolve(process.cwd(), 'drizzle/0004_seed-categories.sql'), 'utf8')
+  );
   return database;
 }
 
