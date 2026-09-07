@@ -5,7 +5,7 @@ status: To Do
 priority: "High"
 type: "Milestone"
 milestone: "0.2.0"
-last_updated: 2026-09-02
+last_updated: 2026-09-07
 ---
 
 ## Summary
@@ -21,3 +21,5 @@ The sync-ready columns land in migration one. UUID keys, `updated_at`, and soft 
 - [ ] Accounts, categories, and transactions are creatable, editable, and soft-deletable from the app.
 - [ ] The starter category seed loads on first run and bulk-deletes in one action.
 - [ ] The transaction list filters by period, category, account, and quality.
+- [ ] BUILD-002 runs Jest logic, real SQLite, and React Native Testing Library checks locally on Linux and in CI before the native build.
+- [ ] UI-006 and UI-007 supply Expo Router and shared NativeWind, Tailwind Variants, and Reanimated primitives; Hermes and default widget exclusion are preserved.

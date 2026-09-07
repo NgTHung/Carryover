@@ -9,7 +9,7 @@ depends_on: ["DATA-002", "DATA-004"]
 risk: "Medium"
 impact: "Cash drift makes the balance, the runway, and therefore the headline figure slightly less true every week. Reconcile is the only correction path."
 tags: ["data", "accounts", "reconcile"]
-last_updated: 2026-09-02
+last_updated: 2026-09-06
 ---
 
 ## Summary
@@ -21,6 +21,7 @@ The adjustment is visible in the transaction list so drift stays honest, and it 
 ## Acceptance Criteria
 
 - [ ] Reconcile takes the amount actually held and writes one adjustment transaction for the difference.
+- [ ] Zod validates the stated balance with the shared nonnegative money schema. Tests accept zero and reject fractional or unsafe values without writing an adjustment.
 - [ ] The adjustment amount is positive and direction carries the sign.
 - [ ] The adjustment appears in the transaction list.
 - [ ] No report counts an adjustment as spending or income, asserted by a test.

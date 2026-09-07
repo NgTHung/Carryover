@@ -5,7 +5,7 @@ status: To Do
 priority: "High"
 type: "Milestone"
 milestone: "0.3.0"
-last_updated: 2026-09-02
+last_updated: 2026-09-07
 ---
 
 ## Summary
@@ -21,4 +21,6 @@ Daily use starts here. Real data changes the category list before anything is bu
 - [ ] Commitments produce unpaid reserves and paying one is a normal logged transaction.
 - [ ] Reconcile writes a visible adjustment that no report counts.
 - [ ] `month_config` is written per period and read back from storage, never recomputed.
+- [ ] The month summary renders spend by group, the quality breakdown, and the day calendar.
 - [ ] The app is installed on the phone and in daily use.
+- [ ] BUILD-003 has a passing iOS Maestro smoke run for the release candidate revision, with device checks completed; ordinary pushes still run fast checks and the native build without Maestro.

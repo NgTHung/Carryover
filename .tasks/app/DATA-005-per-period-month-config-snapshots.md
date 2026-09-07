@@ -9,7 +9,7 @@ depends_on: ["DATA-004"]
 risk: "High"
 impact: "Invariant 7, the one that breaks quietly. Without a frozen snapshot per period, changing income or reserves today silently rewrites what discretionary meant in every past month."
 tags: ["data", "budget", "invariant"]
-last_updated: 2026-09-02
+last_updated: 2026-09-06
 ---
 
 ## Summary
@@ -23,6 +23,7 @@ The period boundary is the first of the month, stored as configuration rather th
 ## Acceptance Criteria
 
 - [ ] A `month_config` row is written when a period opens, holding opening balance, income total, reserved total, and horizon date.
+- [ ] Zod validates period and horizon dates and reuses DATA-001 money schemas before writes. Invalid input leaves stored month config unchanged.
 - [ ] Every report reads `month_config` from storage and nothing recomputes it from current settings.
 - [ ] The horizon defaults to the end of the period and is editable per period.
 - [ ] The period boundary is read from configuration, not a literal in the code.

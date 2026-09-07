@@ -5,11 +5,11 @@ status: To Do
 priority: "Medium"
 type: "Feature"
 milestone: "0.2.0"
-depends_on: ["DATA-003"]
+depends_on: ["DATA-003", "UI-006", "UI-007"]
 risk: "Low"
 impact: "Category sprawl is a predicted failure mode. Pruning has to be as easy as creating, or the list grows to forty entries with six in use."
 tags: ["ui", "categories"]
-last_updated: 2026-09-02
+last_updated: 2026-09-07
 ---
 
 ## Summary
@@ -25,3 +25,4 @@ Prune hard at the end of month one, once real data says which leaves never got p
 - [ ] The seeded suggestions delete in one action from this screen.
 - [ ] Creating a category returns the same module the fill-in screen will call, with no duplicated logic.
 - [ ] The editor refuses to nest a leaf under a leaf.
+- [ ] The Settings route uses Expo Router and shared UI-007 primitives. Local React Native Testing Library tests cover creation, validation feedback, and deletion.

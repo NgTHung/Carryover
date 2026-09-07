@@ -9,7 +9,7 @@ depends_on: ["DATA-001"]
 risk: "Medium"
 impact: "The taxonomy shape is assumed by every report and by the fill-in screen. A third level appearing later would break aggregation at the group."
 tags: ["data", "categories"]
-last_updated: 2026-09-02
+last_updated: 2026-09-06
 ---
 
 ## Summary
@@ -23,6 +23,7 @@ The seed is built around real spending, with Coffee as its own group rather than
 ## Acceptance Criteria
 
 - [ ] A category is a group with no parent or a leaf with a group parent, enforced by the type and by a test.
+- [ ] Zod validates category input shape; the data layer checks that a selected parent exists and is an active group before writing.
 - [ ] Transactions reference a leaf and cannot reference a group.
 - [ ] The starter seed from `docs/spec/carryover-v1.md` loads on first run, with Rent and Bills marked `reserve`.
 - [ ] Seeded categories carry a suggestion flag and delete in one bulk action.

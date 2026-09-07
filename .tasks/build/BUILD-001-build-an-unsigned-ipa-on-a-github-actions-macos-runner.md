@@ -1,14 +1,14 @@
 ---
 id: "BUILD-001"
 title: "Build an unsigned IPA on a GitHub Actions macOS runner"
-status: In Progress
+status: Done
 priority: "High"
 type: "Feature"
 milestone: "0.1.0"
 risk: "Medium"
 impact: "Establishes the only iOS build environment this project has. Every later stage depends on it, and a green build from the first commit means breakage is always traceable to one commit."
 tags: ["build", "ios", "ci"]
-last_updated: 2026-09-01
+last_updated: 2026-09-06
 ---
 
 ## Summary

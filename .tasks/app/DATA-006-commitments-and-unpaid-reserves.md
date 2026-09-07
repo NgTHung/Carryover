@@ -9,7 +9,7 @@ depends_on: ["DATA-003", "DATA-004"]
 risk: "Medium"
 impact: "Reserves are subtracted before anything is called discretionary. An over-counted reserve makes the app pessimistic, an under-counted one makes it lie."
 tags: ["data", "commitments"]
-last_updated: 2026-09-02
+last_updated: 2026-09-06
 ---
 
 ## Summary
@@ -23,6 +23,7 @@ A due day of 31 in a 30 day month resolves to the last day rather than rolling i
 ## Acceptance Criteria
 
 - [ ] A commitment stores name, integer amount, due day 1 to 31, reserve category, and active flag.
+- [ ] Zod validates commitment inputs with the shared positive money schema and integer due day bounds. The data layer verifies the reserve category, and tests reject invalid writes.
 - [ ] A due day beyond the length of the month resolves to the last day of that month.
 - [ ] Reserved unpaid counts active commitments due in the period with no matching logged transaction.
 - [ ] Paying a commitment is an ordinary transaction. No transaction is created automatically.

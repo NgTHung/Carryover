@@ -5,11 +5,11 @@ status: To Do
 priority: "High"
 type: "Feature"
 milestone: "0.3.0"
-depends_on: ["BUDGET-001"]
+depends_on: ["BUDGET-002", "UI-006", "UI-007"]
 risk: "Medium"
 impact: "The screen that decides whether the app gets trusted. If it computes anything itself it can disagree with the widget."
 tags: ["ui", "budget"]
-last_updated: 2026-09-02
+last_updated: 2026-09-07
 ---
 
 ## Summary
@@ -25,4 +25,7 @@ The screen renders snapshot fields. It does no arithmetic of its own, including 
 - [ ] The unknown badge shows the count of drafts with no amount and hides at zero.
 - [ ] The receivable total shows beside discretionary when it is non-zero.
 - [ ] The screen reads snapshot fields and performs no budget arithmetic.
+- [ ] The screen subscribes to the BUDGET-002 Zustand snapshot store with selectors and renders its loading or error state without substituting zero figures.
 - [ ] The capture button is present and reachable with one thumb.
+- [ ] The route and controls reuse UI-006 and UI-007. Reanimated changes presentation only and respects reduced motion without computing or mutating money figures.
+- [ ] Local React Native Testing Library tests cover snapshot loading, errors, unknown counts, and ready values; rendering never substitutes zero for unavailable data.

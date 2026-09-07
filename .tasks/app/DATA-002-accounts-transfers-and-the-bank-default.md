@@ -9,7 +9,7 @@ depends_on: ["DATA-001"]
 risk: "Medium"
 impact: "Account balances feed the carryover balance, which feeds every figure on the home screen and the widget."
 tags: ["data", "accounts"]
-last_updated: 2026-09-02
+last_updated: 2026-09-06
 ---
 
 ## Summary
@@ -24,6 +24,7 @@ Transfers move money between your own accounts. Withdrawing cash is not spending
 
 - [ ] First run seeds a bank account and a cash account, with bank marked default.
 - [ ] Opening balance is editable and stored as integer VND.
+- [ ] Account and transfer inputs use Zod schemas that reuse DATA-001 money validation. Tests reject invalid inputs before any account or transfer is changed.
 - [ ] The account balance is derived from opening balance plus transactions, with no stored running total.
 - [ ] A transfer records a from account, a to account, and a positive amount.
 - [ ] `tests/` asserts a transfer changes both account balances and moves neither spending nor income.
