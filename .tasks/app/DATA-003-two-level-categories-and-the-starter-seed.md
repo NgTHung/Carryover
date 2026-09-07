@@ -1,7 +1,7 @@
 ---
 id: "DATA-003"
 title: "Two-level categories and the starter seed"
-status: In Progress
+status: Done
 priority: "High"
 type: "Feature"
 milestone: "0.2.0"
@@ -28,5 +28,5 @@ This task owns the category contracts, active-leaf validation, historical catego
 - [x] Zod validates category input shape; the data layer checks that a selected parent exists and is an active group before writing.
 - [x] The category data boundary exposes a shared active-leaf validator that rejects missing, deleted, and group category IDs. DATA-004 owns calling it from transaction writes.
 - [x] The starter seed from `docs/spec/carryover-v1.md` loads on first run, with Rent and Bills marked `reserve`.
-- [ ] Seeded categories carry a suggestion flag and delete in one bulk action. A suggested group with an active user-created leaf is retained as a normal group so no active leaf loses its group, including when leaf creation and suggestion deletion overlap.
+- [x] Seeded categories carry a suggestion flag and delete in one bulk action. A suggested group with an active user-created leaf is retained as a normal group so no active leaf loses its group, including when leaf creation and suggestion deletion overlap.
 - [x] A leaf with transactions soft-deletes, and an explicit historical category-reference read still resolves that leaf and its group for the transaction.
