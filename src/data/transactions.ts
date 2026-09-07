@@ -8,10 +8,7 @@
 import { and, eq, sql } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 
-import {
-  createCategoryData,
-  type CategoryData,
-} from './categories';
+import { createCategoryData, type CategoryData } from './categories';
 import { activeRowFilter, type SoftDeleteOptions } from './soft-delete';
 import {
   completeDraftInputSchema,
@@ -225,9 +222,13 @@ export function createTransactionData<TResultKind extends 'sync' | 'async'>(
   return {
     async createTransaction(input: unknown): Promise<Transaction> {
       const parsed = createTransactionInputSchema.parse(input);
-      if (parsed.categoryId !== null) {
-        await categoryData.requireActiveLeafCategory(parsed.categoryId);
-        const inserted = await insertWithActiveCategory(db, parsed as CreateTransactionInput & { categoryId: string });
+      const categoryId = parsed.categoryId;
+      if (categoryId !== null) {
+        await categoryData.requireActiveLeafCategory(categoryId);
+        const inserted = await insertWithActiveCategory(db, {
+          ...parsed,
+          categoryId,
+        });
         return toTransaction(inserted);
       }
 

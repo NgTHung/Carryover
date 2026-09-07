@@ -21,6 +21,10 @@ const payerSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('contact'), contactId: idSchema }).strict(),
 ]);
 
+export const transactionDirectionSchema = directionSchema;
+export const transactionQualitySchema = qualitySchema;
+export const transactionPayerSchema = payerSchema;
+
 const nullableIdInputSchema = idSchema.nullable().optional().default(null);
 const nullableQualityInputSchema = qualitySchema.nullable().optional().default(null);
 const nullablePayerInputSchema = payerSchema
@@ -136,12 +140,27 @@ const completeTransactionInputSchema = z.object({
   amount: positiveVndInputSchema,
 });
 
-export const createTransactionInputSchema = z
+const transactionCreateUnionSchema = z
   .discriminatedUnion('status', [
     draftTransactionInputSchema,
     completeTransactionInputSchema,
   ])
   .superRefine(addTransactionSemanticIssues);
+
+function defaultDraftStatus(input: unknown): unknown {
+  if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+    return input;
+  }
+  const record = input as Record<string, unknown>;
+  return record.status === undefined
+    ? { ...record, status: 'draft' }
+    : input;
+}
+
+export const createTransactionInputSchema = z.preprocess(
+  defaultDraftStatus,
+  transactionCreateUnionSchema
+);
 
 export type CreateTransactionInput = z.infer<
   typeof createTransactionInputSchema

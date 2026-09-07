@@ -110,6 +110,14 @@ test('draft blank or omitted amounts become null, never zero', () => {
     }).amount,
     null
   );
+  assert.equal(
+    createTransactionInputSchema.parse({
+      accountId,
+      direction: 'expense',
+      occurredAt,
+    }).status,
+    'draft'
+  );
 });
 
 test('amount input rejects zero, negative, fractional, and unsafe values without rounding', () => {
