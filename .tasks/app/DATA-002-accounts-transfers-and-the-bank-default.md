@@ -1,7 +1,7 @@
 ---
 id: "DATA-002"
 title: "Accounts, transfers, and the bank default"
-status: Done
+status: In Progress
 priority: "Medium"
 type: "Feature"
 milestone: "0.2.0"
@@ -30,3 +30,4 @@ Transfers move money between your own accounts. Withdrawing cash is not spending
 - [x] `tests/` asserts a transfer changes both account balances and moves neither spending nor income.
 - [x] The Expo migration path seeds both fixed accounts.
 - [x] A soft-deleted account does not erase past transfer effects from an active account balance.
+- [ ] An expense paid by a contact does not change either of your account balances.
