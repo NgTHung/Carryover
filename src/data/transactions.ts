@@ -14,10 +14,13 @@ import {
 } from './categories';
 import { activeRowFilter, type SoftDeleteOptions } from './soft-delete';
 import {
+  completeDraftInputSchema,
   createTransactionInputSchema,
+  editTransactionInputSchema,
   transactionIdSchema,
   transactionSchema,
   type CreateTransactionInput,
+  type EditTransactionInput,
   type Transaction,
 } from './transaction-validation';
 import { nullableIdFromPayer, payerFromNullableId } from './payer';
@@ -85,6 +88,21 @@ function insertValues(input: CreateTransactionInput) {
   };
 }
 
+function activeCategoryCondition(categoryId: string) {
+  return sql`
+    EXISTS (
+      SELECT 1
+      FROM ${categories} AS leaf
+      JOIN ${categories} AS parent ON parent.id = leaf.parent_id
+      WHERE leaf.id = ${categoryId}
+        AND leaf.parent_id IS NOT NULL
+        AND leaf.deleted_at IS NULL
+        AND parent.parent_id IS NULL
+        AND parent.deleted_at IS NULL
+    )
+  `;
+}
+
 async function insertWithActiveCategory<TResultKind extends 'sync' | 'async'>(
   db: LedgerDatabase<TResultKind>,
   input: CreateTransactionInput & { categoryId: string }
@@ -130,6 +148,76 @@ function sqlForActiveCategoryInsert(
   `;
 }
 
+async function findTransaction<TResultKind extends 'sync' | 'async'>(
+  db: LedgerDatabase<TResultKind>,
+  transactionId: string,
+  options: SoftDeleteOptions = {}
+): Promise<Transaction | undefined> {
+  const row = await db
+    .select()
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.id, transactionId),
+        activeRowFilter(transactions.deletedAt, options)
+      )
+    )
+    .get();
+  return row === undefined ? undefined : toTransaction(row);
+}
+
+async function updateTransactionRow<TResultKind extends 'sync' | 'async'>(
+  db: LedgerDatabase<TResultKind>,
+  categoryData: CategoryData<TResultKind>,
+  transaction: Transaction
+): Promise<TransactionRow> {
+  if (transaction.categoryId !== null) {
+    await categoryData.requireActiveLeafCategory(transaction.categoryId);
+  }
+
+  const updated = await db
+    .update(transactions)
+    .set({
+      accountId: transaction.accountId,
+      direction: transaction.direction,
+      amount: transaction.amount,
+      categoryId: transaction.categoryId,
+      quality: transaction.quality,
+      payerContactId: nullableIdFromPayer(transaction.payer),
+      occurredAt: transaction.occurredAt,
+      status: transaction.status,
+      photoKey: transaction.photoKey,
+      note: transaction.note,
+      sourceLabel: transaction.sourceLabel,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(transactions.id, transaction.id),
+        activeRowFilter(transactions.deletedAt),
+        transaction.categoryId === null
+          ? undefined
+          : activeCategoryCondition(transaction.categoryId)
+      )
+    )
+    .returning()
+    .get();
+
+  if (updated === undefined) {
+    throw transaction.categoryId === null
+      ? transactionNotFound(transaction.id)
+      : categoryWriteFailed(transaction.categoryId);
+  }
+  return updated;
+}
+
+function mergeTransactionChanges(
+  transaction: Transaction,
+  changes: EditTransactionInput['changes']
+): Transaction {
+  return transactionSchema.parse({ ...transaction, ...changes });
+}
+
 export function createTransactionData<TResultKind extends 'sync' | 'async'>(
   db: LedgerDatabase<TResultKind>,
   categoryData: CategoryData<TResultKind> = createCategoryData(db)
@@ -159,17 +247,7 @@ export function createTransactionData<TResultKind extends 'sync' | 'async'>(
       options: SoftDeleteOptions = {}
     ): Promise<Transaction | undefined> {
       const parsedId = transactionIdSchema.parse(transactionId);
-      const row = await db
-        .select()
-        .from(transactions)
-        .where(
-          and(
-            eq(transactions.id, parsedId),
-            activeRowFilter(transactions.deletedAt, options)
-          )
-        )
-        .get();
-      return row === undefined ? undefined : toTransaction(row);
+      return findTransaction(db, parsedId, options);
     },
 
     async readTransactions(
@@ -181,6 +259,41 @@ export function createTransactionData<TResultKind extends 'sync' | 'async'>(
         .where(activeRowFilter(transactions.deletedAt, options))
         .all();
       return rows.map(toTransaction);
+    },
+
+    async editTransaction(input: unknown): Promise<Transaction> {
+      const parsed = editTransactionInputSchema.parse(input);
+      const existing = await findTransaction(db, parsed.transactionId);
+      if (existing === undefined) {
+        throw transactionNotFound(parsed.transactionId);
+      }
+      const candidate = mergeTransactionChanges(existing, parsed.changes);
+      const updated = await updateTransactionRow(db, categoryData, candidate);
+      return toTransaction(updated);
+    },
+
+    async completeDraft(input: unknown): Promise<Transaction> {
+      const parsed = completeDraftInputSchema.parse(input);
+      const existing = await findTransaction(db, parsed.transactionId);
+      if (existing === undefined) {
+        throw transactionNotFound(parsed.transactionId);
+      }
+      if (existing.status !== 'draft') {
+        throw new Error(`Transaction ${parsed.transactionId} is already complete`);
+      }
+
+      const categoryId =
+        parsed.categoryId === undefined
+          ? existing.categoryId
+          : parsed.categoryId;
+      const candidate = transactionSchema.parse({
+        ...existing,
+        status: 'complete',
+        amount: parsed.amount,
+        categoryId,
+      });
+      const updated = await updateTransactionRow(db, categoryData, candidate);
+      return toTransaction(updated);
     },
   };
 }

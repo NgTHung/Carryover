@@ -167,3 +167,120 @@ test('normal transaction reads hide a soft-deleted row', async () => {
     database.close();
   }
 });
+
+test('edit validates the resulting transaction before writing', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const proxy = createProxyDatabase(database);
+    const data = createTransactionData(proxy, createCategoryData(proxy));
+    const leafId = categoryId(database, 'Groceries');
+    const groupId = categoryId(database, 'Food');
+    const draft = await data.createTransaction({
+      accountId: bankId(database),
+      direction: 'expense',
+      status: 'draft',
+      occurredAt,
+    });
+
+    const edited = await data.editTransaction({
+      transactionId: draft.id,
+      changes: { amount: '45000', categoryId: leafId },
+    });
+    assert.equal(edited.amount, 45_000);
+    assert.equal(edited.categoryId, leafId);
+
+    await assert.rejects(
+      data.editTransaction({
+        transactionId: draft.id,
+        changes: { categoryId: groupId },
+      }),
+      /category leaf/i
+    );
+    await assert.rejects(
+      data.editTransaction({
+        transactionId: draft.id,
+        changes: { amount: 0 },
+      })
+    );
+
+    const unchanged = await data.readTransaction(draft.id);
+    assert.equal(unchanged?.amount, 45_000);
+    assert.equal(unchanged?.categoryId, leafId);
+
+    const blankDraft = await data.createTransaction({
+      accountId: bankId(database),
+      direction: 'expense',
+      status: 'draft',
+      amount: 50_000,
+      occurredAt,
+    });
+    const blanked = await data.editTransaction({
+      transactionId: blankDraft.id,
+      changes: { amount: '   ' },
+    });
+    assert.equal(blanked.amount, null);
+  } finally {
+    database.close();
+  }
+});
+
+test('completeDraft promotes only drafts and leaves rejected rows unchanged', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const proxy = createProxyDatabase(database);
+    const data = createTransactionData(proxy, createCategoryData(proxy));
+    const leafId = categoryId(database, 'Groceries');
+    const draft = await data.createTransaction({
+      accountId: bankId(database),
+      direction: 'expense',
+      status: 'draft',
+      occurredAt,
+    });
+
+    const complete = await data.completeDraft({
+      transactionId: draft.id,
+      amount: '45000',
+      categoryId: leafId,
+    });
+    assert.equal(complete.status, 'complete');
+    assert.equal(complete.amount, 45_000);
+    assert.equal(complete.categoryId, leafId);
+
+    await assert.rejects(
+      data.completeDraft({
+        transactionId: complete.id,
+        amount: 50_000,
+        categoryId: leafId,
+      }),
+      /already complete/i
+    );
+
+    const incomplete = await data.createTransaction({
+      accountId: bankId(database),
+      direction: 'expense',
+      status: 'draft',
+      occurredAt,
+    });
+    const groupId = categoryId(database, 'Food');
+    await assert.rejects(
+      data.completeDraft({
+        transactionId: incomplete.id,
+        amount: 50_000,
+        categoryId: groupId,
+      }),
+      /category leaf/i
+    );
+    await assert.rejects(
+      data.completeDraft({
+        transactionId: incomplete.id,
+        amount: (BigInt(Number.MAX_SAFE_INTEGER) + 1n).toString(),
+        categoryId: leafId,
+      })
+    );
+    const unchanged = await data.readTransaction(incomplete.id);
+    assert.equal(unchanged?.status, 'draft');
+    assert.equal(unchanged?.amount, null);
+  } finally {
+    database.close();
+  }
+});

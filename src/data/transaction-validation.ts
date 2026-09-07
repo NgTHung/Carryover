@@ -151,7 +151,7 @@ const transactionEditChangesSchema = z
   .object({
     accountId: idSchema,
     direction: directionSchema,
-    amount: positiveVndInputSchema.nullable(),
+    amount: draftVndInputSchema,
     categoryId: idSchema.nullable(),
     quality: qualitySchema.nullable(),
     payer: payerSchema,
@@ -178,7 +178,7 @@ export const completeDraftInputSchema = z
   .object({
     transactionId: idSchema,
     amount: positiveVndInputSchema,
-    categoryId: idSchema.nullable().optional().default(null),
+    categoryId: idSchema.nullable().optional(),
   })
   .strict();
 
