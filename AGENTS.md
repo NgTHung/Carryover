@@ -42,7 +42,7 @@ Invariant 7 is the one that breaks quietly. History is freely editable, so a cha
 
 ## Maintainability
 ---
-Long term maintainability is a core priority. Before adding functionality, check whether shared logic can move to its own module. Duplicated logic across files is a code smell.
+Long term maintainability is a core priority. Before adding functionality, check whether shared logic can move to its own module. Duplicated logic across files is a code smell. Remember to commit for every step of a plan.
 
 Budget arithmetic lives in exactly one pure function. No component, hook, screen, or widget computes a budget number on its own. The widget runs in a separate JavaScript runtime with no access to the database or app state, so a second implementation would drift and the two surfaces would disagree.
 
