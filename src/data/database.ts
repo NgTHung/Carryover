@@ -10,6 +10,7 @@ import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { openDatabaseSync } from 'expo-sqlite';
 
 import migrations from '../../drizzle/migrations';
+import { createAccountData } from './accounts';
 import { createLedgerReads } from './ledger-reads';
 import { ledgerTables } from './schema';
 
@@ -18,5 +19,6 @@ sqlite.execSync('PRAGMA foreign_keys = ON;');
 sqlite.execSync('PRAGMA journal_mode = WAL;');
 
 export const ledgerDb = drizzle(sqlite, { schema: ledgerTables });
+export const accountData = createAccountData(ledgerDb);
 export const ledgerReads = createLedgerReads(ledgerDb);
 export { migrations as ledgerMigrations };

@@ -81,6 +81,7 @@ export function deriveAccountBalances(
     if (transaction.amount === null) {
       continue;
     }
+    assertPositiveVndAmount(transaction.amount, 'transaction amount');
     if (transaction.direction === 'adjustment') {
       throw new Error('Adjustment polarity is not defined for account balances');
     }
