@@ -10,6 +10,41 @@ The build excludes the widget extension. WIDGET-001 settled that a sideloaded IP
 
 Commits that touch only Markdown, `docs/`, or `.tasks/` do not build. Pushing twice cancels the first run.
 
+## Local UI development
+
+Use the browser for routine layout and style work:
+
+```bash
+npm run web
+```
+
+Expo opens the preview at `http://localhost:8081` and applies TypeScript, component, and style changes through Fast Refresh. Run `npm run web:export` when you need to verify the production browser bundle.
+
+The browser displays an explicit preview notice. It does not open the ledger or load the iOS widget. Expo SQLite web support is alpha, and the SDK 57 synchronous API cannot open reliably during module evaluation. A browser database would create a second persistence environment without proving native SQLite behavior. Keep browser data typed and explicit. Use database tests and the iPhone development build for storage behavior.
+
+Use the iPhone development build when you need iOS rendering or native behavior:
+
+1. Open the `iOS unsigned IPA` workflow in GitHub Actions and select **Run workflow**.
+2. Set `development` to true. The widget stays disabled for this build.
+3. Download `carryover-development-ipa`, sign `carryover.ipa` with your existing on-device signer, and install it.
+4. Start Metro on this machine:
+
+   ```bash
+   npm run start:device
+   ```
+
+5. Keep the phone and this machine on the same network. Open Carryover and select the displayed development server. You can also scan Metro's QR code.
+
+If local discovery fails, use a tunnel:
+
+```bash
+npm run start:device -- --tunnel
+```
+
+Fast Refresh is enabled by default. TypeScript, JavaScript, styles, and bundled image changes do not need another IPA. Build and install a new development IPA after changing a native dependency, `app.config.js`, the Expo SDK, or native patch scripts.
+
+The development IPA is a Debug build and needs Metro to serve the application. It is not a release artifact. Normal pushes and manual runs with `development` disabled continue to produce the Release `carryover-ipa` artifact.
+
 ## Cost
 
 macOS runner minutes bill at ten times the Linux rate, so a private repository on the free tier gets roughly 200 macOS minutes per month. A build takes about four minutes, so budget that per code push. Make the repository public for unlimited free minutes, or push deliberately rather than continuously.
@@ -20,7 +55,7 @@ The typecheck job runs on Linux and is effectively free. Let it catch what it ca
 
 ## Testing workflow
 
-Run npm test and npm run typecheck locally before pushing. The existing SQLite tests already run on Linux. BUILD-002 migrates them to Jest and adds React Native Testing Library; Linux CI runs the same fast checks before the macOS build.
+Run `npm test` and `npm run typecheck` locally before pushing. The existing SQLite tests already run on Linux. BUILD-002 migrated them to Jest and added React Native Testing Library; Linux CI runs the same fast checks before the macOS build.
 
 BUILD-003 adds an on-demand Maestro workflow with its own Simulator .app and the widget disabled. The device IPA cannot run in a Simulator. Run Maestro against the candidate revision before releases; do not add its Simulator build to every code push. Native device build checks keep their existing triggers. See [App stack and testing](../app-stack-and-testing.md) for test ownership and device checks.
 

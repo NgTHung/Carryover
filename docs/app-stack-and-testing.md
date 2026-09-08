@@ -75,6 +75,7 @@ Do not add an Android build solely for local end-to-end testing. The local suite
 | Task | Outcome |
 | --- | --- |
 | BUILD-002 | Local Jest setup, React Native Testing Library, and fast Linux CI checks |
+| BUILD-004 | Browser UI preview and an unsigned iPhone development build with Fast Refresh |
 | UI-006 | Expo Router shell, startup gating, and route tests |
 | UI-007 | Shared NativeWind tokens, typed variants, and Reanimated helpers |
 | UI-001 and UI-002 | First product screens reuse the navigation and UI foundations |

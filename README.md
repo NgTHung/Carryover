@@ -20,16 +20,21 @@ You need Node 22.13 or newer. This machine uses `nub`, which bundles its own Nod
 npm install
 npm test
 npm run typecheck
+npm run web
 ```
 
-You cannot build for iOS locally. Push, and the `iOS unsigned IPA` workflow builds on a macOS runner and uploads the IPA as an artifact. The widget extension is excluded until stage 6; dispatch the workflow with the `widget` input to build one.
+`npm run web` opens a local UI preview with Fast Refresh. It uses explicit preview data and does not open the ledger or the iOS widget. See the [unsigned IPA pipeline](docs/build/ios-unsigned-ipa.md#local-ui-development) for the browser boundary and the iPhone development-build loop.
+
+You cannot build for iOS locally. Push, and the `iOS unsigned IPA` workflow builds a Release IPA on a macOS runner. For device Fast Refresh, dispatch the workflow with `development` enabled, install the resulting IPA, and run `npm run start:device`. The widget extension is excluded until stage 6; dispatch a Release build with the `widget` input to build one.
 
 Jest logic, real SQLite, and component tests run locally on Linux. BUILD-003 adds a separate iOS Simulator build for Maestro on demand and before releases, without adding it to every push.
 
 ## Layout
 
 ```
-App.tsx                     stage 0 spike screen
+App.tsx                     native entry point and ledger migration gate
+App.web.tsx                 browser UI preview entry point
+src/dev/                    stage 0 screen and platform diagnostics
 widgets/                    the home screen widget component
 src/budget/snapshot.ts      the snapshot contract every surface reads
 docs/state-and-validation.md data ownership and validation boundaries
