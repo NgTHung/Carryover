@@ -14,12 +14,16 @@ last_updated: 2026-09-08
 
 ## Summary
 
-Add two development-only feedback loops. A browser preview runs on the local machine for routine screen and style work. It uses explicit preview data instead of the ledger because expo-sqlite web support is alpha and the SDK 57 synchronous API cannot open reliably during module evaluation. A separately packaged unsigned iOS development build connects to the local Expo server for device-accurate Fast Refresh. The release workflow and widget opt-in remain unchanged.
+Prioritize an unsigned iOS development build that connects to the local Expo server for device-accurate Fast Refresh. Give it a separate bundle identifier, visible name, and development URL scheme so you can keep your release ledger separate from test data. Keep the release identity and widget opt-in stable.
+
+Keep the browser preview limited to startup and shared layout work until product screens exist. Its current stage 0 screen shows that native diagnostics are unavailable. Future screens should share components with iOS and receive typed fixtures. The browser never opens the ledger because expo-sqlite web support is alpha and browser persistence cannot prove native SQLite behavior.
 
 ## Acceptance Criteria
 
 - [x] The local browser preview starts through a documented npm command and loads the app without importing unavailable iOS widget APIs.
 - [x] The browser path does not open the ledger or imply that browser persistence verifies native SQLite behavior; its visible preview state makes that boundary clear.
+- [ ] Development configuration uses a separate bundle identifier, visible name, and URL scheme; CI and the documented Metro command select the same variant and keep its widget disabled.
+- [ ] The signed development app installs beside the release app, opens from Metro, and keeps test transactions separate from the release ledger.
 - [ ] An on-demand GitHub Actions job packages an unsigned iOS development IPA with Expo development-client support and keeps the widget disabled.
 - [ ] TypeScript and JavaScript changes refresh from the local Expo server without rebuilding the native app; native dependency and app configuration changes are documented as rebuild boundaries.
 - [ ] The existing release IPA build remains unchanged and all local tests, typechecking, Expo diagnostics, and a production web export pass.
@@ -28,4 +32,4 @@ Add two development-only feedback loops. A browser preview runs on the local mac
 
 Local verification passed on 2026-09-08. The web development server rendered the preview without a SQLite or widget runtime error. The production web bundle excludes `openDatabaseSync`, `wa-sqlite`, and `ExpoWidgets`. All 66 tests, strict typechecking, all 21 Expo diagnostics, the production web export, prebuild, and workflow linting passed. Prebuild generated the development-client bundle URL and no widget target.
 
-The branch is six commits ahead of `origin/main`. The three remaining criteria need the Debug and Release jobs to run from those commits, followed by a Fast Refresh check on the signed iPhone build. They remain open because repository policy requires explicit consent before pushing.
+Debug and Release CI builds and signed iPhone checks remain required. Verify both apps install together, Metro opens the development app, and development transactions do not change the release ledger. Pushing requires explicit user consent.
