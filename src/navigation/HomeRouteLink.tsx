@@ -5,25 +5,13 @@
  * the home route instead of assuming a back action is available.
  */
 import { Link } from 'expo-router';
-import { Pressable, StyleSheet, Text } from 'react-native';
+
+import { Button } from '../ui/Button';
 
 export function HomeRouteLink() {
   return (
     <Link href="/" replace asChild>
-      <Pressable style={styles.button}>
-        <Text style={styles.buttonText}>Back to home</Text>
-      </Pressable>
+      <Button className="mt-3">Back to home</Button>
     </Link>
   );
 }
-
-const styles = StyleSheet.create({
-  button: {
-    alignItems: 'center',
-    backgroundColor: '#46C4A4',
-    borderRadius: 8,
-    marginTop: 12,
-    padding: 14,
-  },
-  buttonText: { color: '#08120F', fontSize: 15, fontWeight: '700' },
-});

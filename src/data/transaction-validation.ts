@@ -24,6 +24,7 @@ const payerSchema = z.discriminatedUnion('kind', [
 export const transactionDirectionSchema = directionSchema;
 export const transactionQualitySchema = qualitySchema;
 export const transactionPayerSchema = payerSchema;
+export type TransactionQuality = z.infer<typeof qualitySchema>;
 
 const nullableIdInputSchema = idSchema.nullable().optional().default(null);
 const nullableQualityInputSchema = qualitySchema.nullable().optional().default(null);

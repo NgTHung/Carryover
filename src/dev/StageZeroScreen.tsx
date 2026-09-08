@@ -6,18 +6,22 @@
  */
 import { StatusBar } from 'expo-status-bar';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { FIXTURE_SNAPSHOT, formatVnd } from '../budget/snapshot';
+import { CrossFade } from '../ui/CrossFade';
+import { Button } from '../ui/Button';
 import { pushFixtureToWidget, readSigningFacts } from './runtime-diagnostics';
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.row}>
       <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={styles.rowValue} selectable>
-        {value.length ? value : '(empty)'}
-      </Text>
+      <CrossFade stateKey={value}>
+        <Text style={styles.rowValue} selectable>
+          {value.length ? value : '(empty)'}
+        </Text>
+      </CrossFade>
     </View>
   );
 }
@@ -107,9 +111,7 @@ export function StageZeroScreen({ previewNotice }: { previewNotice?: string }) {
         <Text style={styles.note}>
           {`Fixture is ${formatVnd(FIXTURE_SNAPSHOT.perDay)}. Pushing writes ₫12k, so a widget that changes is reading this app's store.`}
         </Text>
-        <Pressable style={styles.button} onPress={pushToWidget}>
-          <Text style={styles.buttonText}>Push ₫12k to widget</Text>
-        </Pressable>
+        <Button onPress={pushToWidget}>Push ₫12k to widget</Button>
         <Row label="Push result" value={push} />
       </ScrollView>
     </View>
@@ -161,12 +163,4 @@ const styles = StyleSheet.create({
   verdictText: { color: '#E4EAE7', fontSize: 14, fontWeight: '600', lineHeight: 20 },
   note: { color: '#97AAA5', fontSize: 13, lineHeight: 19 },
   error: { color: '#E08A58', fontSize: 13, fontFamily: 'Menlo', lineHeight: 19 },
-  button: {
-    backgroundColor: '#46C4A4',
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginVertical: 4,
-  },
-  buttonText: { color: '#08120F', fontSize: 15, fontWeight: '700' },
 });
