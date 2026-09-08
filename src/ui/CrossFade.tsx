@@ -5,7 +5,6 @@
  * but this component never parses, interpolates, or calculates it.
  */
 import { useEffect, useRef, type ReactNode } from 'react';
-import { View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
 import { animatePresentation, useMotionPlan } from './motion';
@@ -32,7 +31,7 @@ export function CrossFade({ children, stateKey, intent = 'crossFade' }: CrossFad
 
   return (
     <Animated.View style={animatedStyle}>
-      <View>{children}</View>
+      {children}
     </Animated.View>
   );
 }
