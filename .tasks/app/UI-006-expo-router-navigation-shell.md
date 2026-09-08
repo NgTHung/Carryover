@@ -1,7 +1,7 @@
 ---
 id: "UI-006"
 title: "Expo Router navigation shell"
-status: "To Do"
+status: In Progress
 priority: "High"
 type: "Feature"
 milestone: "0.2.0"
@@ -9,7 +9,7 @@ depends_on: ["DATA-001", "build:BUILD-002"]
 risk: "Medium"
 impact: "Gives screens one navigation owner and makes transaction links work without copying ledger data into route state."
 tags: ["ui", "navigation"]
-last_updated: "2026-09-07"
+last_updated: 2026-09-08
 ---
 
 ## Summary
