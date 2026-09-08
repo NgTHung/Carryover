@@ -8,9 +8,9 @@ import { StatusBar } from 'expo-status-bar';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { FIXTURE_SNAPSHOT, formatVnd } from '../budget/snapshot';
-import { CrossFade } from '../ui/CrossFade';
-import { Button } from '../ui/Button';
+import { FIXTURE_SNAPSHOT, formatVnd } from '../../budget/snapshot';
+import { CrossFade } from '../../ui/CrossFade';
+import { Button } from '../../ui/Button';
 import { pushFixtureToWidget, readSigningFacts } from './runtime-diagnostics';
 
 function Row({ label, value }: { label: string; value: string }) {

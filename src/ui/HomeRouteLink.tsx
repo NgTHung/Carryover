@@ -6,7 +6,7 @@
  */
 import { Link } from 'expo-router';
 
-import { Button } from '../ui/Button';
+import { Button } from './Button';
 
 export function HomeRouteLink() {
   return (

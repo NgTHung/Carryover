@@ -6,7 +6,7 @@
  */
 import { requireNativeModule } from 'expo-modules-core';
 
-import { CarryoverWidget } from '../../widgets/CarryoverWidget';
+import { CarryoverWidget } from '../../../widgets/CarryoverWidget';
 import type { SigningFacts, WidgetPushResult } from './runtime-diagnostics.types';
 
 export function readSigningFacts(): SigningFacts | string {

@@ -20,8 +20,8 @@ jest.mock('expo-status-bar', () => ({
   StatusBar: () => null,
 }));
 
-import NativeTransactionRoute from '../src/screens/TransactionRouteScreen';
-import WebTransactionRoute from '../src/screens/TransactionRouteScreen.web';
+import NativeTransactionRoute from '../src/screens/transactions/TransactionRouteScreen';
+import WebTransactionRoute from '../src/screens/transactions/TransactionRouteScreen.web';
 import NotFoundScreen from '../src/screens/NotFoundScreen';
 
 const transaction: Transaction = {

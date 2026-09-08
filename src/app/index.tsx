@@ -1,1 +1,1 @@
-export { default } from '../screens/StageZeroRoute';
+export { default } from '../screens/diagnostics/StageZeroRoute';

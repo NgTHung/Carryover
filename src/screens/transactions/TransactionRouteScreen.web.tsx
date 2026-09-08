@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from 'expo-router';
 
-import { parseTransactionRoute } from '../navigation/load-transaction-route';
+import { parseTransactionRoute } from './load-transaction-route';
 import {
   TransactionRouteView,
   type TransactionRouteState,

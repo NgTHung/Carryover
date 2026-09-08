@@ -1,4 +1,4 @@
-import { loadTransactionRoute, parseTransactionRoute } from '../src/navigation/load-transaction-route';
+import { loadTransactionRoute, parseTransactionRoute } from '../src/screens/transactions/load-transaction-route';
 import type { Transaction } from '../src/data/transaction-validation';
 
 const transactionId = '11111111-1111-4111-8111-111111111111';

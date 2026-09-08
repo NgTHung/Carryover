@@ -8,7 +8,7 @@
 import {
   transactionIdSchema,
   type Transaction,
-} from '../data/transaction-validation';
+} from '../../data/transaction-validation';
 
 export type ParsedTransactionRoute =
   | { status: 'valid'; transactionId: string }

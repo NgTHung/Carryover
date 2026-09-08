@@ -1,1 +1,1 @@
-export { default } from '../../screens/TransactionRouteScreen';
+export { default } from '../../screens/transactions/TransactionRouteScreen';

@@ -1,3 +1,3 @@
 import '../../global.css';
 
-export { default } from '../navigation/RootLayout';
+export { default } from '../screens/RootLayout';

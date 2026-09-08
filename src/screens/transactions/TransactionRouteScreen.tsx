@@ -1,8 +1,8 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 
-import { transactionData } from '../data/database';
-import { loadTransactionRoute, parseTransactionRoute } from '../navigation/load-transaction-route';
+import { transactionData } from '../../data/database';
+import { loadTransactionRoute, parseTransactionRoute } from './load-transaction-route';
 import {
   TransactionRouteView,
   type TransactionRouteState,

@@ -33,9 +33,8 @@ Jest logic, real SQLite, and component tests run locally on Linux. BUILD-003 add
 
 ```
 src/app/                    thin Expo Router route files
-src/navigation/              native and browser root layouts and route loaders
-src/screens/                 screen implementations kept outside the route tree
-src/dev/                    stage 0 screen and platform diagnostics
+src/screens/                 route screens, layouts, transactions, and diagnostics
+src/ui/                     shared controls, motion, and route links
 widgets/                    the home screen widget component
 src/budget/snapshot.ts      the snapshot contract every surface reads
 docs/state-and-validation.md data ownership and validation boundaries

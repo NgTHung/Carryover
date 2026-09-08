@@ -32,7 +32,7 @@ jest.mock('../src/data/database', () => ({
   ledgerMigrations: {},
 }));
 
-jest.mock('../src/dev/runtime-diagnostics', () => ({
+jest.mock('../src/screens/diagnostics/runtime-diagnostics', () => ({
   readSigningFacts: () => mockSigningFacts,
   pushFixtureToWidget: () => mockPushFixtureToWidget(),
 }));
@@ -41,10 +41,10 @@ jest.mock('expo-status-bar', () => ({
   StatusBar: () => null,
 }));
 
-import NativeRootLayout from '../src/navigation/RootLayout';
-import WebRootLayout from '../src/navigation/RootLayout.web';
-import { StageZeroScreen } from '../src/dev/StageZeroScreen';
-import WebStageZeroRoute from '../src/screens/StageZeroRoute.web';
+import NativeRootLayout from '../src/screens/RootLayout';
+import WebRootLayout from '../src/screens/RootLayout.web';
+import { StageZeroScreen } from '../src/screens/diagnostics/StageZeroScreen';
+import WebStageZeroRoute from '../src/screens/diagnostics/StageZeroRoute.web';
 
 afterEach(async () => {
   await cleanup();

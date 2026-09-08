@@ -8,7 +8,7 @@ import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
 import { Stack } from 'expo-router';
 
 import { ledgerDb, ledgerMigrations } from '../data/database';
-import { MigrationStatus } from '../dev/MigrationStatus';
+import { MigrationStatus } from './MigrationStatus';
 
 export default function RootLayout() {
   const { success, error } = useMigrations(ledgerDb, ledgerMigrations);
