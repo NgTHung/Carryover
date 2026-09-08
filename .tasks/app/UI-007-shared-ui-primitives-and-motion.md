@@ -18,9 +18,21 @@ Adopt stable NativeWind with a compatible Tailwind CSS and Tailwind Variants com
 
 ## Acceptance Criteria
 
-- [ ] NativeWind, Tailwind CSS, Tailwind Variants, and any class-merging dependency form a compatible pinned set; the chosen versions and compatibility evidence are documented.
-- [ ] Reanimated and Worklets use versions supported by the installed Expo SDK; the app keeps bundled Hermes and introduces no Moti dependency.
-- [ ] Shared color, typography, and spacing tokens follow docs/DESIGN.md; buttons, inputs, and quality chips use typed variants instead of duplicated class strings.
-- [ ] Motion uses shared Reanimated helpers and the platform reduced-motion preference, including the specified cross-fade fallback.
-- [ ] Animations change presentation only; they never interpolate money amounts as floating point values or calculate budget figures.
+- [x] NativeWind, Tailwind CSS, Tailwind Variants, and any class-merging dependency form a compatible pinned set; the chosen versions and compatibility evidence are documented.
+- [x] Reanimated and Worklets use versions supported by the installed Expo SDK; the app keeps bundled Hermes and introduces no Moti dependency.
+- [x] Shared color, typography, and spacing tokens follow docs/DESIGN.md; buttons, inputs, and quality chips use typed variants instead of duplicated class strings.
+- [x] Motion uses shared Reanimated helpers and the platform reduced-motion preference, including the specified cross-fade fallback.
+- [x] Animations change presentation only; they never interpolate money amounts as floating point values or calculate budget figures.
 - [ ] Existing SQL migration imports remain bundled after Metro and Babel changes; one representative screen passes local component checks, iOS bundling, and a CI native build with the widget excluded.
+
+## Verification
+
+Completed locally on 2026-09-08:
+
+- `npm ls --depth=2 nativewind tailwindcss tailwind-variants tailwind-merge react-native-reanimated react-native-worklets` resolves NativeWind 4.2.6, Tailwind CSS 3.4.19, Tailwind Variants 0.3.1, Tailwind Merge 2.5.4, Reanimated 4.5.1, and Worklets 0.10.1 with no invalid peers.
+- `npm test -- --runInBand` passes 22 suites and 90 tests, including the shared primitive and motion tests.
+- `npm run typecheck`, `npx expo-doctor`, and `npm run web:export` pass.
+- `npx expo export --platform ios` succeeds, and the exported bundle contains the SQL migration markers `CREATE TABLE` and `accounts_opening_balance_non_negative_vnd`.
+- `CARRYOVER_WIDGET=0 npm run prebuild` succeeds on Linux with Hermes enabled and no widget target generated.
+
+The CI macOS native build with the widget excluded still needs to run on a pushed revision. This environment has no Mac, and the user has not authorized a push.
