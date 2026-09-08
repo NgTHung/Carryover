@@ -10,8 +10,12 @@ on:
       - 'docs/**'
   workflow_dispatch:
     inputs:
+      development:
+        description: 'Build a development client for Fast Refresh'
+        type: boolean
+        default: false
       widget:
-        description: 'Build with the widget extension'
+        description: 'Build the release IPA with the widget extension'
         type: boolean
         default: false
 
@@ -40,6 +44,8 @@ jobs:
     needs: typecheck
 
     runs-on: macos-26
+    env:
+      BUILD_CONFIGURATION: ${{ inputs.development && 'Debug' || 'Release' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -61,11 +67,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # The widget is deferred to build:WIDGET-002. Every push builds without the
-      # extension; dispatch the workflow with the widget input to build one.
+      # The widget is deferred to build:WIDGET-002. Every push and development
+      # build excludes it; dispatch a release build with the widget input to opt in.
       - name: Generate the native project
         env:
-          CARRYOVER_WIDGET: ${{ inputs.widget && '1' || '0' }}
+          CARRYOVER_WIDGET: ${{ inputs.development && '0' || inputs.widget && '1' || '0' }}
         run: npm run prebuild
 
       - name: Install pods
@@ -79,7 +85,7 @@ jobs:
           xcodebuild \
             -workspace "$SCHEME.xcworkspace" \
             -scheme "$SCHEME" \
-            -configuration Release \
+            -configuration "$BUILD_CONFIGURATION" \
             -sdk iphoneos \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
@@ -89,7 +95,7 @@ jobs:
 
       - name: Package .ipa
         run: |
-          APP="$(find ios/build/Build/Products/Release-iphoneos -maxdepth 1 -name '*.app' | head -1)"
+          APP="$(find "ios/build/Build/Products/$BUILD_CONFIGURATION-iphoneos" -maxdepth 1 -name '*.app' | head -1)"
           test -n "$APP" || { echo "No .app produced"; exit 1; }
           echo "Packaging $APP"
           mkdir -p Payload
@@ -114,6 +120,6 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: carryover-ipa
+          name: ${{ inputs.development && 'carryover-development-ipa' || 'carryover-ipa' }}
           path: carryover.ipa
           if-no-files-found: error
