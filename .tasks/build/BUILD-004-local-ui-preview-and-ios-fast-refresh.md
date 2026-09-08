@@ -18,8 +18,14 @@ Add two development-only feedback loops. A browser preview runs on the local mac
 
 ## Acceptance Criteria
 
-- [ ] The local browser preview starts through a documented npm command and loads the app without importing unavailable iOS widget APIs.
-- [ ] The browser path does not open the ledger or imply that browser persistence verifies native SQLite behavior; its visible preview state makes that boundary clear.
+- [x] The local browser preview starts through a documented npm command and loads the app without importing unavailable iOS widget APIs.
+- [x] The browser path does not open the ledger or imply that browser persistence verifies native SQLite behavior; its visible preview state makes that boundary clear.
 - [ ] An on-demand GitHub Actions job packages an unsigned iOS development IPA with Expo development-client support and keeps the widget disabled.
 - [ ] TypeScript and JavaScript changes refresh from the local Expo server without rebuilding the native app; native dependency and app configuration changes are documented as rebuild boundaries.
 - [ ] The existing release IPA build remains unchanged and all local tests, typechecking, Expo diagnostics, and a production web export pass.
+
+## Verification
+
+Local verification passed on 2026-09-08. The web development server rendered the preview without a SQLite or widget runtime error. The production web bundle excludes `openDatabaseSync`, `wa-sqlite`, and `ExpoWidgets`. All 66 tests, strict typechecking, all 21 Expo diagnostics, the production web export, prebuild, and workflow linting passed. Prebuild generated the development-client bundle URL and no widget target.
+
+The branch is six commits ahead of `origin/main`. The three remaining criteria need the Debug and Release jobs to run from those commits, followed by a Fast Refresh check on the signed iPhone build. They remain open because repository policy requires explicit consent before pushing.
