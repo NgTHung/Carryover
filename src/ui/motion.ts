@@ -40,5 +40,10 @@ export function animatePresentation(
   progress: SharedValue<number>,
   plan: MotionPlan
 ): void {
+  if (plan.kind === 'instant') {
+    progress.value = 1;
+    return;
+  }
+
   progress.value = withTiming(1, timingConfig(plan));
 }
