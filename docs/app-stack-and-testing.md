@@ -23,7 +23,10 @@ Tailwind Variants 0.3.1, and its Tailwind Merge 2.5.4 dependency. Tailwind
 Variants 0.3.1 stays on the Tailwind 3 line; Tailwind Merge 3 drops Tailwind 3
 support. Reanimated 4.5.1 and Worklets 0.10.1 are direct dependencies because
 they are the versions bundled for Expo SDK 57. The lockfile must resolve one copy
-of each package, and `npm ls` must report no invalid peer dependencies.
+of each package, and `npm ls` must report no invalid peer dependencies. The
+compatibility references are [NativeWind's Expo installation guide](https://www.nativewind.dev/docs/getting-started/installation),
+[Tailwind Merge's v2 support matrix](https://github.com/dcastil/tailwind-merge/tree/v2.6.0),
+and [Tailwind Variants' Tailwind 4 release boundary](https://github.com/heroui-inc/tailwind-variants/releases/tag/v1.0.0).
 
 ## Navigation and UI
 
