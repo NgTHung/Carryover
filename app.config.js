@@ -31,7 +31,7 @@ const widgetPlugin = [
   },
 ];
 
-const plugins = ['expo-sqlite'];
+const plugins = ['expo-router', 'expo-sqlite'];
 if (development) {
   // The default exp+carryover scheme also belongs to the release app.
   plugins.push(['expo-dev-client', { addGeneratedScheme: false }]);
@@ -44,12 +44,18 @@ module.exports = {
   expo: {
     name: development ? 'Carryover Dev' : 'Carryover',
     slug: 'carryover',
-    ...(development ? { scheme: 'carryover-dev' } : {}),
+    scheme: development ? 'carryover-dev' : 'carryover',
     version: '0.1.0',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'automatic',
     newArchEnabled: true,
+    experiments: {
+      typedRoutes: true,
+    },
+    web: {
+      bundler: 'metro',
+    },
     splash: {
       image: './assets/splash-icon.png',
       resizeMode: 'contain',

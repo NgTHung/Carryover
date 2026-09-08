@@ -22,10 +22,10 @@ test('default and explicit release preserve the installed app identity', () => {
   expect(release).toEqual(config('release'));
   expect(release).toMatchObject({
     name: 'Carryover',
+    scheme: 'carryover',
     ios: { bundleIdentifier: 'com.bbq.carryover' },
-    plugins: ['expo-sqlite'],
+    plugins: ['expo-router', 'expo-sqlite'],
   });
-  expect(release).not.toHaveProperty('scheme');
 });
 
 test.each(['0', '1'])('development isolates installation and launch with widget=%s', (widget) => {
@@ -33,7 +33,11 @@ test.each(['0', '1'])('development isolates installation and launch with widget=
     name: 'Carryover Dev',
     scheme: 'carryover-dev',
     ios: { bundleIdentifier: 'com.bbq.carryover.dev' },
-    plugins: ['expo-sqlite', ['expo-dev-client', { addGeneratedScheme: false }]],
+    plugins: [
+      'expo-router',
+      'expo-sqlite',
+      ['expo-dev-client', { addGeneratedScheme: false }],
+    ],
   });
 });
 

@@ -22,21 +22,6 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function MigrationStatus({ message }: { message: string }) {
-  return (
-    <View style={styles.root}>
-      <StatusBar style="light" />
-      <View style={styles.migrationStatus}>
-        <Text style={styles.eyebrow}>CARRYOVER · LEDGER</Text>
-        <Text style={styles.title}>Preparing your ledger</Text>
-        <Text style={styles.error} selectable>
-          {message}
-        </Text>
-      </View>
-    </View>
-  );
-}
-
 export function StageZeroScreen({ previewNotice }: { previewNotice?: string }) {
   const facts = useMemo(readSigningFacts, []);
   const [push, setPush] = useState<string>('Not run.');
@@ -133,7 +118,6 @@ export function StageZeroScreen({ previewNotice }: { previewNotice?: string }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#0D1614' },
-  migrationStatus: { flex: 1, justifyContent: 'center', padding: 20, gap: 8 },
   content: { padding: 20, paddingTop: 68, paddingBottom: 60, gap: 8 },
   eyebrow: { color: '#46C4A4', fontSize: 11, letterSpacing: 1.6, fontWeight: '600' },
   title: { color: '#E4EAE7', fontSize: 28, fontWeight: '700', marginBottom: 8 },

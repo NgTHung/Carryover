@@ -23,6 +23,10 @@ jest.mock('drizzle-orm/expo-sqlite/migrator', () => ({
   useMigrations: (...args: unknown[]) => mockUseMigrations(...args),
 }));
 
+jest.mock('expo-router', () => ({
+  Stack: () => null,
+}));
+
 jest.mock('../src/data/database', () => ({
   ledgerDb: {},
   ledgerMigrations: {},
@@ -37,8 +41,10 @@ jest.mock('expo-status-bar', () => ({
   StatusBar: () => null,
 }));
 
-import App from '../App';
-import WebApp from '../App.web';
+import NativeRootLayout from '../src/navigation/RootLayout';
+import WebRootLayout from '../src/navigation/RootLayout.web';
+import { StageZeroScreen } from '../src/dev/StageZeroScreen';
+import WebStageZeroRoute from '../src/screens/StageZeroRoute.web';
 
 afterEach(async () => {
   await cleanup();
@@ -51,20 +57,20 @@ beforeEach(() => {
 });
 
 test('shows the migration loading state before the ledger is ready', async () => {
-  await render(<App />);
+  await render(<NativeRootLayout />);
 
   expect(screen.getByText('Applying the ledger schema…')).toBeTruthy();
   expect(screen.queryByText('Signing facts')).toBeNull();
   expect(screen.queryByText('Push ₫12k to widget')).toBeNull();
 });
 
-test('shows a migration error and keeps the app screen unavailable', async () => {
+test('shows a migration error and keeps the route tree unavailable', async () => {
   mockUseMigrations.mockReturnValue({
     success: false,
     error: new Error('database is locked'),
   });
 
-  await render(<App />);
+  await render(<NativeRootLayout />);
 
   expect(screen.getByText('Migration failed: database is locked')).toBeTruthy();
   expect(screen.queryByText('Signing facts')).toBeNull();
@@ -74,7 +80,7 @@ test('shows a migration error and keeps the app screen unavailable', async () =>
 test('pushes the widget snapshot through the native boundary', async () => {
   mockUseMigrations.mockReturnValue({ success: true, error: undefined });
 
-  await render(<App />);
+  await render(<StageZeroScreen />);
   const user = userEvent.setup();
   await user.press(screen.getByText('Push ₫12k to widget'));
 
@@ -82,8 +88,23 @@ test('pushes the widget snapshot through the native boundary', async () => {
   expect(await screen.findByText('Wrote ₫12k and read back 1 entry(s). Check the widget.')).toBeTruthy();
 });
 
+test('mounts the native stack only after migration succeeds', async () => {
+  mockUseMigrations.mockReturnValue({ success: true, error: undefined });
+
+  await render(<NativeRootLayout />);
+
+  expect(screen.queryByText('Applying the ledger schema…')).toBeNull();
+  expect(screen.queryByText('Migration failed: database is locked')).toBeNull();
+});
+
+test('mounts the browser stack without opening the ledger', async () => {
+  await render(<WebRootLayout />);
+
+  expect(mockUseMigrations).not.toHaveBeenCalled();
+});
+
 test('labels the browser as a preview without opening the ledger', async () => {
-  await render(<WebApp />);
+  await render(<WebStageZeroRoute />);
 
   expect(
     screen.getByText('Browser preview. The ledger and iOS widget are not connected.')
