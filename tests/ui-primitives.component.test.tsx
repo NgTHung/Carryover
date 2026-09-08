@@ -40,6 +40,12 @@ test('input exposes its label and validation message', async () => {
   expect(screen.getByLabelText('Amount').props.accessibilityHint).toBe('Enter an amount');
 });
 
+test('disabled input state prevents editing', async () => {
+  await render(<Input label="Note" state="disabled" />);
+
+  expect(screen.getByLabelText('Note').props.editable).toBe(false);
+});
+
 test('quality chip keeps its label and selected accessibility state', async () => {
   const onPress = jest.fn();
   const user = userEvent.setup();
