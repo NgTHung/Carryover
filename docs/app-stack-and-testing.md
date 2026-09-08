@@ -18,6 +18,13 @@ Decision recorded on 2026-09-07. Use this contract when adding navigation, UI in
 
 TanStack Query and Moti are deferred. Use stable NativeWind rather than its preview release. NativeWind's stable line currently targets Tailwind 3, so select compatible Tailwind Variants and class-merging versions together. Record the resolved versions when implementing UI-007 and commit the lockfile. Install Expo native packages at the versions supported by the project's SDK. Do not upgrade the SDK to satisfy a styling package without a separate decision.
 
+UI-007 pins the compatible styling set to NativeWind 4.2.6, Tailwind CSS 3.4.19,
+Tailwind Variants 0.3.1, and its Tailwind Merge 2.5.4 dependency. Tailwind
+Variants 0.3.1 stays on the Tailwind 3 line; Tailwind Merge 3 drops Tailwind 3
+support. Reanimated 4.5.1 and Worklets 0.10.1 are direct dependencies because
+they are the versions bundled for Expo SDK 57. The lockfile must resolve one copy
+of each package, and `npm ls` must report no invalid peer dependencies.
+
 ## Navigation and UI
 
 Put thin route files under src/app. Keep screen implementations, shared components, database setup, and domain logic outside that directory. The native root layout gates database-backed screens on migration success and exposes startup failures. The browser root layout intentionally omits the SQLite boundary so the preview cannot query the ledger.

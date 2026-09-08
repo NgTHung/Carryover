@@ -20,6 +20,13 @@ module.exports = {
       ...require('jest-expo/jest-preset'),
       displayName: 'component',
       testMatch: ['<rootDir>/tests/**/*.component.test.tsx'],
+      setupFilesAfterEnv: [
+        ...(require('jest-expo/jest-preset').setupFilesAfterEnv ?? []),
+        '<rootDir>/jest.setup.ts',
+      ],
+      moduleNameMapper: {
+        '\\.css$': '<rootDir>/tests/support/style-mock.js',
+      },
     },
   ],
 };
