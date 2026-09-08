@@ -25,3 +25,5 @@ npm-debug.*
 *.mobileprovision
 *.cer
 *.certSigningRequest
+
+expo-env.d.ts

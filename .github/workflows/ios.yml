@@ -35,6 +35,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Expo Router generates route types from src/app; generate them before
+      # typechecking so CI exercises the same typed links as local development.
+      - run: npx expo customize tsconfig.json
       - run: npm run typecheck
       - run: npm test
 
