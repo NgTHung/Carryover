@@ -1,7 +1,7 @@
 ---
 id: "UI-007"
 title: "Shared UI primitives and motion"
-status: "To Do"
+status: In Progress
 priority: "Medium"
 type: "Feature"
 milestone: "0.2.0"
@@ -9,7 +9,7 @@ depends_on: ["build:BUILD-002"]
 risk: "Medium"
 impact: "Keeps styling and animation consistent while containing the compatibility risk of new build tooling and native animation dependencies."
 tags: ["ui", "design", "animation"]
-last_updated: "2026-09-07"
+last_updated: 2026-09-08
 ---
 
 ## Summary
