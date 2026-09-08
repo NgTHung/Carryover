@@ -20,9 +20,9 @@ TanStack Query and Moti are deferred. Use stable NativeWind rather than its prev
 
 ## Navigation and UI
 
-Put thin route files under src/app. Keep screen implementations, shared components, database setup, and domain logic outside that directory. The root layout gates database-backed screens on migration success and exposes startup failures.
+Put thin route files under src/app. Keep screen implementations, shared components, database setup, and domain logic outside that directory. The native root layout gates database-backed screens on migration success and exposes startup failures. The browser root layout intentionally omits the SQLite boundary so the preview cannot query the ledger.
 
-Expo Router owns route history and route parameters. Route to a transaction by id, then validate the parameter and load the row through the public data API. Zustand holds shared UI state that is not already represented by the route. Do not mirror route history or an active route's transaction id into a store. Screen-local input stays in React state.
+Expo Router owns route history and route parameters. Route to a transaction by id, then validate the parameter and load the row through the public data API. Invalid ids stop before the read, and missing rows have an explicit unavailable state. Zustand holds shared UI state that is not already represented by the route. Do not mirror route history or an active route's transaction id into a store. Screen-local input stays in React state.
 
 Use tokens from [the design constitution](DESIGN.md) for color, spacing, and typography. Tailwind Variants defines reusable control variants. Reanimated owns dynamic animation styles and shared motion helpers. Respect the native reduced-motion preference and the design's cross-fade fallback.
 

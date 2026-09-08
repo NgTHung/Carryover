@@ -32,8 +32,9 @@ Jest logic, real SQLite, and component tests run locally on Linux. BUILD-003 add
 ## Layout
 
 ```
-App.tsx                     native entry point and ledger migration gate
-App.web.tsx                 browser UI preview entry point
+src/app/                    thin Expo Router route files
+src/navigation/              native and browser root layouts and route loaders
+src/screens/                 screen implementations kept outside the route tree
 src/dev/                    stage 0 screen and platform diagnostics
 widgets/                    the home screen widget component
 src/budget/snapshot.ts      the snapshot contract every surface reads
@@ -44,6 +45,11 @@ docs/build/                 pipeline and sideload documentation
 .tasks/                     task files, validated by taskroot
 .github/workflows/ios.yml   the only iOS build environment
 ```
+
+The native root layout applies SQLite migrations before it mounts the stack.
+Transaction links carry only a UUID, which the route validates before it calls
+the public transaction data API. The browser preview keeps the ledger boundary
+closed and shows an explicit unavailable state for transaction links.
 
 ## Working on this
 

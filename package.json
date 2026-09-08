@@ -2,7 +2,7 @@
   "name": "carryover",
   "version": "0.1.0",
   "private": true,
-    "main": "expo-router/entry",
+  "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
     "start:device": "CARRYOVER_VARIANT=development expo start --dev-client --scheme carryover-dev",

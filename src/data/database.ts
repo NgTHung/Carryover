@@ -2,8 +2,8 @@
  * The app's single SQLite connection and migration bundle.
  *
  * Foreign-key enforcement is connection-local in SQLite, so it is enabled
- * before any feature opens a transaction. The migration hook in App.tsx keeps
- * the existing screen behind a clear loading or error state until the schema
+ * before any feature opens a transaction. The native root layout keeps every
+ * ledger-backed route behind a clear loading or error state until the schema
  * is ready.
  */
 import { drizzle } from 'drizzle-orm/expo-sqlite';
