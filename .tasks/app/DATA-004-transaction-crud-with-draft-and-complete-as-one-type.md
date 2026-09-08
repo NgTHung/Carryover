@@ -1,7 +1,7 @@
 ---
 id: "DATA-004"
 title: "Transaction CRUD with draft and complete as one type"
-status: In Progress
+status: Done
 priority: "High"
 type: "Feature"
 milestone: "0.2.0"
@@ -9,7 +9,7 @@ depends_on: ["DATA-001", "DATA-003"]
 risk: "High"
 impact: "The transactions table is the ledger. Its shape decides whether a draft can ever be mistaken for a complete transaction, which is what turns an unknown into a silent zero."
 tags: ["data", "transactions"]
-last_updated: 2026-09-07
+last_updated: 2026-09-08
 ---
 
 ## Summary
@@ -38,6 +38,6 @@ Deletes are soft. History stays freely editable, which is only safe because conf
 - [x] `payer_contact_id` round-trips, and a null reads back as you.
 - [x] Delete is a soft delete and the row reads back as absent from normal queries.
 - [x] `tests/` covers create, edit, complete a draft, and soft delete.
-- [ ] Tests reject invalid create, edit, and completion inputs without changing the stored row. Blank or omitted draft amounts stay null, and malformed, fractional, zero, negative, or unsafe amounts produce Zod validation failures without throwing outside Zod, rounding, or truncating.
-- [ ] Overlapping edits detect a stale write before it can restore an older amount or draft status.
-- [ ] Editing fields other than the category preserves a deleted historical category reference.
+- [x] Tests reject invalid create, edit, and completion inputs without changing the stored row. Blank or omitted draft amounts stay null, and malformed, fractional, zero, negative, or unsafe amounts produce Zod validation failures without throwing outside Zod, rounding, or truncating.
+- [x] Overlapping edits detect a stale write before it can restore an older amount or draft status.
+- [x] Editing fields other than the category preserves a deleted historical category reference.
