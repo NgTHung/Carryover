@@ -12,7 +12,7 @@ Commits that touch only Markdown, `docs/`, or `.tasks/` do not build. Pushing tw
 
 ## Local UI development
 
-Use the browser for routine layout and style work:
+Use the iPhone development build as your main feedback loop. The browser supports shared layout and style work:
 
 ```bash
 npm run web
@@ -20,20 +20,24 @@ npm run web
 
 Expo opens the preview at `http://localhost:8081` and applies TypeScript, component, and style changes through Fast Refresh. Run `npm run web:export` when you need to verify the production browser bundle.
 
-The browser displays an explicit preview notice. It does not open the ledger or load the iOS widget. Expo SQLite web support is alpha, and the SDK 57 synchronous API cannot open reliably during module evaluation. A browser database would create a second persistence environment without proving native SQLite behavior. Keep browser data typed and explicit. Use database tests and the iPhone development build for storage behavior.
+The browser displays an explicit preview notice. The current stage 0 screen only shows that signing facts are unavailable, so it verifies startup but offers little screen coverage. Add typed fixtures to shared components as product screens arrive. Keep this preview small. It does not open the ledger or load the iOS widget. Expo SQLite web support is alpha, and a browser database would create a second persistence environment without proving native SQLite behavior. Use database tests and the iPhone development build for storage behavior.
 
 Use the iPhone development build when you need iOS rendering or native behavior:
 
 1. Open the `iOS unsigned IPA` workflow in GitHub Actions and select **Run workflow**.
 2. Set `development` to true. The widget stays disabled for this build.
-3. Download `carryover-development-ipa`, sign `carryover.ipa` with your existing on-device signer, and install it.
+3. Download `carryover-development-ipa`, sign `carryover.ipa` with your existing on-device signer, and install it. Keep its identifier distinct from the release app if your signer rewrites identifiers. The app should appear as Carryover Dev beside Carryover.
 4. Start Metro on this machine:
 
    ```bash
    npm run start:device
    ```
 
-5. Keep the phone and this machine on the same network. Open Carryover and select the displayed development server. You can also scan Metro's QR code.
+5. Keep the phone and this machine on the same network. Enable Developer Mode if iOS requests it and allow local network access. Open Carryover Dev and select the displayed development server. You can also scan Metro's QR code.
+
+The workflow sets `CARRYOVER_VARIANT=development` for development builds. The Metro command sets the same value and uses the `carryover-dev` URL scheme. The development bundle identifier is `com.bbq.carryover.dev`; release keeps `com.bbq.carryover`. Separate identities give each app its own ledger storage. Development always disables the widget, even if `CARRYOVER_WIDGET=1` is set. The release app keeps its existing URL configuration. This follows Expo's [app variant guidance](https://docs.expo.dev/build-reference/variants/).
+
+After installing, confirm both apps still appear and Metro opens Carryover Dev. Once transaction screens exist, add a test transaction in Carryover Dev, restart both apps, and confirm it exists only in development. Use test data in Carryover Dev. An older development IPA used the release identifier; installing the new variant does not move that older app's data.
 
 If local discovery fails, use a tunnel:
 

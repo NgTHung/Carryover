@@ -46,6 +46,7 @@ jobs:
     runs-on: macos-26
     env:
       BUILD_CONFIGURATION: ${{ inputs.development && 'Debug' || 'Release' }}
+      CARRYOVER_VARIANT: ${{ inputs.development && 'development' || 'release' }}
     steps:
       - uses: actions/checkout@v4
 

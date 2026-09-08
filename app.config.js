@@ -5,9 +5,14 @@
 // installs but left a stale-render question open, so building it on every push
 // spends macOS minutes on a target nothing consumes yet. Set CARRYOVER_WIDGET=1
 // to opt back in.
-const widgetEnabled = process.env.CARRYOVER_WIDGET === '1';
+const variant = process.env.CARRYOVER_VARIANT ?? 'release';
+if (variant !== 'release' && variant !== 'development') {
+  throw new Error(`Unknown CARRYOVER_VARIANT: ${variant}. Use release or development.`);
+}
+const development = variant === 'development';
+const widgetEnabled = !development && process.env.CARRYOVER_WIDGET === '1';
 
-const BUNDLE_ID = 'com.bbq.carryover';
+const BUNDLE_ID = development ? 'com.bbq.carryover.dev' : 'com.bbq.carryover';
 
 const widgetPlugin = [
   'expo-widgets',
@@ -27,14 +32,19 @@ const widgetPlugin = [
 ];
 
 const plugins = ['expo-sqlite'];
+if (development) {
+  // The default exp+carryover scheme also belongs to the release app.
+  plugins.push(['expo-dev-client', { addGeneratedScheme: false }]);
+}
 if (widgetEnabled) {
   plugins.push(widgetPlugin);
 }
 
 module.exports = {
   expo: {
-    name: 'Carryover',
+    name: development ? 'Carryover Dev' : 'Carryover',
     slug: 'carryover',
+    ...(development ? { scheme: 'carryover-dev' } : {}),
     version: '0.1.0',
     orientation: 'portrait',
     icon: './assets/icon.png',

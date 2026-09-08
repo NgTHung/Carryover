@@ -2,7 +2,7 @@
  * Local UI preview entry point.
  *
  * Browser storage is not evidence about the native ledger, so this surface
- * renders explicit preview data and leaves SQLite to device and database tests.
+ * renders the shared stage 0 layout and leaves SQLite to device and database tests.
  */
 import { StageZeroScreen } from './src/dev/StageZeroScreen';
 

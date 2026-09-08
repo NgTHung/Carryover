@@ -23,9 +23,9 @@ npm run typecheck
 npm run web
 ```
 
-`npm run web` opens a local UI preview with Fast Refresh. It uses explicit preview data and does not open the ledger or the iOS widget. See the [unsigned IPA pipeline](docs/build/ios-unsigned-ipa.md#local-ui-development) for the browser boundary and the iPhone development-build loop.
+`npm run web` opens a local UI preview with Fast Refresh. The current stage 0 screen shows that native diagnostics are unavailable. It does not open the ledger or the iOS widget. See the [unsigned IPA pipeline](docs/build/ios-unsigned-ipa.md#local-ui-development) for the browser boundary and the iPhone development-build loop.
 
-You cannot build for iOS locally. Push, and the `iOS unsigned IPA` workflow builds a Release IPA on a macOS runner. For device Fast Refresh, dispatch the workflow with `development` enabled, install the resulting IPA, and run `npm run start:device`. The widget extension is excluded until stage 6; dispatch a Release build with the `widget` input to build one.
+You cannot build for iOS locally. Push, and the `iOS unsigned IPA` workflow builds a Release IPA on a macOS runner. For device Fast Refresh, dispatch the workflow with `development` enabled, install the resulting Carryover Dev IPA beside Carryover, and run `npm run start:device`. Keep the two bundle identifiers distinct when signing so your test data stays separate from your release ledger. The widget extension is excluded until stage 6; dispatch a Release build with the `widget` input to build one.
 
 Jest logic, real SQLite, and component tests run locally on Linux. BUILD-003 adds a separate iOS Simulator build for Maestro on demand and before releases, without adding it to every push.
 
