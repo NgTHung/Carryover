@@ -1,5 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { HomeRouteLink } from '../navigation/HomeRouteLink';
+
 export type TransactionRouteState =
   | { status: 'loading' }
   | { status: 'invalid'; message: string }
@@ -37,6 +39,7 @@ export function TransactionRouteView({ state }: { state: TransactionRouteState }
         {state.transactionId}
       </Text>
       <Text style={styles.detail}>Status: {state.transactionStatus}</Text>
+      <HomeRouteLink />
     </View>
   );
 }
@@ -49,6 +52,7 @@ function Message({ title, detail }: { title: string; detail: string }) {
       <Text style={styles.detail} selectable>
         {detail}
       </Text>
+      <HomeRouteLink />
     </View>
   );
 }

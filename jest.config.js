@@ -20,8 +20,6 @@ module.exports = {
       ...require('jest-expo/jest-preset'),
       displayName: 'component',
       testMatch: ['<rootDir>/tests/**/*.component.test.tsx'],
-      // Keep native mocks local to component tests so their boundaries stay visible.
-      setupFiles: [require.resolve('@react-native/jest-preset/jest/setup.js')],
     },
   ],
 };

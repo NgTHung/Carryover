@@ -1,5 +1,6 @@
-import { Link } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+
+import { HomeRouteLink } from '../navigation/HomeRouteLink';
 
 export default function NotFoundScreen() {
   return (
@@ -7,11 +8,7 @@ export default function NotFoundScreen() {
       <Text style={styles.eyebrow}>CARRYOVER · ROUTES</Text>
       <Text style={styles.title}>Page not found</Text>
       <Text style={styles.detail}>This route is not part of the app.</Text>
-      <Link href="/" asChild>
-        <Pressable style={styles.button}>
-          <Text style={styles.buttonText}>Back to home</Text>
-        </Pressable>
-      </Link>
+      <HomeRouteLink />
     </View>
   );
 }
@@ -27,12 +24,4 @@ const styles = StyleSheet.create({
   eyebrow: { color: '#46C4A4', fontSize: 11, letterSpacing: 1.6, fontWeight: '600' },
   title: { color: '#E4EAE7', fontSize: 28, fontWeight: '700' },
   detail: { color: '#97AAA5', fontSize: 13, lineHeight: 19 },
-  button: {
-    alignItems: 'center',
-    backgroundColor: '#46C4A4',
-    borderRadius: 8,
-    marginTop: 12,
-    padding: 14,
-  },
-  buttonText: { color: '#08120F', fontSize: 15, fontWeight: '700' },
 });
