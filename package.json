@@ -5,6 +5,9 @@
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
+    "start:device": "expo start --dev-client",
+    "web": "expo start --web",
+    "web:export": "expo export --platform web",
     "ios": "expo run:ios",
     "prebuild": "node scripts/patch-expo-widgets.mjs && expo prebuild --platform ios --clean && node scripts/strip-push-entitlement.mjs",
     "test": "jest",
@@ -17,14 +20,18 @@
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
+    "@expo/metro-runtime": "~57.0.15",
     "@expo/ui": "~57.0.14",
     "drizzle-orm": "^0.45.2",
     "expo": "~57.0.18",
+    "expo-dev-client": "~57.0.18",
     "expo-sqlite": "~57.0.2",
     "expo-status-bar": "~57.0.1",
     "expo-widgets": "~57.0.15",
     "react": "19.2.3",
+    "react-dom": "19.2.3",
     "react-native": "0.86.3",
+    "react-native-web": "^0.21.2",
     "zod": "3.25.76"
   },
   "devDependencies": {

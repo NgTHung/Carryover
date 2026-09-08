@@ -17,9 +17,7 @@ const mockSigningFacts = {
 };
 
 const mockUseMigrations = jest.fn();
-const mockUpdateSnapshot = jest.fn();
-const mockReload = jest.fn();
-const mockGetTimeline = jest.fn();
+const mockPushFixtureToWidget = jest.fn();
 
 jest.mock('drizzle-orm/expo-sqlite/migrator', () => ({
   useMigrations: (...args: unknown[]) => mockUseMigrations(...args),
@@ -30,16 +28,9 @@ jest.mock('../src/data/database', () => ({
   ledgerMigrations: {},
 }));
 
-jest.mock('../widgets/CarryoverWidget', () => ({
-  CarryoverWidget: {
-    updateSnapshot: (...args: unknown[]) => mockUpdateSnapshot(...args),
-    reload: (...args: unknown[]) => mockReload(...args),
-    getTimeline: (...args: unknown[]) => mockGetTimeline(...args),
-  },
-}));
-
-jest.mock('expo-modules-core', () => ({
-  requireNativeModule: () => ({ signingFacts: mockSigningFacts }),
+jest.mock('../src/dev/runtime-diagnostics', () => ({
+  readSigningFacts: () => mockSigningFacts,
+  pushFixtureToWidget: () => mockPushFixtureToWidget(),
 }));
 
 jest.mock('expo-status-bar', () => ({
@@ -47,16 +38,16 @@ jest.mock('expo-status-bar', () => ({
 }));
 
 import App from '../App';
+import WebApp from '../App.web';
 
 afterEach(async () => {
   await cleanup();
   jest.clearAllMocks();
-  mockGetTimeline.mockResolvedValue([{ perDay: 12_000, runwayDays: 7, unloggedDrafts: 0 }]);
 });
 
 beforeEach(() => {
   mockUseMigrations.mockReturnValue({ success: false, error: undefined });
-  mockGetTimeline.mockResolvedValue([{ perDay: 12_000, runwayDays: 7, unloggedDrafts: 0 }]);
+  mockPushFixtureToWidget.mockResolvedValue({ status: 'pushed', timelineEntries: 1 });
 });
 
 test('shows the migration loading state before the ledger is ready', async () => {
@@ -87,11 +78,15 @@ test('pushes the widget snapshot through the native boundary', async () => {
   const user = userEvent.setup();
   await user.press(screen.getByText('Push ₫12k to widget'));
 
-  expect(mockUpdateSnapshot).toHaveBeenCalledWith({
-    perDay: 12_000,
-    runwayDays: 7,
-    unloggedDrafts: 0,
-  });
-  expect(mockReload).toHaveBeenCalledTimes(1);
+  expect(mockPushFixtureToWidget).toHaveBeenCalledTimes(1);
   expect(await screen.findByText('Wrote ₫12k and read back 1 entry(s). Check the widget.')).toBeTruthy();
+});
+
+test('labels the browser as a preview without opening the ledger', async () => {
+  await render(<WebApp />);
+
+  expect(
+    screen.getByText('Browser preview. The ledger and iOS widget are not connected.')
+  ).toBeTruthy();
+  expect(mockUseMigrations).not.toHaveBeenCalled();
 });
