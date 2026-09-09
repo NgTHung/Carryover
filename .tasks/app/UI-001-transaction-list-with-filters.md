@@ -1,7 +1,7 @@
 ---
 id: "UI-001"
 title: "Transaction list with filters"
-status: In Progress
+status: Done
 priority: "Medium"
 type: "Feature"
 milestone: "0.2.0"
@@ -30,13 +30,21 @@ Introduce Zustand for the selected period and transaction filters shared across 
 
 ## Acceptance Criteria
 
-- [ ] The list shows amount, leaf category, account, quality, and date for each transaction.
-- [ ] Filters by period, category, account, and quality combine rather than replace each other.
-- [ ] Zustand owns the shared selected period and filters, retains them across screen navigation, and supports an explicit reset. It stores no transaction collection or computed money totals.
-- [ ] The list refreshes after committed creates, edits, completions, and soft deletes, including writes from another screen.
-- [ ] Adjustments and transfers are visible and visually distinct from spending.
-- [ ] Drafts appear with their unknown amount shown as unknown, not as zero.
-- [ ] Tapping a transaction opens it for editing.
-- [ ] The editor saves supported fields, completes valid drafts atomically, and soft-deletes through the public data API. Transfer rows remain read-only.
-- [ ] Expo Router opens a transaction by id, and the screen loads it through the public data API. A missing or deleted transaction has an explicit unavailable state.
-- [ ] The screen reuses UI-007 primitives. React Native Testing Library covers combined filters, unknown amounts, and opening a transaction without a native build.
+- [x] The list shows amount, leaf category, account, quality, and date for each transaction.
+- [x] Filters by period, category, account, and quality combine rather than replace each other.
+- [x] Zustand owns the shared selected period and filters, retains them across screen navigation, and supports an explicit reset. It stores no transaction collection or computed money totals.
+- [x] The list refreshes after committed creates, edits, completions, and soft deletes, including writes from another screen.
+- [x] Adjustments and transfers are visible and visually distinct from spending.
+- [x] Drafts appear with their unknown amount shown as unknown, not as zero.
+- [x] Tapping a transaction opens it for editing.
+- [x] The editor saves supported fields, completes valid drafts atomically, and soft-deletes through the public data API. Transfer rows remain read-only.
+- [x] Expo Router opens a transaction by id, and the screen loads it through the public data API. A missing or deleted transaction has an explicit unavailable state.
+- [x] The screen reuses UI-007 primitives. React Native Testing Library covers combined filters, unknown amounts, and opening a transaction without a native build.
+
+## Verification
+
+- `npm test -- --runInBand` passes 28 suites and 125 tests.
+- `npm run typecheck` passes.
+- `npm run web:export` passes with an explicit ledger-unavailable browser route.
+- `CARRYOVER_WIDGET=0 npm run prebuild` and `CARRYOVER_WIDGET=0 npx expo export --platform ios` pass.
+- `npm run doctor` reports only the four pre-existing Expo SDK patch mismatches.
