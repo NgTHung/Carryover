@@ -1,7 +1,7 @@
 ---
 id: "DATA-006"
 title: "Commitments and unpaid reserves"
-status: In Progress
+status: Done
 priority: "High"
 type: "Feature"
 milestone: "0.3.0"
@@ -26,9 +26,9 @@ A due day of 31 in a 30 day month resolves to the last day rather than rolling i
 
 ## Acceptance Criteria
 
-- [ ] A commitment stores name, integer amount, due day 1 to 31, reserve category, and active flag.
-- [ ] Zod validates commitment inputs with the shared positive money schema and integer due day bounds. The data layer verifies the reserve category, and tests reject invalid writes.
-- [ ] A due day beyond the length of the month resolves to the last day of that month.
-- [ ] Reserved unpaid sums active commitments due in the period after pairing each active, complete expense with at most one commitment in the same reserve category. Pairing is deterministic and does not require the transaction amount to equal the reserved amount.
-- [ ] Paying a commitment is an ordinary transaction. No transaction is created automatically.
-- [ ] An inactive commitment reserves nothing in live calculations, and commitment changes never rewrite a past period's stored month config.
+- [x] A commitment stores name, integer amount, due day 1 to 31, reserve category, and active flag.
+- [x] Zod validates commitment inputs with the shared positive money schema and integer due day bounds. The data layer verifies the reserve category, and tests reject invalid writes.
+- [x] A due day beyond the length of the month resolves to the last day of that month.
+- [x] Reserved unpaid sums active commitments due in the period after pairing each active, complete expense with at most one commitment in the same reserve category. Pairing is deterministic and does not require the transaction amount to equal the reserved amount.
+- [x] Paying a commitment is an ordinary transaction. No transaction is created automatically.
+- [x] An inactive commitment reserves nothing in live calculations, and commitment changes never rewrite a past period's stored month config.
