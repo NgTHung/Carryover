@@ -3,14 +3,18 @@
  *
  * A commitment points at an active reserve leaf and its active reserve group.
  * The category predicate is part of each write statement so a category cannot
- * be deactivated between validation and the commitment write.
+ * be deactivated between validation and the commitment write. Reserved unpaid
+ * reads both ledger inputs in one statement so they share a database view.
  */
-import { and, eq, gte, lt, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
+import { z } from 'zod';
 
 import { calculateUnpaidReserve } from './commitment-reserves';
 import { resolveCommitmentDueDate } from './commitment-period';
+import { categoryIdSchema } from './category-validation';
 import {
+  commitmentDueDaySchema,
   commitmentIdSchema,
   commitmentSchema,
   createCommitmentInputSchema,
@@ -22,6 +26,7 @@ import {
   ledgerChangeNotifier,
   type LedgerChangeNotifier,
 } from './ledger-change-notifier';
+import { positiveVndAmountSchema } from './money-validation';
 import { activeRowFilter, type SoftDeleteOptions } from './soft-delete';
 import {
   categories,
@@ -32,6 +37,7 @@ import {
   uuidV4Sql,
 } from './schema';
 import { periodBounds, periodSchema } from './period';
+import { transactionIdSchema } from './transaction-validation';
 
 type LedgerDatabase<TResultKind extends 'sync' | 'async'> = BaseSQLiteDatabase<
   TResultKind,
@@ -40,6 +46,31 @@ type LedgerDatabase<TResultKind extends 'sync' | 'async'> = BaseSQLiteDatabase<
 >;
 
 export type CommitmentRow = typeof commitments.$inferSelect;
+
+const storedDateSchema = z
+  .number()
+  .int()
+  .transform((value) => new Date(value))
+  .pipe(z.date());
+
+const unpaidReserveReadRowSchema = z.union([
+  z.tuple([
+    z.literal('commitment'),
+    commitmentIdSchema,
+    positiveVndAmountSchema,
+    commitmentDueDaySchema,
+    categoryIdSchema,
+    z.null(),
+  ]),
+  z.tuple([
+    z.literal('payment'),
+    transactionIdSchema,
+    z.null(),
+    z.null(),
+    categoryIdSchema,
+    storedDateSchema,
+  ]),
+]);
 
 function commitmentNotFound(commitmentId: string): Error {
   return new Error(`Active commitment ${commitmentId} was not found`);
@@ -198,47 +229,54 @@ export function createCommitmentData<TResultKind extends 'sync' | 'async'>(
     async readReservedUnpaid(period: unknown): Promise<number> {
       const parsedPeriod = periodSchema.parse(period);
       const bounds = periodBounds(parsedPeriod);
-      const commitmentRows = await db
-        .select()
-        .from(commitments)
-        .where(
-          and(
-            eq(commitments.active, true),
-            activeRowFilter(commitments.deletedAt)
-          )
-        )
-        .all();
-      const paymentRows = await db
-        .select({
-          id: transactions.id,
-          categoryId: transactions.categoryId,
-          occurredAt: transactions.occurredAt,
-        })
-        .from(transactions)
-        .where(
-          and(
-            eq(transactions.status, 'complete'),
-            eq(transactions.direction, 'expense'),
-            gte(transactions.occurredAt, bounds.start),
-            lt(transactions.occurredAt, bounds.end),
-            activeRowFilter(transactions.deletedAt)
-          )
-        )
-        .all();
+      const rawRows = await db.values(sql`
+        SELECT
+          'commitment',
+          ${commitments.id},
+          ${commitments.amount},
+          ${commitments.dueDay},
+          ${commitments.categoryId},
+          NULL
+        FROM ${commitments}
+        WHERE ${commitments.active} = 1
+          AND ${commitments.deletedAt} IS NULL
+        UNION ALL
+        SELECT
+          'payment',
+          ${transactions.id},
+          NULL,
+          NULL,
+          ${transactions.categoryId},
+          ${transactions.occurredAt}
+        FROM ${transactions}
+        WHERE ${transactions.status} = 'complete'
+          AND ${transactions.direction} = 'expense'
+          AND ${transactions.categoryId} IS NOT NULL
+          AND ${transactions.occurredAt} >= ${bounds.start.getTime()}
+          AND ${transactions.occurredAt} < ${bounds.end.getTime()}
+          AND ${transactions.deletedAt} IS NULL
+      `);
+      const reserveCommitments = [];
+      const reservePayments = [];
+      for (const rawRow of rawRows) {
+        const row = unpaidReserveReadRowSchema.parse(rawRow);
+        if (row[0] === 'commitment') {
+          reserveCommitments.push({
+            id: row[1],
+            amount: row[2],
+            categoryId: row[4],
+            dueDate: resolveCommitmentDueDate(parsedPeriod, row[3]),
+          });
+        } else {
+          reservePayments.push({
+            id: row[1],
+            categoryId: row[4],
+            occurredAt: row[5],
+          });
+        }
+      }
 
-      return calculateUnpaidReserve(
-        commitmentRows.map((row) => ({
-          id: row.id,
-          amount: row.amount,
-          categoryId: row.categoryId,
-          dueDate: resolveCommitmentDueDate(parsedPeriod, row.dueDay),
-        })),
-        paymentRows.flatMap((row) =>
-          row.categoryId === null
-            ? []
-            : [{ id: row.id, categoryId: row.categoryId, occurredAt: row.occurredAt }]
-        )
-      );
+      return calculateUnpaidReserve(reserveCommitments, reservePayments);
     },
 
     async editCommitment(input: unknown): Promise<Commitment> {

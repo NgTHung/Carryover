@@ -252,6 +252,61 @@ test('reserved unpaid uses the period start and excludes the next period start',
   }
 });
 
+test('reserved unpaid uses one database view during overlapping ledger edits', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const setupProxy = createProxyDatabase(database);
+    const commitments = createCommitmentData(setupProxy);
+    const transactions = createTransactionData(
+      setupProxy,
+      createCategoryData(setupProxy)
+    );
+    const commitment = await commitments.createCommitment({
+      name: 'Rent',
+      amount: 700_000,
+      dueDay: 1,
+      categoryId: reserveLeafId,
+    });
+    const payment = await transactions.createTransaction({
+      accountId: bankId(database),
+      direction: 'expense',
+      status: 'complete',
+      amount: 700_000,
+      categoryId: reserveLeafId,
+      occurredAt: new Date(2026, 8, 1),
+    });
+    let changed = false;
+    const readProxy = createProxyDatabase(database, {
+      afterQuery(query) {
+        if (changed || !query.toLowerCase().includes('from "commitments"')) {
+          return;
+        }
+        changed = true;
+        const updatedAt = Date.now() + 1;
+        database
+          .prepare(
+            'UPDATE commitments SET amount = ?, category_id = ?, updated_at = ? WHERE id = ?'
+          )
+          .run(800_000, secondReserveLeafId, updatedAt, commitment.id);
+        database
+          .prepare(
+            'UPDATE transactions SET category_id = ?, updated_at = ? WHERE id = ?'
+          )
+          .run(secondReserveLeafId, updatedAt, payment.id);
+      },
+    });
+
+    assert.equal(
+      await createCommitmentData(readProxy).readReservedUnpaid('2026-09'),
+      0
+    );
+    assert.equal(changed, true);
+    assert.equal(await commitments.readReservedUnpaid('2026-09'), 0);
+  } finally {
+    database.close();
+  }
+});
+
 test('reserved unpaid ignores non-payments, deleted rows, and inactive commitments', async () => {
   const database = openMigratedDatabase();
   try {
