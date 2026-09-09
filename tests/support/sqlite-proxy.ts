@@ -7,6 +7,16 @@ import type { RemoteCallback } from 'drizzle-orm/sqlite-proxy';
 
 import { ledgerTables } from '../../src/data/schema';
 
+type ProxyQueryHook = (
+  query: Parameters<RemoteCallback>[0],
+  params: Parameters<RemoteCallback>[1],
+  method: Parameters<RemoteCallback>[2]
+) => void | Promise<void>;
+
+type ProxyDatabaseOptions = {
+  afterQuery?: ProxyQueryHook;
+};
+
 export function openMigratedDatabase(): DatabaseSync {
   const database = new DatabaseSync(':memory:');
   database.exec('PRAGMA foreign_keys = ON;');
@@ -28,16 +38,21 @@ export function openMigratedDatabase(): DatabaseSync {
   return database;
 }
 
-export function createProxyDatabase(database: DatabaseSync) {
+export function createProxyDatabase(
+  database: DatabaseSync,
+  options: ProxyDatabaseOptions = {}
+) {
   const callback: RemoteCallback = async (query, params, method) => {
     const statement = database.prepare(query);
     if (method === 'run') {
       statement.run(...params);
+      await options.afterQuery?.(query, params, method);
       return { rows: [] };
     }
 
     statement.setReturnArrays(true);
     const rows = statement.all(...params).map((row) => Object.values(row));
+    await options.afterQuery?.(query, params, method);
     return { rows: method === 'get' ? rows[0] : rows };
   };
 

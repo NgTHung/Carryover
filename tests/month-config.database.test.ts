@@ -8,6 +8,17 @@ import { createProxyDatabase, openMigratedDatabase } from './support/sqlite-prox
 
 type IdRow = { id: string };
 
+function deferred(): {
+  promise: Promise<void>;
+  resolve: () => void;
+} {
+  let resolve: () => void = () => undefined;
+  const promise = new Promise<void>((complete) => {
+    resolve = () => complete();
+  });
+  return { promise, resolve };
+}
+
 function bankId(database: ReturnType<typeof openMigratedDatabase>): string {
   const row = database
     .prepare("SELECT id FROM accounts WHERE name = 'Bank'")
@@ -137,6 +148,67 @@ test('horizon edits change only the horizon, preserve frozen totals, and notify 
     assert.equal(editedRow.reserved_total, originalRow.reserved_total);
     assert.equal(editedRow.horizon_date, '2026-10-15');
     assert.notEqual(editedRow.updated_at, originalRow.updated_at);
+  } finally {
+    database.close();
+  }
+});
+
+test('stale horizon edits report a concurrent change without overwriting or notifying', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const changes: string[] = [];
+    const notifier = createLedgerChangeNotifier();
+    notifier.subscribe(({ table, mutation }) => changes.push(`${table}:${mutation}`));
+    const initialData = createMonthConfigData(createProxyDatabase(database), notifier);
+    await initialData.openPeriod({
+      period: '2026-09',
+      openingBalance: 1_000_000,
+      incomeTotal: 2_000_000,
+      reservedTotal: 300_000,
+    });
+    changes.length = 0;
+
+    const loserRead = deferred();
+    const releaseLoser = deferred();
+    let initialReadHeld = false;
+    const loserDatabase = createProxyDatabase(database, {
+      afterQuery: async (query, _params, method) => {
+        if (
+          method === 'get' &&
+          !initialReadHeld &&
+          query.includes('month_config')
+        ) {
+          initialReadHeld = true;
+          loserRead.resolve();
+          await releaseLoser.promise;
+        }
+      },
+    });
+    const loserData = createMonthConfigData(loserDatabase, notifier);
+    const winnerData = createMonthConfigData(createProxyDatabase(database), notifier);
+
+    const loserUpdate = loserData.updateHorizon({
+      period: '2026-09',
+      horizonDate: '2026-10-10',
+    });
+    await loserRead.promise;
+
+    const winner = await winnerData.updateHorizon({
+      period: '2026-09',
+      horizonDate: '2026-10-20',
+    });
+    releaseLoser.resolve();
+
+    await assert.rejects(
+      loserUpdate,
+      /month config.*2026-09.*changed during update/i
+    );
+    assert.equal(winner.horizonDate, '2026-10-20');
+    assert.deepEqual(changes, ['month_config:edited']);
+    assert.equal(
+      (await winnerData.readMonthConfig('2026-09'))?.horizonDate,
+      '2026-10-20'
+    );
   } finally {
     database.close();
   }

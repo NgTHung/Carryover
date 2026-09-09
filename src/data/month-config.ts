@@ -43,6 +43,10 @@ function monthConfigNotFound(period: string): Error {
   return new Error(`Active month config for period ${period} was not found`);
 }
 
+function monthConfigChanged(period: string): Error {
+  return new Error(`Month config for period ${period} changed during update`);
+}
+
 async function findMonthConfig<TResultKind extends 'sync' | 'async'>(
   db: LedgerDatabase<TResultKind>,
   period: string
@@ -122,7 +126,11 @@ export function createMonthConfigData<TResultKind extends 'sync' | 'async'>(
         .returning()
         .get();
       if (updated === undefined) {
-        throw monthConfigNotFound(parsed.period);
+        const currentRow = await findMonthConfig(db, parsed.period);
+        if (currentRow === undefined) {
+          throw monthConfigNotFound(parsed.period);
+        }
+        throw monthConfigChanged(parsed.period);
       }
 
       changeNotifier.notify({ table: 'month_config', mutation: 'edited' });
