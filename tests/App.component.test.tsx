@@ -1,4 +1,5 @@
 import { cleanup, render, screen, userEvent } from '@testing-library/react-native';
+import type { ReactNode } from 'react';
 import { Platform } from 'react-native';
 
 const mockSigningFacts = {
@@ -25,6 +26,7 @@ jest.mock('drizzle-orm/expo-sqlite/migrator', () => ({
 }));
 
 jest.mock('expo-router', () => ({
+  Link: ({ children }: { children: ReactNode }) => children,
   Stack: () => null,
 }));
 
