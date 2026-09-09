@@ -1,7 +1,7 @@
 ---
 id: "DATA-009"
 title: "Keep unpaid reserve reads consistent"
-status: In Progress
+status: Done
 priority: "High"
 type: "Bug"
 milestone: "0.3.0"
@@ -18,5 +18,5 @@ Read the commitments and matching payment transactions used by reserved unpaid f
 
 ## Acceptance Criteria
 
-- [ ] Reserved unpaid reads commitments and matching payment transactions from one consistent database view.
-- [ ] A regression test overlaps category edits with the read and proves the result matches one real ledger state.
+- [x] Reserved unpaid reads commitments and matching payment transactions from one consistent database view.
+- [x] A regression test overlaps category edits with the read and proves the result matches one real ledger state.
