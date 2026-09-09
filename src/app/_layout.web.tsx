@@ -4,6 +4,8 @@
  * The browser preview has no ledger connection, so it mounts navigation
  * without importing the native migration boundary.
  */
+import '../../global.css';
+
 import { Stack } from 'expo-router';
 
 export default function RootLayout() {

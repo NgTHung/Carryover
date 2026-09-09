@@ -1,10 +1,10 @@
 import { useLocalSearchParams } from 'expo-router';
 
-import { parseTransactionRoute } from './load-transaction-route';
+import { parseTransactionRoute } from '../../ui/transactions/load-transaction-route';
 import {
   TransactionRouteView,
   type TransactionRouteState,
-} from './TransactionRouteView';
+} from '../../ui/transactions/TransactionRouteView';
 
 export default function TransactionRouteScreen() {
   const { transactionId } = useLocalSearchParams<{

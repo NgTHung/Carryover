@@ -36,7 +36,7 @@ jest.mock('../src/data/database', () => ({
   },
 }));
 
-jest.mock('../src/screens/diagnostics/runtime-diagnostics', () => ({
+jest.mock('../src/ui/diagnostics/runtime-diagnostics', () => ({
   readSigningFacts: () => 'Signing facts are unavailable in router tests.',
   pushFixtureToWidget: jest.fn(),
 }));

@@ -30,9 +30,11 @@ and [Tailwind Variants' Tailwind 4 release boundary](https://github.com/heroui-i
 
 ## Navigation and UI
 
-Put thin route files under src/app. Keep screen implementations, shared components, database setup, and domain logic outside that directory. The native root layout gates database-backed screens on migration success and exposes startup failures. The browser root layout intentionally omits the SQLite boundary so the preview cannot query the ledger.
+Put screen implementations and layouts directly in src/app so you can follow a route without a separate screen wrapper. Keep shared components, helpers, database setup, and domain logic outside that directory because Expo Router treats files there as routes. The native root layout gates database-backed screens on migration success and exposes startup failures. The browser root layout intentionally omits the SQLite boundary so the preview cannot query the ledger.
 
-Keep the root layout and migration status in src/screens. Transaction route modules live together in src/screens/transactions, and Stage Zero probes live in src/screens/diagnostics. This lets you follow a screen without switching between separate navigation and development folders. Shared controls and route links live in src/ui. Keep src/data, src/money, and src/budget separate so storage and pure financial logic retain clear boundaries.
+Keep web route variants beside their fallback files, such as src/app/settings/categories.web.tsx and categories.tsx. Each web variant needs a fallback sibling for the same URL. Use src/ui for shared controls, presentation components, route helpers, and Stage Zero probes. Keep src/data, src/money, and src/budget separate so storage and pure financial logic retain clear boundaries. UI-009 replaces the thin-route convention recorded in UI-006 and UI-008.
+
+Route discovery bundles fallback files on web even when a web variant exists. Access the ledger through src/ui/ledger-access so Metro can replace its native imports with the web module. The web module throws if called; browser routes render their preview without requesting ledger access.
 
 Expo Router owns route history and route parameters. Route to a transaction by id, then validate the parameter and load the row through the public data API. Invalid ids stop before the read, and missing rows have an explicit unavailable state. Zustand holds shared UI state that is not already represented by the route. Do not mirror route history or an active route's transaction id into a store. Screen-local input stays in React state.
 

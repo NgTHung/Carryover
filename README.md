@@ -63,9 +63,8 @@ Keep the development and release bundle identifiers distinct when signing so tes
 ## Project map
 
 ```text
-src/app/                     thin Expo Router route files
-src/screens/                 route screens and layouts
-src/ui/                      shared controls, tokens, and motion
+src/app/                     Expo Router screens and layouts
+src/ui/                      shared components, helpers, tokens, and motion
 src/data/                    ledger schema and data access
 src/budget/snapshot.ts       snapshot contract shared by every surface
 widgets/                     iOS home screen widget

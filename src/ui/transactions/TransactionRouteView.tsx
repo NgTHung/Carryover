@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { HomeRouteLink } from '../../ui/HomeRouteLink';
+import { HomeRouteLink } from '../HomeRouteLink';
 
 export type TransactionRouteState =
   | { status: 'loading' }

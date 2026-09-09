@@ -1,4 +1,5 @@
 import { cleanup, render, screen, userEvent } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 
 const mockSigningFacts = {
   bundleIdentifier: 'com.example.carryover',
@@ -32,7 +33,7 @@ jest.mock('../src/data/database', () => ({
   ledgerMigrations: {},
 }));
 
-jest.mock('../src/screens/diagnostics/runtime-diagnostics', () => ({
+jest.mock('../src/ui/diagnostics/runtime-diagnostics', () => ({
   readSigningFacts: () => mockSigningFacts,
   pushFixtureToWidget: () => mockPushFixtureToWidget(),
 }));
@@ -41,14 +42,14 @@ jest.mock('expo-status-bar', () => ({
   StatusBar: () => null,
 }));
 
-import NativeRootLayout from '../src/screens/RootLayout';
-import WebRootLayout from '../src/screens/RootLayout.web';
-import { StageZeroScreen } from '../src/screens/diagnostics/StageZeroScreen';
-import WebStageZeroRoute from '../src/screens/diagnostics/StageZeroRoute.web';
+import NativeRootLayout from '../src/app/_layout';
+import WebRootLayout from '../src/app/_layout.web';
+import StageZeroScreen from '../src/app/index';
 
 afterEach(async () => {
   await cleanup();
   jest.clearAllMocks();
+  jest.restoreAllMocks();
 });
 
 beforeEach(() => {
@@ -104,7 +105,8 @@ test('mounts the browser stack without opening the ledger', async () => {
 });
 
 test('labels the browser as a preview without opening the ledger', async () => {
-  await render(<WebStageZeroRoute />);
+  jest.replaceProperty(Platform, 'OS', 'web');
+  await render(<StageZeroScreen />);
 
   expect(
     screen.getByText('Browser preview. The ledger and iOS widget are not connected.')

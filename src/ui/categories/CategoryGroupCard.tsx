@@ -1,7 +1,7 @@
 import { Text, View } from 'react-native';
 
 import type { CategoryGroupWithLeaves, CategoryKind } from '../../data/category-types';
-import { Button, Input } from '../../ui';
+import { Button, Input } from '..';
 import type {
   CategoryEditorDeleteState,
   CategoryEditorFormState,

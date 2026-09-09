@@ -10,8 +10,10 @@ import type {
   Category,
   CategoryGroupWithLeaves,
 } from '../src/data/category-types';
-import type { CategoryEditorData } from '../src/screens/categories/category-editor-contract';
-import { CategoryEditorScreen } from '../src/screens/categories/CategoryEditorScreen';
+import type { CategoryEditorData } from '../src/ui/categories/category-editor-contract';
+import CategoryEditorScreen from '../src/app/settings/categories';
+
+jest.mock('../src/data/database', () => ({ categoryData: {} }));
 
 const foodId = '10000000-0000-4000-8000-000000000001';
 const coffeeId = '10000000-0000-4000-8000-000000000002';
