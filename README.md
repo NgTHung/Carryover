@@ -1,18 +1,39 @@
 # Carryover
 
-Carryover is a personal budgeting app for income that arrives on no schedule. The balance carries across months instead of resetting, fixed commitments are reserved off the top, and what remains is divided by days to a horizon you can move. Purchases are captured as a photo in about two seconds and finished later, and an unfinished capture is shown as an explicit unknown rather than counted as zero.
+Carryover is a personal budgeting app for irregular income. It answers one question clearly: how much can you spend today?
 
-The app targets iOS, is built with Expo and React Native, and is distributed as an unsigned IPA that you sign on device. There is no Mac in this toolchain.
+Your carryover balance continues across periods instead of resetting each month. Reserves protect money already committed to rent, bills, and other fixed costs. The app divides your discretionary money by the days to a horizon you choose, then reports one honest per day figure.
 
-## Status
+Carryover is designed for the moments when detailed budgeting breaks down. You can capture a purchase as a photo in about two seconds and complete the draft later. A draft without an amount stays unknown, so the app never hides uncertainty by counting it as zero.
 
-Stage 1 schema work is under review. DATA-001 is reopened to fix default soft-delete reads and SQL money bounds. Zod validation and Zustand UI state are specified for upcoming implementation in [State and validation](docs/state-and-validation.md).
+## What the app does
 
-The agreed navigation, UI, and test stack is recorded in [App stack and testing](docs/app-stack-and-testing.md). Setup tasks track Expo Router, NativeWind with Tailwind Variants, Reanimated, and Jest with React Native Testing Library. Hermes remains the default engine; Maestro will run on demand in macOS CI.
+- Carries your real balance forward across periods.
+- Sets reserves aside before calculating discretionary money.
+- Shows a per day figure based on when your money must last until.
+- Captures purchases as photo drafts with no required fields at capture time.
+- Tracks bank and cash accounts, transfers, and visible reconcile adjustments.
+- Charges only your own share of a split to your budget.
+- Tracks receivables and settlements without treating repayments as income.
+- Keeps transfers, adjustments, and settlements out of spending reports.
 
-A sideloaded IPA can drive a home screen widget on a free Apple account. **Sideload with iloader.** AltStore and SideStore do not register the App Group, so the widget cannot work under them. The app also resolves its App Group at runtime, because every sideloader rewrites the identifier and nothing rewrites the Info.plist key that expo-widgets reads. See [the result document](docs/build/widget-sideload-result.md).
+The home screen and iOS widget will read the same precomputed snapshot. They cannot disagree about your budget because all budget arithmetic lives in one pure function.
 
-## Getting started
+## Product principles
+
+Money correctness comes first. Amounts are positive integer VND, direction carries the sign, and split remainders go to the payer deterministically. Historical period figures use their stored month config, so changing today's settings cannot rewrite the past.
+
+Capture speed comes next. Taking a photo must stay quick even when you do not know the amount, category, or account yet. Carryover reports uncertainty instead of blocking the capture or inventing a value.
+
+The interface reports what happened without scolding you. Quality is your own optional judgment: need, want, or regret.
+
+## Project status
+
+Carryover is a work in progress. The ledger schema, accounts, categories, transaction data layer, navigation shell, and shared UI foundation are in place. The next stages add the transaction and category screens, the budget engine, photo capture, splits, backup and restore, and the home screen widget.
+
+Development work and release gates live in [`.tasks/`](.tasks/) and are validated with `taskroot`. The product contract lives in [the v1 specification](docs/spec/carryover-v1.md), and [the design constitution](docs/DESIGN.md) defines how the app should feel.
+
+## Run the current build
 
 You need Node 22.13 or newer. This machine uses `nub`, which bundles its own Node and provides npm shims.
 
@@ -23,38 +44,39 @@ npm run typecheck
 npm run web
 ```
 
-`npm run web` opens a local UI preview with Fast Refresh. The current stage 0 screen shows that native diagnostics are unavailable. It does not open the ledger or the iOS widget. See the [unsigned IPA pipeline](docs/build/ios-unsigned-ipa.md#local-ui-development) for the browser boundary and the iPhone development-build loop.
+`npm run web` opens the local UI preview with Fast Refresh. The browser build supports interface work, but native ledger and widget features remain unavailable there. Jest logic, real SQLite, and component tests run locally on Linux.
 
-You cannot build for iOS locally. Push, and the `iOS unsigned IPA` workflow builds a Release IPA on a macOS runner. For device Fast Refresh, dispatch the workflow with `development` enabled, install the resulting Carryover Dev IPA beside Carryover, and run `npm run start:device`. Keep the two bundle identifiers distinct when signing so your test data stays separate from your release ledger. The widget extension is excluded until stage 6; dispatch a Release build with the `widget` input to build one.
+## Build for iPhone
 
-Jest logic, real SQLite, and component tests run locally on Linux. BUILD-003 adds a separate iOS Simulator build for Maestro on demand and before releases, without adding it to every push.
+Carryover targets iOS with Expo and React Native. The project has no local Mac or simulator, so GitHub Actions is the iOS build environment.
 
-## Layout
+Push a revision to run the `iOS unsigned IPA` workflow. The workflow produces an unsigned Release IPA on a macOS runner. Sign and install it on your device with iloader. AltStore and SideStore do not register the App Group required by the widget.
 
-```
-src/app/                    thin Expo Router route files
-src/screens/                 route screens, layouts, transactions, and diagnostics
-src/ui/                     shared controls, motion, and route links
-widgets/                    the home screen widget component
-src/budget/snapshot.ts      the snapshot contract every surface reads
-docs/state-and-validation.md data ownership and validation boundaries
-docs/DESIGN.md              the product design language
-docs/spec/                  the settled product contract
-docs/build/                 pipeline and sideload documentation
-.tasks/                     task files, validated by taskroot
-.github/workflows/ios.yml   the only iOS build environment
+For device Fast Refresh, dispatch the workflow with `development` enabled, install the Carryover Dev IPA beside the release app, and run:
+
+```bash
+npm run start:device
 ```
 
-The native root layout applies SQLite migrations before it mounts the stack.
-Transaction links carry only a UUID, which the route validates before it calls
-the public transaction data API. The browser preview keeps the ledger boundary
-closed and shows an explicit unavailable state for transaction links.
+Keep the development and release bundle identifiers distinct when signing so test data stays separate from your real ledger. The widget target is excluded by default while the app is under development. See [the unsigned IPA guide](docs/build/ios-unsigned-ipa.md) and [the widget sideload result](docs/build/widget-sideload-result.md) for build and signing details.
 
-## Working on this
+## Project map
 
-Read `AGENTS.md` before changing code, `CONTEXT.md` before naming anything, and `docs/state-and-validation.md` before adding data or state modules. Read `docs/DESIGN.md` before changing a screen. The money invariants in `AGENTS.md` are not style preferences, and breaking one corrupts data quietly.
+```text
+src/app/                     thin Expo Router route files
+src/screens/                 route screens and layouts
+src/ui/                      shared controls, tokens, and motion
+src/data/                    ledger schema and data access
+src/budget/snapshot.ts       snapshot contract shared by every surface
+widgets/                     iOS home screen widget
+tests/                       logic, database, and component tests
+docs/spec/                   product contract
+docs/build/                  build and sideload documentation
+.tasks/                      versioned development work
+.github/workflows/ios.yml    iOS build workflow
+```
 
-Task work goes through `taskroot`:
+Read [`AGENTS.md`](AGENTS.md) before changing code and [`CONTEXT.md`](CONTEXT.md) before naming anything. Read [state and validation](docs/state-and-validation.md) before adding data or state modules.
 
 ```bash
 taskroot validate
