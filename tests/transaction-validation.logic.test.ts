@@ -7,6 +7,7 @@ import {
 } from '../src/data/money-validation';
 import {
   createTransactionInputSchema,
+  completeDraftInputSchema,
   transactionSchema,
 } from '../src/data/transaction-validation';
 
@@ -144,4 +145,22 @@ test('income, adjustment, and transfer cannot carry a category', () => {
       })
     );
   }
+});
+
+test('draft completion accepts optional full-field changes', () => {
+  const parsed = completeDraftInputSchema.parse({
+    transactionId,
+    amount: '45000',
+    categoryId: null,
+    changes: {
+      accountId,
+      direction: 'income',
+      quality: null,
+      occurredAt,
+      note: 'Salary',
+      sourceLabel: 'Payroll',
+    },
+  });
+  assert.equal(parsed.changes?.direction, 'income');
+  assert.equal(parsed.amount, 45_000);
 });

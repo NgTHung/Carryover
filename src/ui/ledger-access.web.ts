@@ -13,3 +13,4 @@ export const getCategoryEditorData = unavailable;
 export const readTransaction = unavailable;
 export const getTransactionListData = unavailable;
 export const subscribeLedgerChanges = unavailable;
+export const getTransactionEditorData = unavailable;

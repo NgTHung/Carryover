@@ -7,6 +7,7 @@
 import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
 
 import {
+  accountData,
   categoryData,
   ledgerChangeNotifier,
   ledgerDb,
@@ -20,6 +21,7 @@ import type {
   LedgerChangeListener,
 } from '../data/ledger-change-notifier';
 import type { TransactionListData } from '../data/transaction-list';
+import type { TransactionEditorData } from './transactions/transaction-editor-contract';
 
 export function useLedgerMigrations() {
   return useMigrations(ledgerDb, ledgerMigrations);
@@ -39,6 +41,17 @@ export function getTransactionListData(): TransactionListData<'sync'> {
 
 export function subscribeLedgerChanges(listener: LedgerChangeListener): () => void {
   return ledgerChangeNotifier.subscribe(listener);
+}
+
+export function getTransactionEditorData(): TransactionEditorData {
+  return {
+    readTransaction: (id) => transactionData.readTransaction(id),
+    listActiveCategoryGroups: () => categoryData.listActiveCategoryGroups(),
+    readAccountBalances: () => accountData.readAccountBalances(),
+    editTransaction: (input) => transactionData.editTransaction(input),
+    completeDraft: (input) => transactionData.completeDraft(input),
+    softDeleteTransaction: (id) => transactionData.softDeleteTransaction(id),
+  };
 }
 
 export type { LedgerChange };

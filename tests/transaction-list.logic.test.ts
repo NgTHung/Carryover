@@ -5,6 +5,7 @@ import {
   periodBounds,
   periodSchema,
 } from '../src/data/period';
+import { createLedgerChangeNotifier } from '../src/data/ledger-change-notifier';
 import { createTransactionFilterStore } from '../src/ui/transactions/transaction-filters';
 
 test('period schema and bounds use local calendar months', () => {
@@ -52,4 +53,21 @@ test('transaction filter store keeps only choices and resets them', () => {
   assert.equal(store.getState().accountId, null);
   assert.equal(store.getState().quality, null);
   assert.equal('transactions' in store.getState(), false);
+});
+
+test('notifier reports listener errors without throwing from notify', () => {
+  const errors: Array<{ error: unknown; table: string }> = [];
+  const notifier = createLedgerChangeNotifier({
+    onListenerError: (error, change) => errors.push({ error, table: change.table }),
+  });
+  notifier.subscribe(() => {
+    throw new Error('view failed');
+  });
+
+  assert.doesNotThrow(() =>
+    notifier.notify({ table: 'transactions', mutation: 'edited' })
+  );
+  assert.equal(errors.length, 1);
+  assert.equal(errors[0]?.table, 'transactions');
+  assert.equal((errors[0]?.error as Error).message, 'view failed');
 });

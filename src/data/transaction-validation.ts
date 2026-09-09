@@ -199,6 +199,18 @@ export const completeDraftInputSchema = z
     transactionId: idSchema,
     amount: positiveVndInputSchema,
     categoryId: idSchema.nullable().optional(),
+    changes: z
+      .object({
+        accountId: idSchema,
+        direction: directionSchema,
+        quality: qualitySchema.nullable(),
+        occurredAt: z.date(),
+        note: z.string().nullable(),
+        sourceLabel: z.string().nullable(),
+      })
+      .partial()
+      .strict()
+      .optional(),
   })
   .strict();
 

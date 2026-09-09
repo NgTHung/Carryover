@@ -310,6 +310,63 @@ test('completeDraft promotes only drafts and leaves rejected rows unchanged', as
   }
 });
 
+test('completeDraft atomically applies full-field changes and rejects invalid combinations', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const proxy = createProxyDatabase(database);
+    const data = createTransactionData(proxy, createCategoryData(proxy));
+    const bank = bankId(database);
+    const cash = idFor(database, "SELECT id FROM accounts WHERE name = 'Cash'");
+    const occurred = new Date(1735776000000);
+    const draft = await data.createTransaction({
+      accountId: bank,
+      direction: 'expense',
+      status: 'draft',
+      occurredAt,
+    });
+
+    const completed = await data.completeDraft({
+      transactionId: draft.id,
+      amount: '45000',
+      categoryId: null,
+      changes: {
+        accountId: cash,
+        direction: 'income',
+        quality: null,
+        occurredAt: occurred,
+        note: 'Salary',
+        sourceLabel: 'Payroll',
+      },
+    });
+    assert.equal(completed.status, 'complete');
+    assert.equal(completed.accountId, cash);
+    assert.equal(completed.direction, 'income');
+    assert.equal(completed.note, 'Salary');
+    assert.equal(completed.sourceLabel, 'Payroll');
+
+    const rejectedDraft = await data.createTransaction({
+      accountId: bank,
+      direction: 'expense',
+      status: 'draft',
+      occurredAt,
+    });
+    await assert.rejects(
+      data.completeDraft({
+        transactionId: rejectedDraft.id,
+        amount: 50_000,
+        changes: { direction: 'expense', sourceLabel: 'Invalid' },
+      })
+    );
+    const unchanged = await data.readTransaction(rejectedDraft.id);
+    assert.equal(unchanged?.status, 'draft');
+    assert.equal(unchanged?.amount, null);
+    assert.equal(unchanged?.accountId, bank);
+    assert.equal(unchanged?.sourceLabel, null);
+  } finally {
+    database.close();
+  }
+});
+
 test('overlapping edits reject the stale write without restoring older fields', async () => {
   const database = openMigratedDatabase();
   try {

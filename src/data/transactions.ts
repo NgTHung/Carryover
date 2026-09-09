@@ -320,6 +320,7 @@ export function createTransactionData<TResultKind extends 'sync' | 'async'>(
           : parsed.categoryId;
       const candidate = transactionSchema.parse({
         ...existing,
+        ...parsed.changes,
         status: 'complete',
         amount: parsed.amount,
         categoryId,
