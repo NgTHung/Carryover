@@ -40,11 +40,13 @@ function Header({
 
 export function TransactionListView({
   state,
+  optionRows,
   filters,
   onReset,
   onRetry,
 }: {
   state: TransactionListLoadState;
+  optionRows: TransactionListItem[];
   filters: TransactionFilterStore;
   onReset: () => void;
   onRetry: () => void;
@@ -63,26 +65,25 @@ export function TransactionListView({
     );
   }
 
-  if (state.rows.length === 0) {
-    const filtered = filters.categoryId !== null || filters.accountId !== null || filters.quality !== null;
-    return (
-      <View className="flex-1 gap-3 bg-ground-light px-5 py-16 dark:bg-ground-dark">
-        <Text accessibilityRole="header" className="text-title font-bold text-ink-light dark:text-ink-dark">Transactions</Text>
-        <Text className="text-body text-muted-light dark:text-muted-dark">
-          {filtered ? 'No transactions match these filters.' : 'No transactions in this period.'}
-        </Text>
-        {filtered ? <Button variant="secondary" onPress={onReset}>Reset filters</Button> : null}
-      </View>
-    );
-  }
-
   return (
     <FlatList
       testID="transaction-list"
       data={state.rows}
       keyExtractor={transactionListRowId}
       contentContainerClassName="gap-2 bg-ground-light pb-16 dark:bg-ground-dark"
-      ListHeaderComponent={<Header rows={state.rows} filters={filters} onReset={onReset} />}
+      ListHeaderComponent={<Header rows={optionRows} filters={filters} onReset={onReset} />}
+      ListEmptyComponent={
+        <View className="gap-3 px-5 py-8">
+          <Text className="text-body text-muted-light dark:text-muted-dark">
+            {filters.categoryId !== null || filters.accountId !== null || filters.quality !== null
+              ? 'No transactions match these filters.'
+              : 'No transactions in this period.'}
+          </Text>
+          {filters.categoryId !== null || filters.accountId !== null || filters.quality !== null ? (
+            <Button variant="secondary" onPress={onReset}>Reset filters</Button>
+          ) : null}
+        </View>
+      }
       renderItem={({ item }) => {
         if (item.kind === 'transfer') {
           return <TransactionListRow row={item} />;

@@ -22,7 +22,9 @@ export default function TransactionsScreen({
   const setAccountId = useTransactionFilters((state) => state.setAccountId);
   const setQuality = useTransactionFilters((state) => state.setQuality);
   const [state, setState] = useState<TransactionListLoadState>({ status: 'loading' });
+  const [optionRows, setOptionRows] = useState<Awaited<ReturnType<TransactionListData<'sync'>['readTransactionList']>>>([]);
   const requestRef = useRef(0);
+  const optionRequestRef = useRef(0);
   const mountedRef = useRef(false);
 
   const load = useCallback(async () => {
@@ -37,11 +39,30 @@ export default function TransactionsScreen({
     }
   }, [accountId, categoryId, data, quality, selectedPeriod]);
 
+  const loadOptions = useCallback(async () => {
+    const request = optionRequestRef.current + 1;
+    optionRequestRef.current = request;
+    try {
+      const rows = await data.readTransactionList({
+        period: selectedPeriod,
+        categoryId: null,
+        accountId: null,
+        quality: null,
+      });
+      if (mountedRef.current && request === optionRequestRef.current) setOptionRows(rows);
+    } catch (error: unknown) {
+      if (mountedRef.current && request === optionRequestRef.current) {
+        setState({ status: 'error', message: errorMessage(error) });
+      }
+    }
+  }, [data, selectedPeriod]);
+
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
       requestRef.current += 1;
+      optionRequestRef.current += 1;
     };
   }, []);
 
@@ -49,11 +70,16 @@ export default function TransactionsScreen({
     void load();
   }, [load]);
 
+  useEffect(() => {
+    void loadOptions();
+  }, [loadOptions]);
+
   useEffect(() => subscribe((change) => {
     if (change.table === 'transactions' || change.table === 'transfers' || change.table === 'categories' || change.table === 'accounts') {
       void load();
+      void loadOptions();
     }
-  }), [load, subscribe]);
+  }), [load, loadOptions, subscribe]);
 
   const filters = {
     selectedPeriod,
@@ -67,5 +93,5 @@ export default function TransactionsScreen({
     reset,
   };
 
-  return <TransactionListView state={state} filters={filters} onReset={reset} onRetry={() => void load()} />;
+  return <TransactionListView state={state} optionRows={optionRows} filters={filters} onReset={reset} onRetry={() => void load()} />;
 }

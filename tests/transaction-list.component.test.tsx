@@ -1,5 +1,4 @@
-import { cleanup, render, screen, userEvent, waitFor } from '@testing-library/react-native';
-import type { ReactNode } from 'react';
+import { act, cleanup, render, screen, userEvent, waitFor } from '@testing-library/react-native';
 
 import type { Transaction } from '../src/data/transaction-validation';
 import type { TransactionListData, TransactionListRow } from '../src/data/transaction-list';
@@ -11,8 +10,11 @@ jest.mock('../src/ui/ledger-access', () => ({
   subscribeLedgerChanges: jest.fn(() => () => undefined),
 }));
 
+const mockNavigate = jest.fn();
+
 jest.mock('expo-router', () => ({
-  Link: ({ children }: { children: ReactNode }) => children,
+  Link: ({ children, href }: { children: import('react').ReactElement; href: string }) =>
+    require('react').cloneElement(children, { onPress: () => mockNavigate(href) }),
 }));
 
 const bankId = '10000000-0000-4000-8000-000000000001';
@@ -69,7 +71,20 @@ function rows(): TransactionListRow[] {
   ];
 }
 
-function repository(initialRows: TransactionListRow[] = rows(), readTransactionList = jest.fn(async () => initialRows)): TransactionListData<'sync'> {
+function transferRow(): TransactionListRow {
+  return {
+    kind: 'transfer',
+    source: 'transfers',
+    transfer: { id: '50000000-0000-4000-8000-000000000001', amount: 50_000, occurredAt: date, createdAt: date },
+    fromAccount: { id: bankId, name: 'Bank', kind: 'bank' },
+    toAccount: { id: cashId, name: 'Cash', kind: 'cash' },
+  };
+}
+
+function repository(
+  initialRows: TransactionListRow[] = rows(),
+  readTransactionList: TransactionListData<'sync'>['readTransactionList'] = jest.fn(async () => initialRows)
+): TransactionListData<'sync'> {
   return {
     readTransactionList,
     subscribeToChanges: jest.fn(() => () => undefined),
@@ -125,6 +140,49 @@ test('combines leaf, account, and quality filters and can reset them', async () 
   expect(useTransactionFilters.getState().quality).toBeNull();
 });
 
+test('keeps filter choices visible and opens only transaction rows', async () => {
+  const allRows = [...rows(), transferRow()];
+  const readTransactionList = jest.fn(async (filters: { categoryId: string | null }) =>
+    filters.categoryId === null ? allRows : []
+  );
+  const user = userEvent.setup();
+  await render(
+    <TransactionsScreen
+      data={repository(allRows, readTransactionList)}
+      subscribe={() => () => undefined}
+    />
+  );
+
+  await waitFor(() => expect(screen.getAllByText('Groceries').length).toBeGreaterThan(0));
+  await user.press(screen.getAllByRole('button', { name: /Open expense transaction/ })[0]);
+  expect(mockNavigate).toHaveBeenCalledWith(`/transactions/${transactionId}`);
+  expect(screen.queryByRole('button', { name: /Open transfer transaction/ })).toBeNull();
+
+  await user.press(screen.getByRole('button', { name: 'Groceries' }));
+  await waitFor(() => expect(screen.getByText('No transactions match these filters.')).toBeTruthy());
+  expect(screen.getByRole('button', { name: 'Groceries' })).toBeTruthy();
+});
+
+test('reloads after an external committed ledger change', async () => {
+  let listener: ((change: { table: 'transactions'; mutation: 'edited' }) => void) | undefined;
+  const readTransactionList = jest.fn(async () => rows());
+  await render(
+    <TransactionsScreen
+      data={repository(rows(), readTransactionList)}
+      subscribe={(next) => {
+        listener = next as typeof listener;
+        return () => undefined;
+      }}
+    />
+  );
+
+  await waitFor(() => expect(readTransactionList).toHaveBeenCalledTimes(2));
+  await act(async () => {
+    listener?.({ table: 'transactions', mutation: 'edited' });
+  });
+  await waitFor(() => expect(readTransactionList).toHaveBeenCalledTimes(4));
+});
+
 test('shows a calm empty state', async () => {
   const data = repository([]);
   await render(<TransactionsScreen data={data} subscribe={() => () => undefined} />);
@@ -133,6 +191,7 @@ test('shows a calm empty state', async () => {
 
 test('shows a read error and retries it', async () => {
   const readTransactionList = jest.fn()
+    .mockRejectedValueOnce(new Error('Ledger unavailable'))
     .mockRejectedValueOnce(new Error('Ledger unavailable'))
     .mockResolvedValue(rows());
   const failing = repository(rows(), readTransactionList);
