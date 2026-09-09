@@ -74,6 +74,36 @@ test('month config schema requires a strict snapshot and valid horizon', () => {
   );
 });
 
+test('malformed periods remain safe validation failures', () => {
+  assert.equal(
+    monthConfigSchema.safeParse({
+      period: '2026-9',
+      openingBalance: 1_000,
+      incomeTotal: 2_000,
+      reservedTotal: 500,
+      horizonDate: '2026-09-30',
+    }).success,
+    false
+  );
+  assert.equal(
+    openPeriodInputSchema.safeParse({
+      period: '2026-9',
+      openingBalance: 1_000,
+      incomeTotal: 2_000,
+      reservedTotal: 500,
+      horizonDate: '2026-09-30',
+    }).success,
+    false
+  );
+  assert.equal(
+    updateHorizonInputSchema.safeParse({
+      period: '2026-9',
+      horizonDate: '2026-09-30',
+    }).success,
+    false
+  );
+});
+
 test('opening a period defaults horizon to period end and accepts zero totals', () => {
   assert.deepEqual(
     openPeriodInputSchema.parse({

@@ -13,15 +13,19 @@ import {
   periodEndDate,
   periodSchema,
   periodStartDate,
-  type Period,
 } from './period';
 
 function addHorizonBeforePeriodIssue(
-  period: Period,
+  period: string,
   horizonDate: string,
   context: z.RefinementCtx
 ): void {
-  if (horizonDate < periodStartDate(period)) {
+  const parsedPeriod = periodSchema.safeParse(period);
+  if (!parsedPeriod.success) {
+    return;
+  }
+
+  if (horizonDate < periodStartDate(parsedPeriod.data)) {
     context.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['horizonDate'],
