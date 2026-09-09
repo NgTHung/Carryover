@@ -43,6 +43,8 @@ export type AccountBalance = {
   balance: number;
 };
 
+export type ActiveAccount = Omit<AccountBalance, 'openingBalance' | 'balance'>;
+
 function accountNotFound(accountId: string): Error {
   return new Error(`Active account ${accountId} was not found`);
 }
@@ -111,6 +113,19 @@ export function createAccountData<TResultKind extends 'sync' | 'async'>(
       await requireActiveAccounts(db, [parsed.fromAccountId, parsed.toAccountId]);
       await db.insert(transfers).values(parsed).run();
       changeNotifier.notify({ table: 'transfers', mutation: 'created' });
+    },
+
+    async listActiveAccounts(): Promise<ActiveAccount[]> {
+      return db
+        .select({
+          accountId: accounts.id,
+          name: accounts.name,
+          kind: accounts.kind,
+          isDefault: accounts.isDefault,
+        })
+        .from(accounts)
+        .where(activeRowFilter(accounts.deletedAt))
+        .all();
     },
 
     async readAccountBalances(): Promise<AccountBalance[]> {

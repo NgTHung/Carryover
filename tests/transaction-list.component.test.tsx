@@ -200,3 +200,33 @@ test('shows a read error and retries it', async () => {
   await userEvent.setup().press(screen.getByRole('button', { name: 'Try again' }));
   await waitFor(() => expect(screen.getAllByText('Groceries').length).toBeGreaterThan(0));
 });
+
+test('retry restores both transaction rows and filter choices', async () => {
+  useTransactionFilters.setState({ categoryId });
+  let filteredAttempts = 0;
+  let optionAttempts = 0;
+  const readTransactionList = jest.fn(async (input: { categoryId: string | null }) => {
+    if (input.categoryId === null) {
+      optionAttempts += 1;
+      if (optionAttempts === 1) throw new Error('Options unavailable');
+    } else {
+      filteredAttempts += 1;
+      if (filteredAttempts === 1) throw new Error('Rows unavailable');
+    }
+    return rows();
+  });
+
+  await render(
+    <TransactionsScreen
+      data={repository(rows(), readTransactionList)}
+      subscribe={() => () => undefined}
+    />
+  );
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy());
+  await userEvent.setup().press(screen.getByRole('button', { name: 'Try again' }));
+
+  await waitFor(() => expect(screen.getByText('₫125.000')).toBeTruthy());
+  expect(screen.getByRole('button', { name: 'Groceries' })).toBeTruthy();
+  expect(filteredAttempts).toBe(2);
+  expect(optionAttempts).toBe(2);
+});

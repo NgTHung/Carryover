@@ -29,7 +29,7 @@ jest.mock('../src/data/database', () => ({
     completeDraft: jest.fn(),
     softDeleteTransaction: jest.fn(),
   },
-  accountData: { readAccountBalances: (...args: unknown[]) => mockReadAccounts(...args) },
+  accountData: { listActiveAccounts: (...args: unknown[]) => mockReadAccounts(...args) },
   categoryData: {
     listActiveCategoryGroups: (...args: unknown[]) => mockListCategories(...args),
     createCategory: jest.fn(),
@@ -93,6 +93,7 @@ test('opens a transaction URL and provides a reliable route home', async () => {
 
   await waitFor(() => expect(view.getByText('Edit transaction')).toBeTruthy());
   expect(mockReadTransaction).toHaveBeenCalledWith(transactionId);
+  expect(mockReadAccounts).toHaveBeenCalledTimes(1);
 
   await act(async () => {
     fireEvent.press(view.getByText('Back to home'));

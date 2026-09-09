@@ -14,7 +14,7 @@ type RouteState = TransactionRouteState | {
   status: 'ready';
   transaction: Awaited<ReturnType<TransactionEditorData['readTransaction']>> & {};
   groups: Awaited<ReturnType<TransactionEditorData['listActiveCategoryGroups']>>;
-  accounts: Awaited<ReturnType<TransactionEditorData['readAccountBalances']>>;
+  accounts: Awaited<ReturnType<TransactionEditorData['listActiveAccounts']>>;
 };
 
 export default function TransactionRouteScreen({ data = getTransactionEditorData() }: { data?: TransactionEditorData }) {
@@ -46,7 +46,7 @@ export default function TransactionRouteScreen({ data = getTransactionEditorData
         } else {
           const [groups, accounts] = await Promise.all([
             data.listActiveCategoryGroups(),
-            data.readAccountBalances(),
+            data.listActiveAccounts(),
           ]);
           if (cancelled) return;
           setState({

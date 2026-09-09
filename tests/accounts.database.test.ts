@@ -236,3 +236,28 @@ test('account balance reads have no stored running-total column', () => {
     database.close();
   }
 });
+
+test('active account choices remain readable when an adjustment blocks balance projection', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const bankId = accountId(database, 'Bank');
+    const data = createAccountData(createProxyDatabase(database));
+    database
+      .prepare(
+        "INSERT INTO transactions (account_id, direction, amount, occurred_at, status) VALUES (?, 'adjustment', 50000, ?, 'complete')"
+      )
+      .run(bankId, occurredAt.getTime());
+
+    await assert.rejects(
+      data.readAccountBalances(),
+      /Adjustment polarity is not defined/
+    );
+    const choices = await data.listActiveAccounts();
+    assert.equal(
+      choices.map((account) => account.name).sort().join(','),
+      'Bank,Cash'
+    );
+  } finally {
+    database.close();
+  }
+});

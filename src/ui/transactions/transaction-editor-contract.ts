@@ -5,7 +5,7 @@
  * modules, so native access stays at one boundary and browser access stays
  * unavailable.
  */
-import type { AccountBalance } from '../../data/accounts';
+import type { ActiveAccount } from '../../data/accounts';
 import type { CategoryGroupWithLeaves } from '../../data/category-types';
 import type {
   CompleteDraftInput,
@@ -16,7 +16,7 @@ import type {
 export type TransactionEditorData = {
   readTransaction(id: string): Promise<Transaction | undefined>;
   listActiveCategoryGroups(): Promise<CategoryGroupWithLeaves[]>;
-  readAccountBalances(): Promise<AccountBalance[]>;
+  listActiveAccounts(): Promise<ActiveAccount[]>;
   editTransaction(input: EditTransactionInput): Promise<Transaction>;
   completeDraft(input: CompleteDraftInput): Promise<Transaction>;
   softDeleteTransaction(id: string): Promise<void>;

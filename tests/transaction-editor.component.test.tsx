@@ -1,6 +1,6 @@
 import { cleanup, render, screen, userEvent, waitFor } from '@testing-library/react-native';
 
-import type { AccountBalance } from '../src/data/accounts';
+import type { ActiveAccount } from '../src/data/accounts';
 import type { CategoryGroupWithLeaves } from '../src/data/category-types';
 import type { Transaction } from '../src/data/transaction-validation';
 import { TransactionEditor } from '../src/ui/transactions/TransactionEditor';
@@ -57,20 +57,18 @@ const groups: CategoryGroupWithLeaves[] = [{
   }],
 }];
 
-const accounts: AccountBalance[] = [{
+const accounts: ActiveAccount[] = [{
   accountId: bankId,
   name: 'Bank',
   kind: 'bank',
   isDefault: true,
-  openingBalance: 0,
-  balance: 0,
 }];
 
 function editorData(): TransactionEditorData {
   return {
     readTransaction: jest.fn(),
     listActiveCategoryGroups: jest.fn(),
-    readAccountBalances: jest.fn(),
+    listActiveAccounts: jest.fn(),
     editTransaction: jest.fn(async () => complete()),
     completeDraft: jest.fn(async () => complete()),
     softDeleteTransaction: jest.fn(async () => undefined),

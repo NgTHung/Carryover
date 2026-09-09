@@ -93,5 +93,10 @@ export default function TransactionsScreen({
     reset,
   };
 
-  return <TransactionListView state={state} optionRows={optionRows} filters={filters} onReset={reset} onRetry={() => void load()} />;
+  const retry = () => {
+    void load();
+    void loadOptions();
+  };
+
+  return <TransactionListView state={state} optionRows={optionRows} filters={filters} onReset={reset} onRetry={retry} />;
 }

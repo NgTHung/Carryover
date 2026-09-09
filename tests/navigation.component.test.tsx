@@ -22,7 +22,7 @@ jest.mock('../src/data/database', () => ({
     softDeleteTransaction: jest.fn(),
   },
   categoryData: { listActiveCategoryGroups: () => mockListCategories() },
-  accountData: { readAccountBalances: () => mockReadAccounts() },
+  accountData: { listActiveAccounts: () => mockReadAccounts() },
 }));
 
 jest.mock('expo-status-bar', () => ({

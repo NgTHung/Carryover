@@ -7,7 +7,7 @@
 import { useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
-import type { AccountBalance } from '../../data/accounts';
+import type { ActiveAccount } from '../../data/accounts';
 import type { CategoryGroupWithLeaves } from '../../data/category-types';
 import { draftVndInputSchema } from '../../data/money-validation';
 import type {
@@ -122,7 +122,7 @@ export function TransactionEditor({
 }: {
   transaction: Transaction;
   groups: CategoryGroupWithLeaves[];
-  accounts: AccountBalance[];
+  accounts: ActiveAccount[];
   data: TransactionEditorData;
   onDone: () => void;
 }) {
