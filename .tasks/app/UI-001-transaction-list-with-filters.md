@@ -1,7 +1,7 @@
 ---
 id: "UI-001"
 title: "Transaction list with filters"
-status: To Do
+status: In Progress
 priority: "Medium"
 type: "Feature"
 milestone: "0.2.0"
@@ -9,7 +9,7 @@ depends_on: ["DATA-004", "UI-006", "UI-007"]
 risk: "Low"
 impact: "The only way to see whether the ledger is right before the budget engine exists."
 tags: ["ui", "transactions"]
-last_updated: 2026-09-07
+last_updated: 2026-09-09
 ---
 
 ## Summary
@@ -20,6 +20,14 @@ Adjustments and transfers appear here even though no report counts them. Drift s
 
 Introduce Zustand for the selected period and transaction filters shared across screens. Components subscribe with selectors. SQLite supplies the transaction rows through the data layer, and screen-local input stays in React state. Follow `docs/state-and-validation.md`.
 
+## Implementation Notes
+
+- The list lives at `/transactions`; the Stage Zero root links to it until UI-003 replaces the home screen.
+- Period selects one local calendar month. Category, account, and quality each select one value or all, and every active filter combines with AND semantics.
+- Transfers from the transfer ledger appear as read-only rows. Manual transaction and transfer creation remain outside this task.
+- The transaction route edits amount, direction, leaf or income source, account, quality, date, and note. It preserves photo and payer metadata without exposing capture or split controls.
+- Draft edits preserve an unknown amount as null. A draft completes only when its direction-specific required fields are present.
+
 ## Acceptance Criteria
 
 - [ ] The list shows amount, leaf category, account, quality, and date for each transaction.
@@ -29,5 +37,6 @@ Introduce Zustand for the selected period and transaction filters shared across 
 - [ ] Adjustments and transfers are visible and visually distinct from spending.
 - [ ] Drafts appear with their unknown amount shown as unknown, not as zero.
 - [ ] Tapping a transaction opens it for editing.
+- [ ] The editor saves supported fields, completes valid drafts atomically, and soft-deletes through the public data API. Transfer rows remain read-only.
 - [ ] Expo Router opens a transaction by id, and the screen loads it through the public data API. A missing or deleted transaction has an explicit unavailable state.
 - [ ] The screen reuses UI-007 primitives. React Native Testing Library covers combined filters, unknown amounts, and opening a transaction without a native build.
