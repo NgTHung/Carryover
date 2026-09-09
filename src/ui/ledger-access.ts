@@ -43,15 +43,17 @@ export function subscribeLedgerChanges(listener: LedgerChangeListener): () => vo
   return ledgerChangeNotifier.subscribe(listener);
 }
 
+const transactionEditorData: TransactionEditorData = {
+  readTransaction: (id) => transactionData.readTransaction(id),
+  listActiveCategoryGroups: () => categoryData.listActiveCategoryGroups(),
+  readAccountBalances: () => accountData.readAccountBalances(),
+  editTransaction: (input) => transactionData.editTransaction(input),
+  completeDraft: (input) => transactionData.completeDraft(input),
+  softDeleteTransaction: (id) => transactionData.softDeleteTransaction(id),
+};
+
 export function getTransactionEditorData(): TransactionEditorData {
-  return {
-    readTransaction: (id) => transactionData.readTransaction(id),
-    listActiveCategoryGroups: () => categoryData.listActiveCategoryGroups(),
-    readAccountBalances: () => accountData.readAccountBalances(),
-    editTransaction: (input) => transactionData.editTransaction(input),
-    completeDraft: (input) => transactionData.completeDraft(input),
-    softDeleteTransaction: (id) => transactionData.softDeleteTransaction(id),
-  };
+  return transactionEditorData;
 }
 
 export type { LedgerChange };

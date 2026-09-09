@@ -14,6 +14,7 @@ const transactionId = '11111111-1111-4111-8111-111111111111';
 const mockUseMigrations = jest.fn();
 const mockReadTransaction = jest.fn();
 const mockListCategories = jest.fn();
+const mockReadAccounts = jest.fn();
 
 jest.mock('drizzle-orm/expo-sqlite/migrator', () => ({
   useMigrations: (...args: unknown[]) => mockUseMigrations(...args),
@@ -24,7 +25,11 @@ jest.mock('../src/data/database', () => ({
   ledgerMigrations: {},
   transactionData: {
     readTransaction: (...args: unknown[]) => mockReadTransaction(...args),
+    editTransaction: jest.fn(),
+    completeDraft: jest.fn(),
+    softDeleteTransaction: jest.fn(),
   },
+  accountData: { readAccountBalances: (...args: unknown[]) => mockReadAccounts(...args) },
   categoryData: {
     listActiveCategoryGroups: (...args: unknown[]) => mockListCategories(...args),
     createCategory: jest.fn(),
@@ -39,6 +44,13 @@ jest.mock('../src/data/database', () => ({
 jest.mock('../src/ui/diagnostics/runtime-diagnostics', () => ({
   readSigningFacts: () => 'Signing facts are unavailable in router tests.',
   pushFixtureToWidget: jest.fn(),
+}));
+
+jest.mock('../src/ui/QualityChip', () => ({
+  QualityChip: ({ quality }: { quality: string }) => {
+    const { Text } = require('react-native');
+    return <Text>{quality}</Text>;
+  },
 }));
 
 const transaction: Transaction = {
@@ -68,6 +80,7 @@ beforeEach(() => {
   mockUseMigrations.mockReturnValue({ success: true, error: undefined });
   mockReadTransaction.mockResolvedValue(transaction);
   mockListCategories.mockResolvedValue([]);
+  mockReadAccounts.mockResolvedValue([]);
 });
 
 test('opens a transaction URL and provides a reliable route home', async () => {
@@ -78,7 +91,7 @@ test('opens a transaction URL and provides a reliable route home', async () => {
     />
   );
 
-  await waitFor(() => expect(view.getByText('Transaction loaded')).toBeTruthy());
+  await waitFor(() => expect(view.getByText('Edit transaction')).toBeTruthy());
   expect(mockReadTransaction).toHaveBeenCalledWith(transactionId);
 
   await act(async () => {

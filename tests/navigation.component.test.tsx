@@ -6,6 +6,8 @@ import type { Transaction } from '../src/data/transaction-validation';
 const transactionId = '11111111-1111-4111-8111-111111111111';
 const mockUseLocalSearchParams = jest.fn();
 const mockReadTransaction = jest.fn();
+const mockListCategories = jest.fn(async () => []);
+const mockReadAccounts = jest.fn(async () => []);
 
 jest.mock('expo-router', () => ({
   Link: ({ children }: { children: ReactNode }) => children,
@@ -13,7 +15,14 @@ jest.mock('expo-router', () => ({
 }));
 
 jest.mock('../src/data/database', () => ({
-  transactionData: { readTransaction: (...args: unknown[]) => mockReadTransaction(...args) },
+  transactionData: {
+    readTransaction: (...args: unknown[]) => mockReadTransaction(...args),
+    editTransaction: jest.fn(),
+    completeDraft: jest.fn(),
+    softDeleteTransaction: jest.fn(),
+  },
+  categoryData: { listActiveCategoryGroups: () => mockListCategories() },
+  accountData: { readAccountBalances: () => mockReadAccounts() },
 }));
 
 jest.mock('expo-status-bar', () => ({
@@ -47,15 +56,15 @@ afterEach(() => {
   jest.clearAllMocks();
 });
 
-test('native transaction route validates before reading and renders the loaded status', async () => {
+test('native transaction route validates before reading and opens the editor', async () => {
   mockUseLocalSearchParams.mockReturnValue({ transactionId });
   mockReadTransaction.mockResolvedValue(transaction);
 
   const view = await render(<NativeTransactionRoute />);
 
   await waitFor(() => expect(mockReadTransaction).toHaveBeenCalledWith(transactionId));
-  await waitFor(() => expect(view.getByText('Transaction loaded')).toBeTruthy());
-  expect(view.getByText('Status: draft')).toBeTruthy();
+  await waitFor(() => expect(view.getByText('Edit transaction')).toBeTruthy());
+  expect(view.getByText('Draft')).toBeTruthy();
 });
 
 test('native transaction route shows invalid links without reading the ledger', async () => {
