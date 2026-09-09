@@ -11,3 +11,5 @@ function unavailable(): never {
 export const useLedgerMigrations = unavailable;
 export const getCategoryEditorData = unavailable;
 export const readTransaction = unavailable;
+export const getTransactionListData = unavailable;
+export const subscribeLedgerChanges = unavailable;

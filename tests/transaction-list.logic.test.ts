@@ -1,0 +1,55 @@
+import { strict as assert } from 'node:assert';
+
+import {
+  currentPeriod,
+  periodBounds,
+  periodSchema,
+} from '../src/data/period';
+import { createTransactionFilterStore } from '../src/ui/transactions/transaction-filters';
+
+test('period schema and bounds use local calendar months', () => {
+  assert.equal(periodSchema.safeParse('2026-02').success, true);
+  assert.equal(periodSchema.safeParse('2026-2').success, false);
+  assert.equal(periodSchema.safeParse('2026-13').success, false);
+
+  const { start, end } = periodBounds('2026-02');
+  assert.equal(start.getFullYear(), 2026);
+  assert.equal(start.getMonth(), 1);
+  assert.equal(start.getDate(), 1);
+  assert.equal(start.getHours(), 0);
+  assert.equal(end.getFullYear(), 2026);
+  assert.equal(end.getMonth(), 2);
+  assert.equal(end.getDate(), 1);
+  assert.equal(end.getHours(), 0);
+  assert.equal(currentPeriod(new Date(2026, 8, 9, 23, 59)), '2026-09');
+});
+
+test('transaction filter store keeps only choices and resets them', () => {
+  const store = createTransactionFilterStore('2026-02');
+  store.getState().setCategoryId('11111111-1111-4111-8111-111111111111');
+  store.getState().setAccountId('22222222-2222-4222-8222-222222222222');
+  store.getState().setQuality('unrated');
+  store.getState().setSelectedPeriod('2026-03');
+
+  assert.deepEqual(
+    {
+      selectedPeriod: store.getState().selectedPeriod,
+      categoryId: store.getState().categoryId,
+      accountId: store.getState().accountId,
+      quality: store.getState().quality,
+    },
+    {
+      selectedPeriod: '2026-03',
+      categoryId: '11111111-1111-4111-8111-111111111111',
+      accountId: '22222222-2222-4222-8222-222222222222',
+      quality: 'unrated',
+    }
+  );
+
+  store.getState().reset();
+  assert.equal(store.getState().selectedPeriod, currentPeriod());
+  assert.equal(store.getState().categoryId, null);
+  assert.equal(store.getState().accountId, null);
+  assert.equal(store.getState().quality, null);
+  assert.equal('transactions' in store.getState(), false);
+});

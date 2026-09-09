@@ -16,6 +16,10 @@ import {
   recordTransferSchema,
   updateAccountOpeningBalanceSchema,
 } from './account-validation';
+import {
+  ledgerChangeNotifier,
+  type LedgerChangeNotifier,
+} from './ledger-change-notifier';
 import { activeRowFilter } from './soft-delete';
 import {
   accounts,
@@ -66,7 +70,8 @@ async function requireActiveAccounts<TResultKind extends 'sync' | 'async'>(
 }
 
 export function createAccountData<TResultKind extends 'sync' | 'async'>(
-  db: LedgerDatabase<TResultKind>
+  db: LedgerDatabase<TResultKind>,
+  changeNotifier: LedgerChangeNotifier = ledgerChangeNotifier
 ) {
   return {
     async updateOpeningBalance(input: unknown): Promise<void> {
@@ -98,12 +103,14 @@ export function createAccountData<TResultKind extends 'sync' | 'async'>(
           )
         )
         .run();
+      changeNotifier.notify({ table: 'accounts', mutation: 'edited' });
     },
 
     async recordTransfer(input: unknown): Promise<void> {
       const parsed = recordTransferSchema.parse(input);
       await requireActiveAccounts(db, [parsed.fromAccountId, parsed.toAccountId]);
       await db.insert(transfers).values(parsed).run();
+      changeNotifier.notify({ table: 'transfers', mutation: 'created' });
     },
 
     async readAccountBalances(): Promise<AccountBalance[]> {

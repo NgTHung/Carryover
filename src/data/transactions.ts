@@ -9,6 +9,10 @@ import { and, eq, sql } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 
 import { createCategoryData, type CategoryData } from './categories';
+import {
+  ledgerChangeNotifier,
+  type LedgerChangeNotifier,
+} from './ledger-change-notifier';
 import { activeRowFilter, type SoftDeleteOptions } from './soft-delete';
 import {
   completeDraftInputSchema,
@@ -35,7 +39,7 @@ type LedgerDatabase<TResultKind extends 'sync' | 'async'> = BaseSQLiteDatabase<
   typeof ledgerTables
 >;
 
-type TransactionRow = typeof transactions.$inferSelect;
+export type TransactionRow = typeof transactions.$inferSelect;
 
 function transactionNotFound(transactionId: string): Error {
   return new Error(`Active transaction ${transactionId} was not found`);
@@ -53,7 +57,7 @@ function categoryWriteFailed(categoryId: string): Error {
   return new Error(`Active category leaf ${categoryId} was not found`);
 }
 
-function toTransaction(row: TransactionRow): Transaction {
+export function toTransaction(row: TransactionRow): Transaction {
   return transactionSchema.parse({
     id: row.id,
     accountId: row.accountId,
@@ -232,7 +236,8 @@ function mergeTransactionChanges(
 
 export function createTransactionData<TResultKind extends 'sync' | 'async'>(
   db: LedgerDatabase<TResultKind>,
-  categoryData: CategoryData<TResultKind> = createCategoryData(db)
+  categoryData: CategoryData<TResultKind> = createCategoryData(db),
+  changeNotifier: LedgerChangeNotifier = ledgerChangeNotifier
 ) {
   return {
     async createTransaction(input: unknown): Promise<Transaction> {
@@ -244,7 +249,9 @@ export function createTransactionData<TResultKind extends 'sync' | 'async'>(
           ...parsed,
           categoryId,
         });
-        return toTransaction(inserted);
+        const transaction = toTransaction(inserted);
+        changeNotifier.notify({ table: 'transactions', mutation: 'created' });
+        return transaction;
       }
 
       const inserted = await db
@@ -255,7 +262,9 @@ export function createTransactionData<TResultKind extends 'sync' | 'async'>(
       if (inserted === undefined) {
         throw transactionInsertFailed();
       }
-      return toTransaction(inserted);
+      const transaction = toTransaction(inserted);
+      changeNotifier.notify({ table: 'transactions', mutation: 'created' });
+      return transaction;
     },
 
     async readTransaction(
@@ -290,7 +299,9 @@ export function createTransactionData<TResultKind extends 'sync' | 'async'>(
         candidate,
         parsed.changes.categoryId !== undefined
       );
-      return toTransaction(updated);
+      const transaction = toTransaction(updated);
+      changeNotifier.notify({ table: 'transactions', mutation: 'edited' });
+      return transaction;
     },
 
     async completeDraft(input: unknown): Promise<Transaction> {
@@ -319,7 +330,9 @@ export function createTransactionData<TResultKind extends 'sync' | 'async'>(
         candidate,
         true
       );
-      return toTransaction(updated);
+      const transaction = toTransaction(updated);
+      changeNotifier.notify({ table: 'transactions', mutation: 'completed' });
+      return transaction;
     },
 
     async softDeleteTransaction(transactionId: unknown): Promise<void> {
@@ -338,6 +351,7 @@ export function createTransactionData<TResultKind extends 'sync' | 'async'>(
       if (updated === undefined) {
         throw transactionNotFound(parsedId);
       }
+      changeNotifier.notify({ table: 'transactions', mutation: 'deleted' });
     },
   };
 }

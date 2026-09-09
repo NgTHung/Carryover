@@ -12,17 +12,28 @@ import { openDatabaseSync } from 'expo-sqlite';
 import migrations from '../../drizzle/migrations';
 import { createAccountData } from './accounts';
 import { createCategoryData } from './categories';
+import { ledgerChangeNotifier } from './ledger-change-notifier';
 import { createLedgerReads } from './ledger-reads';
 import { ledgerTables } from './schema';
 import { createTransactionData } from './transactions';
+import { createTransactionListData } from './transaction-list';
 
 export const sqlite = openDatabaseSync('carryover.db');
 sqlite.execSync('PRAGMA foreign_keys = ON;');
 sqlite.execSync('PRAGMA journal_mode = WAL;');
 
 export const ledgerDb = drizzle(sqlite, { schema: ledgerTables });
-export const accountData = createAccountData(ledgerDb);
-export const categoryData = createCategoryData(ledgerDb);
+export const accountData = createAccountData(ledgerDb, ledgerChangeNotifier);
+export const categoryData = createCategoryData(ledgerDb, ledgerChangeNotifier);
 export const ledgerReads = createLedgerReads(ledgerDb);
-export const transactionData = createTransactionData(ledgerDb, categoryData);
+export const transactionData = createTransactionData(
+  ledgerDb,
+  categoryData,
+  ledgerChangeNotifier
+);
+export const transactionListData = createTransactionListData(
+  ledgerDb,
+  ledgerChangeNotifier
+);
+export { ledgerChangeNotifier };
 export { migrations as ledgerMigrations };

@@ -14,6 +14,10 @@ import {
   reorderCategoriesInputSchema,
   setCategoryGroupKindInputSchema,
 } from './category-validation';
+import {
+  ledgerChangeNotifier,
+  type LedgerChangeNotifier,
+} from './ledger-change-notifier';
 import type {
   Category,
   CategoryGroup,
@@ -154,7 +158,8 @@ async function findLeaf<TResultKind extends 'sync' | 'async'>(
 }
 
 export function createCategoryData<TResultKind extends 'sync' | 'async'>(
-  db: LedgerDatabase<TResultKind>
+  db: LedgerDatabase<TResultKind>,
+  changeNotifier: LedgerChangeNotifier = ledgerChangeNotifier
 ) {
   return {
     async createCategory(input: unknown): Promise<Category> {
@@ -175,7 +180,9 @@ export function createCategoryData<TResultKind extends 'sync' | 'async'>(
         if (inserted === undefined) {
           throw new Error('Category group insert returned no row');
         }
-        return toCategoryGroup(inserted);
+        const group = toCategoryGroup(inserted);
+        changeNotifier.notify({ table: 'categories', mutation: 'created' });
+        return group;
       }
 
       const inserted = await db
@@ -209,7 +216,9 @@ export function createCategoryData<TResultKind extends 'sync' | 'async'>(
       if (group === undefined) {
         throw categoryGroupNotFound(parsed.groupId);
       }
-      return toCategoryLeaf(inserted, group);
+      const leaf = toCategoryLeaf(inserted, group);
+      changeNotifier.notify({ table: 'categories', mutation: 'created' });
+      return leaf;
     },
 
     async listActiveCategoryGroups(): Promise<CategoryGroupWithLeaves[]> {
@@ -248,6 +257,7 @@ export function createCategoryData<TResultKind extends 'sync' | 'async'>(
         .set({ name: parsed.name, updatedAt: new Date() })
         .where(eq(categories.id, parsed.categoryId))
         .run();
+      changeNotifier.notify({ table: 'categories', mutation: 'edited' });
     },
 
     async setCategoryGroupKind(input: unknown): Promise<void> {
@@ -263,6 +273,7 @@ export function createCategoryData<TResultKind extends 'sync' | 'async'>(
           or(eq(categories.id, group.id), eq(categories.parentId, group.id))
         )
         .run();
+      changeNotifier.notify({ table: 'categories', mutation: 'edited' });
     },
 
     async reorderCategories(input: unknown): Promise<void> {
@@ -297,6 +308,7 @@ export function createCategoryData<TResultKind extends 'sync' | 'async'>(
         })
         .where(inArray(categories.id, parsed.categoryIds))
         .run();
+      changeNotifier.notify({ table: 'categories', mutation: 'edited' });
     },
 
     async softDeleteCategory(categoryId: unknown): Promise<void> {
@@ -322,6 +334,7 @@ export function createCategoryData<TResultKind extends 'sync' | 'async'>(
           )
         )
         .run();
+      changeNotifier.notify({ table: 'categories', mutation: 'deleted' });
     },
 
     async requireActiveLeafCategory(categoryId: unknown): Promise<CategoryLeaf> {
@@ -381,6 +394,7 @@ export function createCategoryData<TResultKind extends 'sync' | 'async'>(
           and(eq(categories.isSuggestion, true), activeRowFilter(categories.deletedAt))
         )
         .run();
+      changeNotifier.notify({ table: 'categories', mutation: 'deleted' });
     },
   };
 }
