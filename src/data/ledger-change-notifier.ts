@@ -8,7 +8,8 @@ export type LedgerChangeTable =
   | 'transactions'
   | 'transfers'
   | 'categories'
-  | 'accounts';
+  | 'accounts'
+  | 'month_config';
 
 export type LedgerChangeMutation =
   | 'created'
