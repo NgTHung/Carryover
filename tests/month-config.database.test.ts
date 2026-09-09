@@ -1,6 +1,7 @@
 import { strict as assert } from 'node:assert';
 
 import { createCategoryData } from '../src/data/categories';
+import { createCommitmentData } from '../src/data/commitments';
 import { createLedgerChangeNotifier } from '../src/data/ledger-change-notifier';
 import { createMonthConfigData } from '../src/data/month-config';
 import { createTransactionData } from '../src/data/transactions';
@@ -296,6 +297,7 @@ test('past month snapshot remains frozen when transactions and commitments chang
     const proxy = createProxyDatabase(database);
     const monthData = createMonthConfigData(proxy);
     const transactionData = createTransactionData(proxy, createCategoryData(proxy));
+    const commitmentData = createCommitmentData(proxy);
     const past = await monthData.openPeriod({
       period: '2025-01',
       openingBalance: 5_000_000,
@@ -316,14 +318,16 @@ test('past month snapshot remains frozen when transactions and commitments chang
       transactionId: transaction.id,
       changes: { amount: 50_000 },
     });
-    database
-      .prepare(
-        'INSERT INTO commitments (name, amount, due_day, category_id, active) VALUES (?, ?, ?, ?, ?)'
-      )
-      .run('Rent', 700_000, 5, rentReserveId(database), 1);
-    database
-      .prepare('UPDATE commitments SET amount = ?, updated_at = ? WHERE name = ?')
-      .run(800_000, Date.now() + 1, 'Rent');
+    const commitment = await commitmentData.createCommitment({
+      name: 'Rent',
+      amount: 700_000,
+      dueDay: 5,
+      categoryId: rentReserveId(database),
+    });
+    await commitmentData.editCommitment({
+      commitmentId: commitment.id,
+      changes: { amount: 800_000 },
+    });
     assert.deepEqual(await monthData.readMonthConfig(past.period), before);
   } finally {
     database.close();

@@ -5,9 +5,11 @@
  * The category predicate is part of each write statement so a category cannot
  * be deactivated between validation and the commitment write.
  */
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, gte, lt, sql } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 
+import { calculateUnpaidReserve } from './commitment-reserves';
+import { resolveCommitmentDueDate } from './commitment-period';
 import {
   commitmentIdSchema,
   commitmentSchema,
@@ -26,8 +28,10 @@ import {
   commitments,
   ledgerTables,
   nowMillisecondsSql,
+  transactions,
   uuidV4Sql,
 } from './schema';
+import { periodBounds, periodSchema } from './period';
 
 type LedgerDatabase<TResultKind extends 'sync' | 'async'> = BaseSQLiteDatabase<
   TResultKind,
@@ -189,6 +193,52 @@ export function createCommitmentData<TResultKind extends 'sync' | 'async'>(
         .where(activeRowFilter(commitments.deletedAt, options))
         .all();
       return rows.map(toCommitment);
+    },
+
+    async readReservedUnpaid(period: unknown): Promise<number> {
+      const parsedPeriod = periodSchema.parse(period);
+      const bounds = periodBounds(parsedPeriod);
+      const commitmentRows = await db
+        .select()
+        .from(commitments)
+        .where(
+          and(
+            eq(commitments.active, true),
+            activeRowFilter(commitments.deletedAt)
+          )
+        )
+        .all();
+      const paymentRows = await db
+        .select({
+          id: transactions.id,
+          categoryId: transactions.categoryId,
+          occurredAt: transactions.occurredAt,
+        })
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.status, 'complete'),
+            eq(transactions.direction, 'expense'),
+            gte(transactions.occurredAt, bounds.start),
+            lt(transactions.occurredAt, bounds.end),
+            activeRowFilter(transactions.deletedAt)
+          )
+        )
+        .all();
+
+      return calculateUnpaidReserve(
+        commitmentRows.map((row) => ({
+          id: row.id,
+          amount: row.amount,
+          categoryId: row.categoryId,
+          dueDate: resolveCommitmentDueDate(parsedPeriod, row.dueDay),
+        })),
+        paymentRows.flatMap((row) =>
+          row.categoryId === null
+            ? []
+            : [{ id: row.id, categoryId: row.categoryId, occurredAt: row.occurredAt }]
+        )
+      );
     },
 
     async editCommitment(input: unknown): Promise<Commitment> {

@@ -1,16 +1,28 @@
 import { strict as assert } from 'node:assert';
 
+import { createCategoryData } from '../src/data/categories';
 import { createCommitmentData } from '../src/data/commitments';
 import { createLedgerChangeNotifier } from '../src/data/ledger-change-notifier';
+import { MAX_VND_AMOUNT } from '../src/money/currency';
+import { createTransactionData } from '../src/data/transactions';
 import { createProxyDatabase, openMigratedDatabase } from './support/sqlite-proxy';
 
 const reserveLeafId = '20000000-0000-4000-8000-000000000007';
 const secondReserveLeafId = '20000000-0000-4000-8000-000000000008';
 const spendLeafId = '20000000-0000-4000-8000-000000000001';
 const reserveGroupId = '10000000-0000-4000-8000-000000000003';
+const secondSpendLeafId = '20000000-0000-4000-8000-000000000002';
 
 function databaseCount(database: ReturnType<typeof openMigratedDatabase>, table: string): number {
   return (database.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get() as { count: number }).count;
+}
+
+function bankId(database: ReturnType<typeof openMigratedDatabase>): string {
+  return (
+    database.prepare("SELECT id FROM accounts WHERE name = 'Bank'").get() as {
+      id: string;
+    }
+  ).id;
 }
 
 test('commitments round-trip with active default and notify actual writes', async () => {
@@ -149,6 +161,163 @@ test('commitment writes never create transactions', async () => {
     await data.editCommitment({ commitmentId: created.id, changes: { amount: 800_000 } });
     await data.softDeleteCommitment(created.id);
     assert.equal(databaseCount(database, 'transactions'), before);
+  } finally {
+    database.close();
+  }
+});
+
+test('reserved unpaid matches complete expenses once within the requested period', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const proxy = createProxyDatabase(database);
+    const commitments = createCommitmentData(proxy);
+    const transactions = createTransactionData(proxy, createCategoryData(proxy));
+    const first = await commitments.createCommitment({
+      name: 'Rent first',
+      amount: 700_000,
+      dueDay: 5,
+      categoryId: reserveLeafId,
+    });
+    await commitments.createCommitment({
+      name: 'Rent second',
+      amount: 800_000,
+      dueDay: 20,
+      categoryId: reserveLeafId,
+    });
+    const bank = bankId(database);
+    await transactions.createTransaction({
+      accountId: bank,
+      direction: 'expense',
+      status: 'complete',
+      amount: 1,
+      categoryId: reserveLeafId,
+      occurredAt: new Date(2026, 8, 6),
+    });
+    await transactions.createTransaction({
+      accountId: bank,
+      direction: 'expense',
+      status: 'draft',
+      amount: null,
+      categoryId: reserveLeafId,
+      occurredAt: new Date(2026, 8, 7),
+    });
+    assert.equal(await commitments.readReservedUnpaid('2026-09'), 800_000);
+    assert.equal(await commitments.readReservedUnpaid('2026-08'), 1_500_000);
+    assert.equal(first.active, true);
+  } finally {
+    database.close();
+  }
+});
+
+test('reserved unpaid ignores non-payments, deleted rows, and inactive commitments', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const proxy = createProxyDatabase(database);
+    const commitments = createCommitmentData(proxy);
+    const transactions = createTransactionData(proxy, createCategoryData(proxy));
+    const inactive = await commitments.createCommitment({
+      name: 'Inactive rent',
+      amount: 100_000,
+      dueDay: 1,
+      categoryId: reserveLeafId,
+      active: false,
+    });
+    const active = await commitments.createCommitment({
+      name: 'Active rent',
+      amount: 200_000,
+      dueDay: 1,
+      categoryId: reserveLeafId,
+    });
+    await commitments.editCommitment({
+      commitmentId: inactive.id,
+      changes: { active: true },
+    });
+    await commitments.editCommitment({
+      commitmentId: inactive.id,
+      changes: { active: false },
+    });
+    const bank = bankId(database);
+    const draft = await transactions.createTransaction({
+      accountId: bank,
+      direction: 'expense',
+      status: 'draft',
+      amount: null,
+      categoryId: reserveLeafId,
+      occurredAt: new Date(2026, 8, 1),
+    });
+    const income = await transactions.createTransaction({
+      accountId: bank,
+      direction: 'income',
+      status: 'complete',
+      amount: 200_000,
+      categoryId: null,
+      occurredAt: new Date(2026, 8, 1),
+    });
+    const adjustment = await transactions.createTransaction({
+      accountId: bank,
+      direction: 'adjustment',
+      status: 'complete',
+      amount: 200_000,
+      categoryId: null,
+      occurredAt: new Date(2026, 8, 1),
+    });
+    const transfer = await transactions.createTransaction({
+      accountId: bank,
+      direction: 'transfer',
+      status: 'complete',
+      amount: 200_000,
+      categoryId: null,
+      occurredAt: new Date(2026, 8, 1),
+    });
+    const wrongCategory = await transactions.createTransaction({
+      accountId: bank,
+      direction: 'expense',
+      status: 'complete',
+      amount: 200_000,
+      categoryId: secondSpendLeafId,
+      occurredAt: new Date(2026, 8, 1),
+    });
+    const deleted = await transactions.createTransaction({
+      accountId: bank,
+      direction: 'expense',
+      status: 'complete',
+      amount: 200_000,
+      categoryId: reserveLeafId,
+      occurredAt: new Date(2026, 8, 1),
+    });
+    await transactions.softDeleteTransaction(deleted.id);
+    assert.equal(await commitments.readReservedUnpaid('2026-09'), 200_000);
+    assert.equal((await commitments.readCommitment(active.id))?.active, true);
+    assert.equal(draft.status, 'draft');
+    assert.equal(income.direction, 'income');
+    assert.equal(adjustment.direction, 'adjustment');
+    assert.equal(transfer.direction, 'transfer');
+    assert.equal(wrongCategory.categoryId, secondSpendLeafId);
+  } finally {
+    database.close();
+  }
+});
+
+test('reserved unpaid rejects a result beyond the safe VND amount', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const commitments = createCommitmentData(createProxyDatabase(database));
+    await commitments.createCommitment({
+      name: 'Large rent one',
+      amount: MAX_VND_AMOUNT,
+      dueDay: 1,
+      categoryId: reserveLeafId,
+    });
+    await commitments.createCommitment({
+      name: 'Large rent two',
+      amount: 1,
+      dueDay: 2,
+      categoryId: reserveLeafId,
+    });
+    await assert.rejects(
+      commitments.readReservedUnpaid('2026-09'),
+      /safe VND amount/i
+    );
   } finally {
     database.close();
   }
