@@ -13,6 +13,7 @@ import type { Transaction } from '../src/data/transaction-validation';
 const transactionId = '11111111-1111-4111-8111-111111111111';
 const mockUseMigrations = jest.fn();
 const mockReadTransaction = jest.fn();
+const mockListCategories = jest.fn();
 
 jest.mock('drizzle-orm/expo-sqlite/migrator', () => ({
   useMigrations: (...args: unknown[]) => mockUseMigrations(...args),
@@ -23,6 +24,15 @@ jest.mock('../src/data/database', () => ({
   ledgerMigrations: {},
   transactionData: {
     readTransaction: (...args: unknown[]) => mockReadTransaction(...args),
+  },
+  categoryData: {
+    listActiveCategoryGroups: (...args: unknown[]) => mockListCategories(...args),
+    createCategory: jest.fn(),
+    renameCategory: jest.fn(),
+    setCategoryGroupKind: jest.fn(),
+    reorderCategories: jest.fn(),
+    softDeleteCategory: jest.fn(),
+    deleteSuggestedCategories: jest.fn(),
   },
 }));
 
@@ -57,6 +67,7 @@ afterEach(async () => {
 beforeEach(() => {
   mockUseMigrations.mockReturnValue({ success: true, error: undefined });
   mockReadTransaction.mockResolvedValue(transaction);
+  mockListCategories.mockResolvedValue([]);
 });
 
 test('opens a transaction URL and provides a reliable route home', async () => {
@@ -103,4 +114,30 @@ test('recovers from an unknown URL through the real router', async () => {
   });
 
   await waitFor(() => expect(view.getByText('Signing facts unavailable')).toBeTruthy());
+});
+
+test('opens the category editor through the settings route', async () => {
+  const view = await render(
+    <ExpoRoot
+      context={getMockContext('./src/app')}
+      location="/settings/categories"
+    />
+  );
+
+  await waitFor(() => expect(view.getByText('Groups hold leaves. Transactions use leaves only.')).toBeTruthy());
+  expect(mockListCategories).toHaveBeenCalledTimes(1);
+});
+
+test('keeps the category route behind the migration gate', async () => {
+  mockUseMigrations.mockReturnValue({ success: false, error: undefined });
+
+  const view = await render(
+    <ExpoRoot
+      context={getMockContext('./src/app')}
+      location="/settings/categories"
+    />
+  );
+
+  expect(view.getByText('Applying the ledger schema…')).toBeTruthy();
+  expect(mockListCategories).not.toHaveBeenCalled();
 });
