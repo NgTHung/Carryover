@@ -20,7 +20,7 @@ These are not style preferences. Breaking one corrupts data silently.
 
 Amounts are `INTEGER` VND with exponent 0. No floating point value ever holds an amount, at any layer, including intermediate arithmetic and JSON. Use the `CURRENCY_EXPONENT` constant instead of writing 1 or 100 inline.
 
-Amounts are always positive. Direction carries the sign. Never store a negative amount to mean an expense.
+Amounts are always positive. Direction determines the effect for expenses and income. Adjustment effect determines whether an adjustment increases or decreases a balance. Never store a negative amount to carry direction or effect.
 
 Division that splits money must assign the remainder deterministically. The remainder goes to the payer. Two runs over the same input must produce the same split.
 

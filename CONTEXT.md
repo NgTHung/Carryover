@@ -43,8 +43,12 @@ One recorded movement of money, in any direction, belonging to one account.
 _Avoid_: Entry, record, expense
 
 **Direction**:
-Whether a transaction is an expense, income, adjustment, or transfer. It carries the sign; the amount is always positive.
+Whether a transaction is an expense, income, adjustment, or transfer. Expense and income direction determines the balance effect; the amount is always positive.
 _Avoid_: Type, sign, kind
+
+**Adjustment effect**:
+Whether an adjustment increases or decreases an account balance. It carries the effect while the adjustment amount stays positive.
+_Avoid_: Signed amount, correction sign
 
 **Draft**:
 A transaction captured by photo that does not yet have the fields needed to complete it. It is the same table and the same type as a complete transaction, separated by status.

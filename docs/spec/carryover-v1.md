@@ -82,6 +82,7 @@ categories     parent_id(null = group), name, sort, kind(spend|reserve),
                is_suggestion
 transactions   account_id, direction(expense|income|adjustment|transfer),
                amount(int VND, always positive),
+               adjustment_effect(increase|decrease; adjustment only),
                category_id(leaf; null for income/adjustment),
                quality(need|want|regret|null),
                payer_contact_id(nullable; null = you),
