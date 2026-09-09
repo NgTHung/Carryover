@@ -1,7 +1,7 @@
 ---
 id: "DATA-005"
 title: "Per-period month config snapshots"
-status: In Progress
+status: Done
 priority: "High"
 type: "Feature"
 milestone: "0.3.0"
@@ -27,9 +27,9 @@ beyond the period, but it cannot precede the period start.
 
 ## Acceptance Criteria
 
-- [ ] A `month_config` row is written when a period opens, holding opening balance, income total, reserved total, and horizon date.
-- [ ] Zod validates period and horizon dates and reuses DATA-001 money schemas before writes. Invalid input leaves stored month config unchanged.
-- [ ] Every report reads `month_config` from storage and nothing recomputes it from current settings.
-- [ ] The horizon defaults to the end of the period and is editable per period.
-- [ ] The period boundary is read from configuration, not a literal in the code.
-- [ ] `tests/` edits a past transaction and changes today's commitments, then asserts a past period's stored figures are unchanged.
+- [x] A `month_config` row is written when a period opens, holding opening balance, income total, reserved total, and horizon date.
+- [x] Zod validates period and horizon dates and reuses DATA-001 money schemas before writes. Invalid input leaves stored month config unchanged.
+- [x] Every report reads `month_config` from storage and nothing recomputes it from current settings.
+- [x] The horizon defaults to the end of the period and is editable per period.
+- [x] The period boundary is read from configuration, not a literal in the code.
+- [x] `tests/` edits a past transaction and changes today's commitments, then asserts a past period's stored figures are unchanged.
