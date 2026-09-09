@@ -1,7 +1,7 @@
 ---
 id: "DATA-007"
 title: "Reconcile writes a visible adjustment"
-status: To Do
+status: In Progress
 priority: "Medium"
 type: "Feature"
 milestone: "0.3.0"
@@ -9,7 +9,7 @@ depends_on: ["DATA-002", "DATA-004"]
 risk: "Medium"
 impact: "Cash drift makes the balance, the runway, and therefore the headline figure slightly less true every week. Reconcile is the only correction path."
 tags: ["data", "accounts", "reconcile"]
-last_updated: 2026-09-06
+last_updated: 2026-09-09
 ---
 
 ## Summary
