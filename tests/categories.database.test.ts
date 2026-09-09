@@ -67,6 +67,113 @@ test('category creation returns typed groups and leaves', async () => {
   }
 });
 
+test('category creation appends, lists, renames, and changes group kind', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const data = createCategoryData(createProxyDatabase(database));
+    const group = await data.createCategory({
+      level: 'group',
+      name: 'Weekend',
+      kind: 'spend',
+    });
+    const leaf = await data.createCategory({
+      level: 'leaf',
+      name: 'Cinema',
+      groupId: group.id,
+    });
+
+    assert.equal(group.sort, 8);
+    assert.equal(leaf.sort, 0);
+    await data.renameCategory({ categoryId: group.id, name: 'Leisure' });
+    await data.setCategoryGroupKind({ groupId: group.id, kind: 'reserve' });
+
+    const sections = await data.listActiveCategoryGroups();
+    const leisure = sections.find((section) => section.id === group.id);
+    assert.equal(leisure?.name, 'Leisure');
+    assert.equal(leisure?.kind, 'reserve');
+    assert.equal(leisure?.leaves[0]?.name, 'Cinema');
+    assert.equal(leisure?.leaves[0]?.kind, 'reserve');
+  } finally {
+    database.close();
+  }
+});
+
+test('category reordering assigns deterministic sibling sort values', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const data = createCategoryData(createProxyDatabase(database));
+    const groups = await data.listActiveCategoryGroups();
+    const reversedGroups = groups.map((group) => group.id).reverse();
+    await data.reorderCategories({ level: 'group', categoryIds: reversedGroups });
+
+    const reordered = await data.listActiveCategoryGroups();
+    assert.deepEqual(
+      reordered.map((group) => group.id),
+      reversedGroups
+    );
+    assert.deepEqual(
+      reordered.map((group) => group.sort),
+      reversedGroups.map((_, index) => index)
+    );
+
+    const food = reordered.find((group) => group.name === 'Food');
+    if (!food) throw new Error('Missing Food group');
+    const reversedLeaves = food.leaves.map((leaf) => leaf.id).reverse();
+    await data.reorderCategories({
+      level: 'leaf',
+      groupId: food.id,
+      categoryIds: reversedLeaves,
+    });
+    const reorderedFood = (await data.listActiveCategoryGroups()).find(
+      (group) => group.id === food.id
+    );
+    assert.deepEqual(
+      reorderedFood?.leaves.map((leaf) => leaf.id),
+      reversedLeaves
+    );
+
+    await assert.rejects(
+      data.reorderCategories({
+        level: 'leaf',
+        groupId: food.leaves[0]?.id,
+        categoryIds: reversedLeaves,
+      }),
+      /category order/i
+    );
+  } finally {
+    database.close();
+  }
+});
+
+test('deleting a group soft-deletes its leaves and keeps history readable', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const proxy = createProxyDatabase(database);
+    const data = createCategoryData(proxy);
+    const reads = createLedgerReads(proxy);
+    const foodId = categoryId(database, 'Food');
+    const leafId = categoryId(database, 'Groceries');
+    database
+      .prepare(
+        "INSERT INTO transactions (account_id, direction, amount, category_id, occurred_at, status) VALUES (?, 'expense', 45000, ?, 1735689600000, 'complete')"
+      )
+      .run(bankId(database), leafId);
+
+    await data.softDeleteCategory(foodId);
+
+    await assert.rejects(data.requireActiveLeafCategory(leafId), /category leaf/i);
+    const reference = await data.readLeafReference(leafId);
+    assert.equal(reference?.group.id, foodId);
+    assert.ok(reference?.group);
+    assert.ok(reference?.group.name === 'Food');
+    assert.ok(reference?.deletedAt instanceof Date);
+    assert.equal((await reads.categories().all()).some((row) => row.id === foodId), false);
+    assert.equal((await reads.transactions().get())?.categoryId, leafId);
+  } finally {
+    database.close();
+  }
+});
+
 test('leaf creation rejects missing, deleted, and leaf group references before writing', async () => {
   const database = openMigratedDatabase();
   try {

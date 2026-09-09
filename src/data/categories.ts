@@ -4,18 +4,22 @@
  * SQLite stores the group relationship as a nullable foreign key, so this
  * boundary checks the active row facts that a foreign key cannot express.
  */
-import { and, eq, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 
 import {
   categoryIdSchema,
   createCategoryInputSchema,
+  renameCategoryInputSchema,
+  reorderCategoriesInputSchema,
+  setCategoryGroupKindInputSchema,
 } from './category-validation';
 import type {
   Category,
   CategoryGroup,
   CategoryGroupReference,
   CategoryLeaf,
+  CategoryGroupWithLeaves,
 } from './category-types';
 import { activeRowFilter } from './soft-delete';
 import {
@@ -43,6 +47,14 @@ function categoryLeafNotFound(categoryId: string): Error {
 
 function historicalGroupNotFound(categoryId: string): Error {
   return new Error(`Category leaf ${categoryId} has no historical group`);
+}
+
+function categoryNotFound(categoryId: string): Error {
+  return new Error(`Active category ${categoryId} was not found`);
+}
+
+function categoryOrderMismatch(): Error {
+  return new Error('Category order must include every active sibling exactly once');
 }
 
 function toCategoryGroup(row: CategoryRow): CategoryGroup {
@@ -84,6 +96,15 @@ function toCategoryLeaf(row: CategoryRow, group: CategoryGroup): CategoryLeaf {
     deletedAt: row.deletedAt,
     group: toGroupReference(group),
   };
+}
+
+function compareCategoryRows(left: CategoryRow, right: CategoryRow): number {
+  if (left.sort !== right.sort) {
+    return left.sort - right.sort;
+  }
+  if (left.name < right.name) return -1;
+  if (left.name > right.name) return 1;
+  return left.id < right.id ? -1 : left.id > right.id ? 1 : 0;
 }
 
 async function findGroup<TResultKind extends 'sync' | 'async'>(
@@ -143,7 +164,9 @@ export function createCategoryData<TResultKind extends 'sync' | 'async'>(
           .insert(categories)
           .values({
             name: parsed.name,
-            sort: parsed.sort,
+            sort:
+              parsed.sort ??
+              sql<number>`COALESCE((SELECT MAX(sort) + 1 FROM categories WHERE parent_id IS NULL AND deleted_at IS NULL), 0)`,
             kind: parsed.kind,
             isSuggestion: false,
           })
@@ -166,7 +189,10 @@ export function createCategoryData<TResultKind extends 'sync' | 'async'>(
             NULL,
             ${categories.id},
             ${parsed.name},
-            ${parsed.sort},
+            ${
+              parsed.sort ??
+              sql<number>`COALESCE((SELECT MAX(child.sort) + 1 FROM categories AS child WHERE child.parent_id = ${parsed.groupId} AND child.deleted_at IS NULL), 0)`
+            },
             ${categories.kind},
             0
           FROM ${categories}
@@ -184,6 +210,118 @@ export function createCategoryData<TResultKind extends 'sync' | 'async'>(
         throw categoryGroupNotFound(parsed.groupId);
       }
       return toCategoryLeaf(inserted, group);
+    },
+
+    async listActiveCategoryGroups(): Promise<CategoryGroupWithLeaves[]> {
+      const rows = await db
+        .select()
+        .from(categories)
+        .where(activeRowFilter(categories.deletedAt))
+        .all();
+      const groupRows = rows
+        .filter((row) => row.parentId === null)
+        .sort(compareCategoryRows);
+      const groups = groupRows.map(toCategoryGroup);
+      return groups.map((group) => {
+        const leaves = rows
+          .filter((row) => row.parentId === group.id)
+          .sort(compareCategoryRows)
+          .map((row) => toCategoryLeaf(row, group));
+        return { ...group, leaves };
+      });
+    },
+
+    async renameCategory(input: unknown): Promise<void> {
+      const parsed = renameCategoryInputSchema.parse(input);
+      const row = await db
+        .select({ id: categories.id })
+        .from(categories)
+        .where(
+          and(eq(categories.id, parsed.categoryId), activeRowFilter(categories.deletedAt))
+        )
+        .get();
+      if (row === undefined) {
+        throw categoryNotFound(parsed.categoryId);
+      }
+      await db
+        .update(categories)
+        .set({ name: parsed.name, updatedAt: new Date() })
+        .where(eq(categories.id, parsed.categoryId))
+        .run();
+    },
+
+    async setCategoryGroupKind(input: unknown): Promise<void> {
+      const parsed = setCategoryGroupKindInputSchema.parse(input);
+      const group = await findGroup(db, parsed.groupId, { activeOnly: true });
+      if (group === undefined) {
+        throw categoryGroupNotFound(parsed.groupId);
+      }
+      await db
+        .update(categories)
+        .set({ kind: parsed.kind, updatedAt: new Date() })
+        .where(
+          or(eq(categories.id, group.id), eq(categories.parentId, group.id))
+        )
+        .run();
+    },
+
+    async reorderCategories(input: unknown): Promise<void> {
+      const parsed = reorderCategoriesInputSchema.parse(input);
+      const rows = await db
+        .select({ id: categories.id, parentId: categories.parentId })
+        .from(categories)
+        .where(activeRowFilter(categories.deletedAt))
+        .all();
+      const siblingIds = rows
+        .filter((row) =>
+          parsed.level === 'group'
+            ? row.parentId === null
+            : row.parentId === parsed.groupId
+        )
+        .map((row) => row.id);
+      const requestedIds = new Set(parsed.categoryIds);
+      if (
+        siblingIds.length !== parsed.categoryIds.length ||
+        siblingIds.some((id) => !requestedIds.has(id))
+      ) {
+        throw categoryOrderMismatch();
+      }
+      const cases = parsed.categoryIds.map(
+        (categoryId, index) => sql`WHEN ${categories.id} = ${categoryId} THEN ${index}`
+      );
+      await db
+        .update(categories)
+        .set({
+          sort: sql`CASE ${sql.join(cases, sql.raw(' '))} ELSE ${categories.sort} END`,
+          updatedAt: new Date(),
+        })
+        .where(inArray(categories.id, parsed.categoryIds))
+        .run();
+    },
+
+    async softDeleteCategory(categoryId: unknown): Promise<void> {
+      const parsedId = categoryIdSchema.parse(categoryId);
+      const row = await db
+        .select({ id: categories.id, parentId: categories.parentId })
+        .from(categories)
+        .where(
+          and(eq(categories.id, parsedId), activeRowFilter(categories.deletedAt))
+        )
+        .get();
+      if (row === undefined) {
+        throw categoryNotFound(parsedId);
+      }
+      const now = new Date();
+      await db
+        .update(categories)
+        .set({ deletedAt: now, updatedAt: now })
+        .where(
+          and(
+            or(eq(categories.id, row.id), eq(categories.parentId, row.id)),
+            activeRowFilter(categories.deletedAt)
+          )
+        )
+        .run();
     },
 
     async requireActiveLeafCategory(categoryId: unknown): Promise<CategoryLeaf> {
@@ -217,14 +355,7 @@ export function createCategoryData<TResultKind extends 'sync' | 'async'>(
       if (leaf === undefined) {
         throw categoryLeafNotFound(parsedId);
       }
-      const now = new Date();
-      await db
-        .update(categories)
-        .set({ deletedAt: now, updatedAt: now })
-        .where(
-          and(eq(categories.id, leaf.id), activeRowFilter(categories.deletedAt))
-        )
-        .run();
+      await this.softDeleteCategory(leaf.id);
     },
 
     async deleteSuggestedCategories(): Promise<void> {

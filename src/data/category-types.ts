@@ -33,3 +33,7 @@ export type CategoryLeaf = CategoryFields & {
 };
 
 export type Category = CategoryGroup | CategoryLeaf;
+
+export type CategoryGroupWithLeaves = CategoryGroup & {
+  leaves: CategoryLeaf[];
+};

@@ -17,7 +17,7 @@ export const createCategoryInputSchema = z.discriminatedUnion('level', [
     .object({
       level: z.literal('group'),
       name: categoryNameSchema,
-      sort: categorySortSchema,
+      sort: categorySortSchema.optional(),
       kind: categoryKindSchema,
     })
     .strict(),
@@ -25,7 +25,7 @@ export const createCategoryInputSchema = z.discriminatedUnion('level', [
     .object({
       level: z.literal('leaf'),
       name: categoryNameSchema,
-      sort: categorySortSchema,
+      sort: categorySortSchema.optional(),
       groupId: categoryIdSchema,
     })
     .strict(),
@@ -33,3 +33,53 @@ export const createCategoryInputSchema = z.discriminatedUnion('level', [
 
 export type CreateCategoryInput = z.infer<typeof createCategoryInputSchema>;
 export type ValidatedCategoryKind = z.infer<typeof categoryKindSchema>;
+
+export const renameCategoryInputSchema = z
+  .object({
+    categoryId: categoryIdSchema,
+    name: categoryNameSchema,
+  })
+  .strict();
+
+export const setCategoryGroupKindInputSchema = z
+  .object({
+    groupId: categoryIdSchema,
+    kind: categoryKindSchema,
+  })
+  .strict();
+
+const categoryOrderIdsSchema = z
+  .array(categoryIdSchema)
+  .min(1)
+  .superRefine((ids, context) => {
+    if (new Set(ids).size !== ids.length) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Category IDs must be unique',
+      });
+    }
+  });
+
+export const reorderCategoriesInputSchema = z.discriminatedUnion('level', [
+  z
+    .object({
+      level: z.literal('group'),
+      categoryIds: categoryOrderIdsSchema,
+    })
+    .strict(),
+  z
+    .object({
+      level: z.literal('leaf'),
+      groupId: categoryIdSchema,
+      categoryIds: categoryOrderIdsSchema,
+    })
+    .strict(),
+]);
+
+export type RenameCategoryInput = z.infer<typeof renameCategoryInputSchema>;
+export type SetCategoryGroupKindInput = z.infer<
+  typeof setCategoryGroupKindInputSchema
+>;
+export type ReorderCategoriesInput = z.infer<
+  typeof reorderCategoriesInputSchema
+>;
