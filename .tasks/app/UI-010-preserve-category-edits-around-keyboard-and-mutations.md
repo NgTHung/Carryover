@@ -1,7 +1,7 @@
 ---
 id: "UI-010"
 title: "Preserve category edits around keyboard and mutations"
-status: In Progress
+status: Done
 priority: "Medium"
 type: "Bug"
 milestone: "0.2.0"
@@ -18,6 +18,12 @@ Keep an open category form intact while unrelated mutations reload data, and let
 
 ## Acceptance Criteria
 
-- [ ] Changing group kind or category order does not close or clear an open form.
-- [ ] The category editor adjusts its scroll insets for the iOS keyboard and supports interactive keyboard dismissal.
-- [ ] Component tests cover preserved input and keyboard-aware scroll configuration.
+- [x] Changing group kind or category order does not close or clear an open form.
+- [x] The category editor adjusts its scroll insets for the iOS keyboard and supports interactive keyboard dismissal.
+- [x] Component tests cover preserved input and keyboard-aware scroll configuration.
+
+## Verification
+
+- `npm test -- --runInBand` passes 24 suites and 108 tests.
+- `npm run typecheck` passes.
+- `git diff --check` passes.
