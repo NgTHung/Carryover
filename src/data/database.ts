@@ -12,6 +12,7 @@ import { openDatabaseSync } from 'expo-sqlite';
 import migrations from '../../drizzle/migrations';
 import { createAccountData } from './accounts';
 import { createCategoryData } from './categories';
+import { createCommitmentData } from './commitments';
 import { ledgerChangeNotifier } from './ledger-change-notifier';
 import { createLedgerReads } from './ledger-reads';
 import { createMonthConfigData } from './month-config';
@@ -26,6 +27,7 @@ sqlite.execSync('PRAGMA journal_mode = WAL;');
 export const ledgerDb = drizzle(sqlite, { schema: ledgerTables });
 export const accountData = createAccountData(ledgerDb, ledgerChangeNotifier);
 export const categoryData = createCategoryData(ledgerDb, ledgerChangeNotifier);
+export const commitmentData = createCommitmentData(ledgerDb, ledgerChangeNotifier);
 export const monthConfigData = createMonthConfigData(ledgerDb, ledgerChangeNotifier);
 export const ledgerReads = createLedgerReads(ledgerDb);
 export const transactionData = createTransactionData(

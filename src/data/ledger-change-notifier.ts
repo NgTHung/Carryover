@@ -9,7 +9,8 @@ export type LedgerChangeTable =
   | 'transfers'
   | 'categories'
   | 'accounts'
-  | 'month_config';
+  | 'month_config'
+  | 'commitments';
 
 export type LedgerChangeMutation =
   | 'created'
