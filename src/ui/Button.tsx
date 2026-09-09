@@ -23,6 +23,10 @@ const buttonStyles = tv({
         root: 'border border-faint-light bg-surface-light dark:border-faint-dark dark:bg-surface-dark',
         label: 'text-ink-light dark:text-ink-dark',
       },
+      danger: {
+        root: 'border border-error-light bg-surface-light dark:border-error-dark dark:bg-surface-dark',
+        label: 'text-error-light dark:text-error-dark',
+      },
     },
     size: {
       compact: { root: 'px-3' },

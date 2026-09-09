@@ -6,7 +6,7 @@
  */
 import { z } from 'zod';
 
-const categoryNameSchema = z.string().trim().min(1);
+export const categoryNameSchema = z.string().trim().min(1);
 const categorySortSchema = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 
 export const categoryKindSchema = z.enum(['spend', 'reserve']);
