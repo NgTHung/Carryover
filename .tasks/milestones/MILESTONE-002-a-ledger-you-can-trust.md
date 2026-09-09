@@ -22,4 +22,4 @@ The sync-ready columns land in migration one. UUID keys, `updated_at`, and soft 
 - [ ] The starter category seed loads on first run and bulk-deletes in one action.
 - [ ] The transaction list filters by period, category, account, and quality.
 - [ ] BUILD-002 runs Jest logic, real SQLite, and React Native Testing Library checks locally on Linux and in CI before the native build.
-- [ ] UI-006 and UI-007 supply Expo Router and shared NativeWind, Tailwind Variants, and Reanimated primitives; Hermes and default widget exclusion are preserved.
+- [x] UI-006 and UI-007 supply Expo Router and shared NativeWind, Tailwind Variants, and Reanimated primitives; Hermes and default widget exclusion are preserved.

@@ -1,7 +1,7 @@
 ---
 id: "UI-007"
 title: "Shared UI primitives and motion"
-status: In Progress
+status: Done
 priority: "Medium"
 type: "Feature"
 milestone: "0.2.0"
@@ -9,7 +9,7 @@ depends_on: ["build:BUILD-002"]
 risk: "Medium"
 impact: "Keeps styling and animation consistent while containing the compatibility risk of new build tooling and native animation dependencies."
 tags: ["ui", "design", "animation"]
-last_updated: 2026-09-08
+last_updated: 2026-09-09
 ---
 
 ## Summary
@@ -23,7 +23,7 @@ Adopt stable NativeWind with a compatible Tailwind CSS and Tailwind Variants com
 - [x] Shared color, typography, and spacing tokens follow docs/DESIGN.md; buttons, inputs, and quality chips use typed variants instead of duplicated class strings.
 - [x] Motion uses shared Reanimated helpers and the platform reduced-motion preference, including the specified cross-fade fallback.
 - [x] Animations change presentation only; they never interpolate money amounts as floating point values or calculate budget figures.
-- [ ] Existing SQL migration imports remain bundled after Metro and Babel changes; one representative screen passes local component checks, iOS bundling, and a CI native build with the widget excluded.
+- [x] Existing SQL migration imports remain bundled after Metro and Babel changes; one representative screen passes local component checks, iOS bundling, and a CI native build with the widget excluded.
 
 ## Verification
 
@@ -42,4 +42,4 @@ Cross-fade review completed on 2026-09-08:
 - Typechecking and fresh web and iOS exports pass after the fix. SQL migrations remain bundled on iOS, and web bundles exclude SQLite and widget native module markers.
 - The StrictMode regression passes and emits a Reanimated findNodeHandle deprecation warning. Native rendering still needs device verification.
 
-The CI macOS native build with the widget excluded still needs to run on a pushed revision. This environment has no Mac, and the user has not authorized a push.
+GitHub Actions verified commit `49889323fc8557ec79fc5cb95eadaa6491210fd9` on 2026-09-08. The macOS `ipa` job built the app successfully with the widget excluded, and the Linux `typecheck` job passed.
