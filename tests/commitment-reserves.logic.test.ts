@@ -43,6 +43,21 @@ test('pairs one payment per category by due date and occurrence order', () => {
   );
 });
 
+test('clears the lexically earlier commitment when due dates tie regardless of input order', () => {
+  const payments = [payment('payment', 'rent', '2026-09-01T00:00:00.000Z')];
+  const laterIdCommitment = commitment('b', 2_000, 'rent', '2026-09-01');
+  const earlierIdCommitment = commitment('a', 1_000, 'rent', '2026-09-01');
+
+  assert.equal(
+    calculateUnpaidReserve([laterIdCommitment, earlierIdCommitment], payments),
+    2_000
+  );
+  assert.equal(
+    calculateUnpaidReserve([earlierIdCommitment, laterIdCommitment], payments),
+    2_000
+  );
+});
+
 test('does not compare payment amount and rejects an unsafe unpaid total', () => {
   assert.equal(
     calculateUnpaidReserve(

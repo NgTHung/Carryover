@@ -209,6 +209,49 @@ test('reserved unpaid matches complete expenses once within the requested period
   }
 });
 
+test('reserved unpaid uses the period start and excludes the next period start', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const proxy = createProxyDatabase(database);
+    const commitments = createCommitmentData(proxy);
+    const transactions = createTransactionData(proxy, createCategoryData(proxy));
+    await commitments.createCommitment({
+      name: 'September rent',
+      amount: 700_000,
+      dueDay: 1,
+      categoryId: reserveLeafId,
+    });
+    await commitments.createCommitment({
+      name: 'Second reserve',
+      amount: 800_000,
+      dueDay: 1,
+      categoryId: secondReserveLeafId,
+    });
+    const bank = bankId(database);
+    await transactions.createTransaction({
+      accountId: bank,
+      direction: 'expense',
+      status: 'complete',
+      amount: 1,
+      categoryId: reserveLeafId,
+      occurredAt: new Date(2026, 8, 1, 0, 0, 0, 0),
+    });
+    await transactions.createTransaction({
+      accountId: bank,
+      direction: 'expense',
+      status: 'complete',
+      amount: 1,
+      categoryId: secondReserveLeafId,
+      occurredAt: new Date(2026, 9, 1, 0, 0, 0, 0),
+    });
+
+    assert.equal(await commitments.readReservedUnpaid('2026-09'), 800_000);
+    assert.equal(await commitments.readReservedUnpaid('2026-10'), 700_000);
+  } finally {
+    database.close();
+  }
+});
+
 test('reserved unpaid ignores non-payments, deleted rows, and inactive commitments', async () => {
   const database = openMigratedDatabase();
   try {

@@ -328,6 +328,10 @@ test('past month snapshot remains frozen when transactions and commitments chang
       commitmentId: commitment.id,
       changes: { amount: 800_000 },
     });
+    await commitmentData.editCommitment({
+      commitmentId: commitment.id,
+      changes: { active: false },
+    });
     assert.deepEqual(await monthData.readMonthConfig(past.period), before);
   } finally {
     database.close();
