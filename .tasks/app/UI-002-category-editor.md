@@ -1,7 +1,7 @@
 ---
 id: "UI-002"
 title: "Category editor"
-status: In Progress
+status: Done
 priority: "Medium"
 type: "Feature"
 milestone: "0.2.0"
@@ -28,9 +28,18 @@ Prune hard at the end of month one, once real data says which leaves never got p
 
 ## Acceptance Criteria
 
-- [ ] Groups and leaves are creatable, renamable, and reorderable by `sort`.
-- [ ] A group can be marked `spend` or `reserve`.
-- [ ] The seeded suggestions delete in one action from this screen.
-- [ ] Creating a category returns the same module the fill-in screen will call, with no duplicated logic.
-- [ ] The editor refuses to nest a leaf under a leaf.
-- [ ] The Settings route uses Expo Router and shared UI-007 primitives. Local React Native Testing Library tests cover creation, validation feedback, and deletion.
+- [x] Groups and leaves are creatable, renamable, and reorderable by `sort`.
+- [x] A group can be marked `spend` or `reserve`.
+- [x] The seeded suggestions delete in one action from this screen.
+- [x] Creating a category returns the same module the fill-in screen will call, with no duplicated logic.
+- [x] The editor refuses to nest a leaf under a leaf.
+- [x] The Settings route uses Expo Router and shared UI-007 primitives. Local React Native Testing Library tests cover creation, validation feedback, and deletion.
+
+## Verification
+
+- `npm test -- --runInBand` passes 24 suites and 106 tests.
+- `npm run typecheck` passes.
+- The focused category database and component tests pass.
+- `npm run web:export` passes, and the web bundle contains no SQLite import markers.
+- `CARRYOVER_WIDGET=0 npm run prebuild` and `CARRYOVER_WIDGET=0 npx expo export --platform ios` pass.
+- `npm run doctor` reports one existing SDK patch-level mismatch in four pinned Expo packages. No dependency upgrade was made in this UI task.
