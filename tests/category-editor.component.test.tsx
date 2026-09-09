@@ -153,6 +153,38 @@ test('shows validation feedback before trying to create a blank group', async ()
   expect(repository.data.createCategory).not.toHaveBeenCalled();
 });
 
+test('keeps an open leaf form after changing kind and category order', async () => {
+  const repository = createRepository();
+  const user = userEvent.setup();
+  await render(<CategoryEditorScreen data={repository.data} />);
+  await waitFor(() => expect(screen.getByText('Food')).toBeTruthy());
+
+  await user.press(screen.getByRole('button', { name: 'Add leaf to Food' }));
+  await user.type(screen.getByLabelText('Leaf name'), 'Bakery');
+  await user.press(screen.getAllByRole('button', { name: 'Reserve' })[0]);
+
+  await waitFor(() => expect(screen.getByLabelText('Leaf name').props.value).toBe('Bakery'));
+  expect(screen.getByText('Reserve group')).toBeTruthy();
+
+  await user.press(screen.getByRole('button', { name: 'Move Food down' }));
+
+  await waitFor(() => expect(screen.getByLabelText('Leaf name').props.value).toBe('Bakery'));
+  expect(repository.data.reorderCategories).toHaveBeenCalledWith({
+    level: 'group',
+    categoryIds: [coffeeId, foodId],
+  });
+});
+
+test('adjusts the category list around the iOS keyboard', async () => {
+  const repository = createRepository();
+  await render(<CategoryEditorScreen data={repository.data} />);
+  await waitFor(() => expect(screen.getByText('Food')).toBeTruthy());
+
+  const scrollView = screen.getByTestId('category-list');
+  expect(scrollView.props.automaticallyAdjustKeyboardInsets).toBe(true);
+  expect(scrollView.props.keyboardDismissMode).toBe('interactive');
+});
+
 test('deletes a category after the inline confirmation', async () => {
   const repository = createRepository();
   const user = userEvent.setup();

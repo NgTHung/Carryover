@@ -17,6 +17,11 @@ type LoadState =
   | { status: 'ready'; groups: CategoryGroupWithLeaves[] }
   | { status: 'error'; message: string };
 
+type MutationOptions = {
+  closeForm?: boolean;
+  successMessage?: string;
+};
+
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -66,13 +71,16 @@ export default function CategoryEditorScreen({ data = getCategoryEditorData() }:
   );
 
   const runMutation = useCallback(
-    async (action: () => Promise<void>, successMessage?: string) => {
+    async (
+      action: () => Promise<void>,
+      { closeForm = false, successMessage }: MutationOptions = {}
+    ) => {
       setBusy(true);
       setFeedback(undefined);
       try {
         await action();
         await load();
-        setForm({ status: 'closed' });
+        if (closeForm) setForm({ status: 'closed' });
         setDeleteState({ status: 'closed' });
         if (successMessage) setFeedback(successMessage);
       } catch (error: unknown) {
@@ -98,7 +106,7 @@ export default function CategoryEditorScreen({ data = getCategoryEditorData() }:
           name: form.name,
           kind: form.kind,
         }).then(() => undefined),
-      'Group created'
+      { closeForm: true, successMessage: 'Group created' }
     );
   }, [data, form, runMutation]);
 
@@ -116,7 +124,7 @@ export default function CategoryEditorScreen({ data = getCategoryEditorData() }:
           name: form.name,
           groupId: form.groupId,
         }).then(() => undefined),
-      'Leaf created'
+      { closeForm: true, successMessage: 'Leaf created' }
     );
   }, [data, form, runMutation]);
 
@@ -132,7 +140,7 @@ export default function CategoryEditorScreen({ data = getCategoryEditorData() }:
     }
     await runMutation(
       () => data.renameCategory({ categoryId, name }),
-      'Category renamed'
+      { closeForm: true, successMessage: 'Category renamed' }
     );
   }, [data, runMutation]);
 
@@ -166,7 +174,7 @@ export default function CategoryEditorScreen({ data = getCategoryEditorData() }:
     if (deleteState.status !== 'open') return;
     void runMutation(
       () => data.softDeleteCategory(deleteState.categoryId),
-      `${deleteState.label} deleted`
+      { closeForm: true, successMessage: `${deleteState.label} deleted` }
     );
   }, [data, deleteState, runMutation]);
 
@@ -186,7 +194,10 @@ export default function CategoryEditorScreen({ data = getCategoryEditorData() }:
 
   return (
     <ScrollView
+      testID="category-list"
+      automaticallyAdjustKeyboardInsets
       contentContainerClassName="gap-5 bg-ground-light px-5 pb-16 pt-16 dark:bg-ground-dark"
+      keyboardDismissMode="interactive"
       keyboardShouldPersistTaps="handled"
     >
       <View className="gap-1">
@@ -214,7 +225,7 @@ export default function CategoryEditorScreen({ data = getCategoryEditorData() }:
             onPress={() =>
               void runMutation(
                 () => data.deleteSuggestedCategories(),
-                'Suggested categories deleted'
+                { closeForm: true, successMessage: 'Suggested categories deleted' }
               )
             }
           >
