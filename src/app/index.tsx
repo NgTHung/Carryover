@@ -5,6 +5,7 @@
  * makes clear that only an installed iOS build can exercise native behavior.
  */
 import { StatusBar } from 'expo-status-bar';
+import { Link } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -115,6 +116,9 @@ export default function StageZeroScreen() {
           {`Fixture is ${formatVnd(FIXTURE_SNAPSHOT.perDay)}. Pushing writes ₫12k, so a widget that changes is reading this app's store.`}
         </Text>
         <Button onPress={pushToWidget}>Push ₫12k to widget</Button>
+        <Link href={'/transactions' as never} asChild>
+          <Button variant="secondary">Open transactions</Button>
+        </Link>
         <Row label="Push result" value={push} />
       </ScrollView>
     </View>
