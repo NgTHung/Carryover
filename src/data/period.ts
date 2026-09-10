@@ -6,6 +6,8 @@
  */
 import { z } from 'zod';
 
+import { dateOnlyFromLocalDate } from './date-only';
+
 export const PERIOD_START_DAY = 1;
 
 export const periodSchema = z
@@ -29,13 +31,6 @@ function localDateAtMidnight(year: number, month: number, day: number): Date {
   date.setHours(0, 0, 0, 0);
   date.setFullYear(year, month, day);
   return date;
-}
-
-function dateOnlyFromLocalDate(date: Date): string {
-  const year = date.getFullYear().toString().padStart(4, '0');
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const day = date.getDate().toString().padStart(2, '0');
-  return `${year}-${month}-${day}`;
 }
 
 export function currentPeriod(now: Date = new Date()): Period {

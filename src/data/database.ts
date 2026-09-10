@@ -10,6 +10,10 @@ import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { openDatabaseSync } from 'expo-sqlite';
 
 import migrations from '../../drizzle/migrations';
+import {
+  readBudgetInput,
+  type BudgetInputWithoutWriteTime,
+} from '../budget/snapshot-source';
 import { createAccountData } from './accounts';
 import { createCategoryData } from './categories';
 import { createCommitmentData } from './commitments';
@@ -39,5 +43,34 @@ export const transactionListData = createTransactionListData(
   ledgerDb,
   ledgerChangeNotifier
 );
+
+export async function readCommittedBudgetInput(
+  now: Date
+): Promise<BudgetInputWithoutWriteTime> {
+  let input: BudgetInputWithoutWriteTime | undefined;
+
+  await sqlite.withExclusiveTransactionAsync(async (transaction) => {
+    const transactionDb = drizzle(transaction, { schema: ledgerTables });
+    input = await readBudgetInput(
+      {
+        accounts: createAccountData(transactionDb, ledgerChangeNotifier),
+        commitments: createCommitmentData(transactionDb, ledgerChangeNotifier),
+        monthConfig: createMonthConfigData(transactionDb, ledgerChangeNotifier),
+        transactions: createTransactionData(
+          transactionDb,
+          createCategoryData(transactionDb, ledgerChangeNotifier),
+          ledgerChangeNotifier
+        ),
+      },
+      now
+    );
+  });
+
+  if (input === undefined) {
+    throw new Error('Budget input transaction completed without a result');
+  }
+  return input;
+}
+
 export { ledgerChangeNotifier };
 export { migrations as ledgerMigrations };
