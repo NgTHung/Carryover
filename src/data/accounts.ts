@@ -10,12 +10,15 @@ import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import {
   deriveAccountBalances,
   type BalanceTransaction,
-  type BalanceTransfer,
 } from './account-balances';
 import {
   recordTransferSchema,
   updateAccountOpeningBalanceSchema,
 } from './account-validation';
+import {
+  reconcileAccount,
+  type ReconcileResult,
+} from './account-reconcile';
 import {
   ledgerChangeNotifier,
   type LedgerChangeNotifier,
@@ -27,6 +30,8 @@ import {
   transactions,
   transfers,
 } from './schema';
+
+export type { ReconcileResult } from './account-reconcile';
 
 type LedgerDatabase<TResultKind extends 'sync' | 'async'> = BaseSQLiteDatabase<
   TResultKind,
@@ -75,6 +80,82 @@ export function createAccountData<TResultKind extends 'sync' | 'async'>(
   db: LedgerDatabase<TResultKind>,
   changeNotifier: LedgerChangeNotifier = ledgerChangeNotifier
 ) {
+  const readAccountBalances = async (): Promise<AccountBalance[]> => {
+    const allAccountRows = await db
+      .select({
+        accountId: accounts.id,
+        name: accounts.name,
+        kind: accounts.kind,
+        isDefault: accounts.isDefault,
+        openingBalance: accounts.openingBalance,
+        deletedAt: accounts.deletedAt,
+      })
+      .from(accounts)
+      .all();
+    const activeAccountRows = allAccountRows.filter(
+      (account) => account.deletedAt === null
+    );
+
+    const transactionRows = await db
+      .select({
+        accountId: transactions.accountId,
+        direction: transactions.direction,
+        amount: transactions.amount,
+        adjustmentEffect: transactions.adjustmentEffect,
+        payerContactId: transactions.payerContactId,
+      })
+      .from(transactions)
+      .where(activeRowFilter(transactions.deletedAt))
+      .all();
+    const balanceTransactions: BalanceTransaction[] = transactionRows.map(
+      (transaction) => {
+        const base = {
+          accountId: transaction.accountId,
+          amount: transaction.amount,
+        };
+        return transaction.direction === 'expense'
+          ? {
+              ...base,
+              direction: transaction.direction,
+              payerContactId: transaction.payerContactId,
+            }
+          : transaction.direction === 'adjustment'
+            ? {
+                ...base,
+                direction: transaction.direction,
+                adjustmentEffect: transaction.adjustmentEffect,
+              }
+            : { ...base, direction: transaction.direction };
+      }
+    );
+
+    const transferRows = await db
+      .select({
+        fromAccountId: transfers.fromAccountId,
+        toAccountId: transfers.toAccountId,
+        amount: transfers.amount,
+      })
+      .from(transfers)
+      .where(activeRowFilter(transfers.deletedAt))
+      .all();
+    const derived = deriveAccountBalances({
+      accounts: allAccountRows,
+      transactions: balanceTransactions,
+      transfers: transferRows,
+    });
+    const balanceById = new Map(
+      derived.map((account) => [account.accountId, account.balance])
+    );
+
+    return activeAccountRows.map(({ deletedAt: _deletedAt, ...account }) => {
+      const balance = balanceById.get(account.accountId);
+      if (balance === undefined) {
+        throw new Error(`Could not derive account ${account.accountId}`);
+      }
+      return { ...account, balance };
+    });
+  };
+
   return {
     async updateOpeningBalance(input: unknown): Promise<void> {
       const parsed = updateAccountOpeningBalanceSchema.parse(input);
@@ -128,75 +209,14 @@ export function createAccountData<TResultKind extends 'sync' | 'async'>(
         .all();
     },
 
-    async readAccountBalances(): Promise<AccountBalance[]> {
-      const allAccountRows = await db
-        .select({
-          accountId: accounts.id,
-          name: accounts.name,
-          kind: accounts.kind,
-          isDefault: accounts.isDefault,
-          openingBalance: accounts.openingBalance,
-          deletedAt: accounts.deletedAt,
-        })
-        .from(accounts)
-        .all();
-      const activeAccountRows = allAccountRows.filter(
-        (account) => account.deletedAt === null
+    readAccountBalances,
+
+    async reconcileAccount(input: unknown): Promise<ReconcileResult> {
+      return reconcileAccount(
+        db,
+        changeNotifier,
+        input
       );
-
-      const transactionRows = await db
-        .select({
-          accountId: transactions.accountId,
-          direction: transactions.direction,
-          amount: transactions.amount,
-          payerContactId: transactions.payerContactId,
-        })
-        .from(transactions)
-        .where(activeRowFilter(transactions.deletedAt))
-        .all();
-      const balanceTransactions: BalanceTransaction[] = transactionRows.map(
-        (transaction) => {
-          const base = {
-            accountId: transaction.accountId,
-            amount: transaction.amount,
-          };
-          return transaction.direction === 'expense'
-            ? {
-                ...base,
-                direction: transaction.direction,
-                payerContactId: transaction.payerContactId,
-              }
-            : { ...base, direction: transaction.direction };
-        }
-      );
-
-      const transferRows = await db
-        .select({
-          fromAccountId: transfers.fromAccountId,
-          toAccountId: transfers.toAccountId,
-          amount: transfers.amount,
-        })
-        .from(transfers)
-        .where(activeRowFilter(transfers.deletedAt))
-        .all();
-      const balanceTransfers: BalanceTransfer[] = transferRows;
-
-      const derived = deriveAccountBalances({
-        accounts: allAccountRows,
-        transactions: balanceTransactions,
-        transfers: balanceTransfers,
-      });
-      const balanceById = new Map(
-        derived.map((account) => [account.accountId, account.balance])
-      );
-
-      return activeAccountRows.map(({ deletedAt: _deletedAt, ...account }) => {
-        const balance = balanceById.get(account.accountId);
-        if (balance === undefined) {
-          throw new Error(`Could not derive account ${account.accountId}`);
-        }
-        return { ...account, balance };
-      });
     },
   };
 }

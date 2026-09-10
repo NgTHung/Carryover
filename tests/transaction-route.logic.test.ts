@@ -33,6 +33,7 @@ test('loads a valid transaction by id and reports a missing row explicitly', asy
     id: transactionId,
     accountId: '22222222-2222-4222-8222-222222222222',
     direction: 'expense',
+    adjustmentEffect: null,
     amount: null,
     categoryId: null,
     quality: null,

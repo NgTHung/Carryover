@@ -10,8 +10,20 @@ import {
   nonNegativeVndAmountSchema,
   positiveVndAmountSchema,
 } from './money-validation';
+import type { AdjustmentEffect } from './transaction-validation';
 
 const accountIdSchema = z.string().uuid();
+
+export const reconcileAccountSchema = z
+  .object({
+    accountId: accountIdSchema,
+    statedBalance: nonNegativeVndAmountSchema,
+    occurredAt: z.date(),
+  })
+  .strict();
+
+export type ReconcileAccount = z.infer<typeof reconcileAccountSchema>;
+export type { AdjustmentEffect } from './transaction-validation';
 
 export const updateAccountOpeningBalanceSchema = z
   .object({

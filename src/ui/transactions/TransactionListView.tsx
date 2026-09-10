@@ -5,6 +5,7 @@ import type { TransactionListRow as TransactionListItem } from '../../data/trans
 import { Button } from '../Button';
 import { TransactionListFilters } from './TransactionListFilters';
 import { TransactionListRow, transactionListRowId } from './TransactionListRow';
+import { adjustmentEffectLabel } from './adjustment';
 import type { TransactionFilterStore } from './transaction-filters';
 
 export type TransactionListLoadState =
@@ -92,7 +93,11 @@ export function TransactionListView({
           <Link href={`/transactions/${item.transaction.id}`} asChild>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={`Open ${item.transaction.direction} transaction from ${item.transaction.occurredAt.toISOString()}`}
+              accessibilityLabel={
+                item.transaction.direction === 'adjustment'
+                  ? `Open adjustment, ${adjustmentEffectLabel(item.transaction) ?? 'Balance adjustment'}, ${item.transaction.occurredAt.toISOString()}`
+                  : `Open ${item.transaction.direction} transaction from ${item.transaction.occurredAt.toISOString()}`
+              }
               className="min-h-touch active:opacity-80"
             >
               <TransactionListRow row={item} />

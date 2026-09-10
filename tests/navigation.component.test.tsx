@@ -7,10 +7,19 @@ const transactionId = '11111111-1111-4111-8111-111111111111';
 const mockUseLocalSearchParams = jest.fn();
 const mockReadTransaction = jest.fn();
 const mockListCategories = jest.fn(async () => []);
-const mockReadAccounts = jest.fn(async () => []);
+const mockReadAccounts = jest.fn(async () => [
+  {
+    accountId: '22222222-2222-4222-8222-222222222222',
+    name: 'Bank',
+    kind: 'bank' as const,
+    isDefault: true,
+  },
+]);
+const mockReplace = jest.fn();
 
 jest.mock('expo-router', () => ({
   Link: ({ children }: { children: ReactNode }) => children,
+  router: { replace: (...args: unknown[]) => mockReplace(...args) },
   useLocalSearchParams: (...args: unknown[]) => mockUseLocalSearchParams(...args),
 }));
 
@@ -37,6 +46,7 @@ const transaction: Transaction = {
   id: transactionId,
   accountId: '22222222-2222-4222-8222-222222222222',
   direction: 'expense',
+  adjustmentEffect: null,
   amount: null,
   categoryId: null,
   quality: null,
@@ -65,6 +75,24 @@ test('native transaction route validates before reading and opens the editor', a
   await waitFor(() => expect(mockReadTransaction).toHaveBeenCalledWith(transactionId));
   await waitFor(() => expect(view.getByText('Edit transaction')).toBeTruthy());
   expect(view.getByText('Draft')).toBeTruthy();
+});
+
+test('an adjustment opens a read-only detail instead of the transaction editor', async () => {
+  mockUseLocalSearchParams.mockReturnValue({ transactionId });
+  mockReadTransaction.mockResolvedValue({
+    ...transaction,
+    direction: 'adjustment',
+    adjustmentEffect: 'decrease',
+    amount: 50_000,
+    status: 'complete',
+  } satisfies Transaction);
+
+  const view = await render(<NativeTransactionRoute />);
+
+  await waitFor(() => expect(view.getByText('Adjustment')).toBeTruthy());
+  expect(view.getByText('Balance decreased')).toBeTruthy();
+  expect(view.getByText('Read-only account maintenance')).toBeTruthy();
+  expect(view.queryByText('Edit transaction')).toBeNull();
 });
 
 test('native transaction route shows invalid links without reading the ledger', async () => {

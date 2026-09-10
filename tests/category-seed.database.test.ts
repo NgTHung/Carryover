@@ -94,8 +94,9 @@ test('the first-run migration seeds the specified two-level taxonomy', () => {
 test('the migration is registered in the Expo migration bundle', () => {
   const entries = migrations.journal.entries;
   const lastEntry = entries[entries.length - 1];
-  assert.equal(lastEntry?.tag, '0004_seed-categories');
+  assert.equal(lastEntry?.tag, '0005_adjustment-effect');
   assert.equal(typeof migrations.migrations.m0004, 'string');
+  assert.equal(typeof migrations.migrations.m0005, 'string');
 });
 
 test('replaying the seed does not restore renamed or deleted rows', () => {

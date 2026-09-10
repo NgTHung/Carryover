@@ -15,6 +15,7 @@ const mockUseMigrations = jest.fn();
 const mockReadTransaction = jest.fn();
 const mockListCategories = jest.fn();
 const mockReadAccounts = jest.fn();
+const mockReadAccountBalances = jest.fn();
 
 jest.mock('drizzle-orm/expo-sqlite/migrator', () => ({
   useMigrations: (...args: unknown[]) => mockUseMigrations(...args),
@@ -29,7 +30,11 @@ jest.mock('../src/data/database', () => ({
     completeDraft: jest.fn(),
     softDeleteTransaction: jest.fn(),
   },
-  accountData: { listActiveAccounts: (...args: unknown[]) => mockReadAccounts(...args) },
+  accountData: {
+    listActiveAccounts: (...args: unknown[]) => mockReadAccounts(...args),
+    readAccountBalances: (...args: unknown[]) => mockReadAccountBalances(...args),
+    reconcileAccount: jest.fn(),
+  },
   categoryData: {
     listActiveCategoryGroups: (...args: unknown[]) => mockListCategories(...args),
     createCategory: jest.fn(),
@@ -57,6 +62,7 @@ const transaction: Transaction = {
   id: transactionId,
   accountId: '22222222-2222-4222-8222-222222222222',
   direction: 'expense',
+  adjustmentEffect: null,
   amount: null,
   categoryId: null,
   quality: null,
@@ -81,6 +87,16 @@ beforeEach(() => {
   mockReadTransaction.mockResolvedValue(transaction);
   mockListCategories.mockResolvedValue([]);
   mockReadAccounts.mockResolvedValue([]);
+  mockReadAccountBalances.mockResolvedValue([
+    {
+      accountId: '22222222-2222-4222-8222-222222222222',
+      name: 'Bank',
+      kind: 'bank',
+      isDefault: true,
+      openingBalance: 0,
+      balance: 0,
+    },
+  ]);
 });
 
 test('opens a transaction URL and provides a reliable route home', async () => {
@@ -154,4 +170,34 @@ test('keeps the category route behind the migration gate', async () => {
 
   expect(view.getByText('Applying the ledger schema…')).toBeTruthy();
   expect(mockListCategories).not.toHaveBeenCalled();
+});
+
+test('opens accounts and reconcile through the settings route', async () => {
+  const view = await render(
+    <ExpoRoot
+      context={getMockContext('./src/app')}
+      location="/settings/accounts"
+    />
+  );
+
+  await waitFor(() =>
+    expect(
+      view.getByText("What's actually in your bank account?")
+    ).toBeTruthy()
+  );
+  expect(mockReadAccountBalances).toHaveBeenCalledTimes(1);
+});
+
+test('keeps accounts and reconcile behind the migration gate', async () => {
+  mockUseMigrations.mockReturnValue({ success: false, error: undefined });
+
+  const view = await render(
+    <ExpoRoot
+      context={getMockContext('./src/app')}
+      location="/settings/accounts"
+    />
+  );
+
+  expect(view.getByText('Applying the ledger schema…')).toBeTruthy();
+  expect(mockReadAccountBalances).not.toHaveBeenCalled();
 });

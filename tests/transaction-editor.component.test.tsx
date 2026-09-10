@@ -2,7 +2,10 @@ import { cleanup, render, screen, userEvent, waitFor } from '@testing-library/re
 
 import type { ActiveAccount } from '../src/data/accounts';
 import type { CategoryGroupWithLeaves } from '../src/data/category-types';
-import type { Transaction } from '../src/data/transaction-validation';
+import {
+  parseTransaction,
+  type Transaction,
+} from '../src/data/transaction-validation';
 import { TransactionEditor } from '../src/ui/transactions/TransactionEditor';
 import type { TransactionEditorData } from '../src/ui/transactions/transaction-editor-contract';
 
@@ -13,10 +16,11 @@ const groupId = '44444444-4444-4444-8444-444444444444';
 const occurredAt = new Date(2026, 0, 12, 10, 30);
 
 function complete(overrides: Partial<Extract<Transaction, { status: 'complete' }>> = {}): Extract<Transaction, { status: 'complete' }> {
-  return {
+  const transaction = parseTransaction({
     id: transactionId,
     accountId: bankId,
     direction: 'expense',
+    adjustmentEffect: null,
     amount: 125_000,
     categoryId,
     quality: 'need',
@@ -30,7 +34,11 @@ function complete(overrides: Partial<Extract<Transaction, { status: 'complete' }
     updatedAt: occurredAt,
     deletedAt: null,
     ...overrides,
-  };
+  });
+  if (transaction.status !== 'complete') {
+    throw new Error('Expected a complete transaction fixture');
+  }
+  return transaction;
 }
 
 function draft(): Extract<Transaction, { status: 'draft' }> {

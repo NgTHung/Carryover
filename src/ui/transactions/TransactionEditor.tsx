@@ -19,7 +19,7 @@ import { Button, Input, QualityChip } from '../index';
 import { HomeRouteLink } from '../HomeRouteLink';
 import type { TransactionEditorData } from './transaction-editor-contract';
 
-type EditableDirection = 'expense' | 'income' | 'adjustment';
+type EditableDirection = 'expense' | 'income';
 
 type EditorForm = {
   amount: string;
@@ -53,7 +53,7 @@ function parseLocalDate(value: string, previous: Date): Date | undefined {
 }
 
 function initialForm(transaction: Transaction): EditorForm | undefined {
-  if (transaction.direction === 'transfer') return undefined;
+  if (transaction.direction === 'transfer' || transaction.direction === 'adjustment') return undefined;
   return {
     amount: transaction.amount === null ? '' : transaction.amount.toString(),
     direction: transaction.direction,
@@ -136,8 +136,14 @@ export function TransactionEditor({
     return (
       <View className="flex-1 gap-3 bg-ground-light px-5 py-16 dark:bg-ground-dark">
         <Text className="text-eyebrow font-semibold tracking-widest text-need-light dark:text-need-dark">LEDGER</Text>
-        <Text accessibilityRole="header" className="text-title font-bold text-ink-light dark:text-ink-dark">Transfer</Text>
-        <Text className="text-body text-muted-light dark:text-muted-dark">Transfers are read-only in this screen.</Text>
+        <Text accessibilityRole="header" className="text-title font-bold text-ink-light dark:text-ink-dark">
+          {transaction.direction === 'adjustment' ? 'Adjustment' : 'Transfer'}
+        </Text>
+        <Text className="text-body text-muted-light dark:text-muted-dark">
+          {transaction.direction === 'adjustment'
+            ? 'Adjustments are read-only. Reconcile the account to create another one.'
+            : 'Transfers are read-only in this screen.'}
+        </Text>
         <Button onPress={onDone}>Back to transactions</Button>
       </View>
     );
@@ -223,11 +229,10 @@ export function TransactionEditor({
       <View className="gap-2">
         <Text className="text-body font-semibold text-ink-light dark:text-ink-dark">Direction</Text>
         <View className="flex-row flex-wrap gap-2">
-          {(['expense', 'income', 'adjustment'] as const).map((direction) => (
+          {(['expense', 'income'] as const).map((direction) => (
             <Choice key={direction} label={direction} selected={form.direction === direction} disabled={busy} onPress={() => setForm({ ...form, direction, categoryId: direction === 'expense' ? form.categoryId : null, sourceLabel: direction === 'income' ? form.sourceLabel : '' })} />
           ))}
         </View>
-        {form.direction === 'adjustment' ? <Text className="text-detail text-muted-light dark:text-muted-dark">Adjustments do not count as spending or income.</Text> : null}
       </View>
 
       {form.direction === 'expense' ? (

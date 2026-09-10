@@ -16,10 +16,10 @@ import {
 import { activeRowFilter, type SoftDeleteOptions } from './soft-delete';
 import {
   completeDraftInputSchema,
-  createTransactionInputSchema,
   editTransactionInputSchema,
+  parseCreateTransactionInput,
+  parseTransaction,
   transactionIdSchema,
-  transactionSchema,
   type CreateTransactionInput,
   type EditTransactionInput,
   type Transaction,
@@ -58,10 +58,11 @@ function categoryWriteFailed(categoryId: string): Error {
 }
 
 export function toTransaction(row: TransactionRow): Transaction {
-  return transactionSchema.parse({
+  return parseTransaction({
     id: row.id,
     accountId: row.accountId,
     direction: row.direction,
+    adjustmentEffect: row.adjustmentEffect,
     amount: row.amount,
     categoryId: row.categoryId,
     quality: row.quality,
@@ -81,6 +82,7 @@ function insertValues(input: CreateTransactionInput) {
   return {
     accountId: input.accountId,
     direction: input.direction,
+    adjustmentEffect: input.adjustmentEffect,
     amount: input.amount,
     categoryId: input.categoryId,
     quality: input.quality,
@@ -134,6 +136,7 @@ function sqlForActiveCategoryInsert(
       NULL,
       ${input.accountId},
       ${input.direction},
+      ${input.adjustmentEffect},
       ${input.amount},
       ${input.categoryId},
       ${input.quality},
@@ -190,6 +193,7 @@ async function updateTransactionRow<TResultKind extends 'sync' | 'async'>(
     .set({
       accountId: transaction.accountId,
       direction: transaction.direction,
+      adjustmentEffect: transaction.adjustmentEffect,
       amount: transaction.amount,
       categoryId: transaction.categoryId,
       quality: transaction.quality,
@@ -231,7 +235,7 @@ function mergeTransactionChanges(
   transaction: Transaction,
   changes: EditTransactionInput['changes']
 ): Transaction {
-  return transactionSchema.parse({ ...transaction, ...changes });
+  return parseTransaction({ ...transaction, ...changes });
 }
 
 export function createTransactionData<TResultKind extends 'sync' | 'async'>(
@@ -241,7 +245,7 @@ export function createTransactionData<TResultKind extends 'sync' | 'async'>(
 ) {
   return {
     async createTransaction(input: unknown): Promise<Transaction> {
-      const parsed = createTransactionInputSchema.parse(input);
+      const parsed = parseCreateTransactionInput(input);
       const categoryId = parsed.categoryId;
       if (categoryId !== null) {
         await categoryData.requireActiveLeafCategory(categoryId);
@@ -318,7 +322,7 @@ export function createTransactionData<TResultKind extends 'sync' | 'async'>(
         parsed.categoryId === undefined
           ? existing.categoryId
           : parsed.categoryId;
-      const candidate = transactionSchema.parse({
+      const candidate = parseTransaction({
         ...existing,
         ...parsed.changes,
         status: 'complete',

@@ -4,14 +4,15 @@
  * The database stores opening balances and ledger rows, not running totals.
  * BigInt keeps a large intermediate sum exact before the public API returns a
  * safe integer number. A contact-paid expense creates debt without moving your
- * money. Adjustment polarity belongs to DATA-007, so seeing one here fails
- * closed instead of guessing which way the balance should move.
+ * money. Adjustments carry their effect explicitly, so a malformed legacy row
+ * fails closed instead of guessing which way it moved money.
  */
 import {
   assertNonNegativeVndAmount,
   assertPositiveVndAmount,
   MAX_VND_AMOUNT,
 } from '../money/currency';
+import type { AdjustmentEffect } from './account-validation';
 
 const MAX_SAFE_BALANCE = BigInt(MAX_VND_AMOUNT);
 
@@ -31,7 +32,11 @@ export type BalanceTransaction =
       payerContactId: string | null;
     })
   | (BalanceTransactionBase & {
-      direction: 'income' | 'adjustment' | 'transfer';
+      direction: 'income' | 'transfer';
+    })
+  | (BalanceTransactionBase & {
+      direction: 'adjustment';
+      adjustmentEffect: AdjustmentEffect | null;
     });
 
 export type BalanceTransfer = {
@@ -92,7 +97,16 @@ export function deriveAccountBalances(
     }
     assertPositiveVndAmount(transaction.amount, 'transaction amount');
     if (transaction.direction === 'adjustment') {
-      throw new Error('Adjustment polarity is not defined for account balances');
+      if (transaction.adjustmentEffect === null) {
+        throw new Error('Adjustment effect is not defined for account balances');
+      }
+      addEffect(
+        balances,
+        transaction.accountId,
+        transaction.amount,
+        transaction.adjustmentEffect
+      );
+      continue;
     }
     if (transaction.direction === 'transfer') {
       continue;

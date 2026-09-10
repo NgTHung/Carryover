@@ -1,6 +1,7 @@
 import { Text, View } from 'react-native';
 import { formatVnd } from '../../money/currency';
 import type { TransactionListRow as TransactionListItem } from '../../data/transaction-list';
+import { adjustmentEffectLabel } from './adjustment';
 
 function dateLabel(date: Date): string {
   return date.toLocaleDateString('en-GB', {
@@ -16,6 +17,9 @@ function amountLabel(amount: number | null): string {
 
 function transactionDetail(row: Extract<TransactionListItem, { kind: 'transaction' }>): string {
   const { transaction } = row;
+  if (transaction.direction === 'adjustment') {
+    return adjustmentEffectLabel(transaction) ?? 'Balance adjustment';
+  }
   if (transaction.direction === 'income') {
     return transaction.sourceLabel ?? 'Income';
   }
@@ -26,7 +30,8 @@ function rowAccessibilityLabel(row: TransactionListItem): string {
   if (row.kind === 'transaction') {
     const { transaction } = row;
     const status = transaction.status === 'draft' ? ', Draft' : '';
-    return `${amountLabel(transaction.amount)}, ${transaction.direction}, ${transactionDetail(row)}, ${row.account.name}, ${transaction.quality ?? 'Unrated'}, ${dateLabel(transaction.occurredAt)}${status}`;
+    const adjustment = adjustmentEffectLabel(transaction);
+    return `${amountLabel(transaction.amount)}, ${adjustment ?? transaction.direction}, ${transactionDetail(row)}, ${row.account.name}, ${transaction.quality ?? 'Unrated'}, ${dateLabel(transaction.occurredAt)}${status}`;
   }
 
   if (row.source === 'transaction') {
@@ -51,6 +56,27 @@ export function transactionListRowDate(row: TransactionListItem): Date {
 export function TransactionListRow({ row }: { row: TransactionListItem }) {
   if (row.kind === 'transaction') {
     const { transaction } = row;
+    const adjustment = adjustmentEffectLabel(transaction);
+    if (transaction.direction === 'adjustment') {
+      return (
+        <View
+          accessible
+          accessibilityLabel={rowAccessibilityLabel(row)}
+          className="gap-1 rounded-surface border border-faint-light bg-ground-light p-4 opacity-75 dark:border-faint-dark dark:bg-ground-dark"
+        >
+          <View className="flex-row items-start justify-between gap-3">
+            <Text className="flex-1 text-body font-semibold tabular-nums text-muted-light dark:text-muted-dark">
+              {amountLabel(transaction.amount)}
+            </Text>
+            <Text className="text-detail font-semibold uppercase text-muted-light dark:text-muted-dark">Adjustment</Text>
+          </View>
+          <Text className="text-body text-muted-light dark:text-muted-dark">{adjustment ?? 'Balance adjustment'}</Text>
+          <Text className="text-detail text-muted-light dark:text-muted-dark">
+            {row.account.name} · {dateLabel(transaction.occurredAt)}
+          </Text>
+        </View>
+      );
+    }
     return (
       <View
         accessible

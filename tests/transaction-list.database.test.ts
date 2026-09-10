@@ -92,6 +92,15 @@ test('transaction list applies combined filters, preserves history, and shows tr
       amount: 175_000,
       occurredAt,
     });
+    const reconciliation = await accountData.reconcileAccount({
+      accountId: bankId,
+      statedBalance: 50_000,
+      occurredAt,
+    });
+    assert.equal(reconciliation.status, 'adjusted');
+    if (reconciliation.status !== 'adjusted') {
+      throw new Error('Expected an adjustment');
+    }
 
     database
       .prepare('UPDATE categories SET deleted_at = ? WHERE id = ?')
@@ -117,11 +126,30 @@ test('transaction list applies combined filters, preserves history, and shows tr
     );
     assert.ok(rowIds.includes(unknown.id));
     assert.ok(rowIds.includes(directionalTransfer.id));
+    assert.ok(rowIds.includes(reconciliation.adjustmentId));
     assert.equal(allRows.filter((row) => row.kind === 'transfer').length, 2);
+    const adjustmentRow = allRows.find(
+      (row) =>
+        row.kind === 'transaction' &&
+        row.transaction.id === reconciliation.adjustmentId
+    );
+    assert.equal(adjustmentRow?.kind, 'transaction');
+    if (adjustmentRow?.kind === 'transaction') {
+      assert.equal(adjustmentRow.account.id, bankId);
+      assert.equal(adjustmentRow.transaction.adjustmentEffect, 'increase');
+    }
     const unratedRows = await listData.readTransactionList(
       filters({ quality: 'unrated' })
     );
     assert.equal(unratedRows.some((row) => row.kind === 'transfer'), false);
+    assert.equal(
+      unratedRows.some(
+        (row) =>
+          row.kind === 'transaction' &&
+          row.transaction.direction === 'adjustment'
+      ),
+      false
+    );
     const unknownRow = allRows.find(
       (row) => row.kind === 'transaction' && row.transaction.id === unknown.id
     );

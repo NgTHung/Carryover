@@ -3,8 +3,8 @@
  *
  * The schemas share the currency constants with the SQLite adapters, so a
  * value accepted by Zod remains representable when it is read back. They do
- * not coerce input because rounding a captured amount would corrupt the
- * ledger.
+ * Text inputs become integers through BigInt, never rounding, before they
+ * cross into the ledger.
  */
 import { z } from 'zod';
 
@@ -15,35 +15,42 @@ import {
 
 const wholeVndAmountSchema = z.number().finite().int().max(MAX_VND_AMOUNT);
 
-const positiveVndAmountTextSchema = z
-  .string()
-  .trim()
-  .regex(/^\d+$/, 'amount must contain whole dong only')
-  .superRefine((value, context) => {
-    if (!/^\d+$/.test(value)) {
-      return;
-    }
-    const amount = BigInt(value);
-    if (amount <= 0n) {
-      context.addIssue({
-        code: z.ZodIssueCode.too_small,
-        minimum: 0,
-        inclusive: false,
-        type: 'number',
-        message: 'amount must be positive',
-      });
-    }
-    if (amount > BigInt(MAX_VND_AMOUNT)) {
-      context.addIssue({
-        code: z.ZodIssueCode.too_big,
-        maximum: MAX_VND_AMOUNT,
-        inclusive: true,
-        type: 'number',
-        message: 'amount exceeds the safe VND amount',
-      });
-    }
-  })
-  .transform((value) => Number(BigInt(value)));
+function vndAmountTextSchema(allowZero: boolean) {
+  return z
+    .string()
+    .trim()
+    .regex(/^\d+$/, 'amount must contain whole dong only')
+    .superRefine((value, context) => {
+      if (!/^\d+$/.test(value)) {
+        return;
+      }
+      const amount = BigInt(value);
+      if (amount < 0n || (!allowZero && amount === 0n)) {
+        context.addIssue({
+          code: z.ZodIssueCode.too_small,
+          minimum: 0,
+          inclusive: allowZero,
+          type: 'number',
+          message: allowZero
+            ? 'amount must be nonnegative'
+            : 'amount must be positive',
+        });
+      }
+      if (amount > BigInt(MAX_VND_AMOUNT)) {
+        context.addIssue({
+          code: z.ZodIssueCode.too_big,
+          maximum: MAX_VND_AMOUNT,
+          inclusive: true,
+          type: 'number',
+          message: 'amount exceeds the safe VND amount',
+        });
+      }
+    })
+    .transform((value) => Number(BigInt(value)));
+}
+
+const positiveVndAmountTextSchema = vndAmountTextSchema(false);
+const nonNegativeVndAmountTextSchema = vndAmountTextSchema(true);
 
 const blankVndAmountTextSchema = z
   .string()
@@ -65,6 +72,11 @@ export const nonNegativeVndAmountSchema = wholeVndAmountSchema
 export const positiveVndInputSchema = z.union([
   positiveVndAmountSchema,
   positiveVndAmountTextSchema,
+]);
+
+export const nonNegativeVndInputSchema = z.union([
+  nonNegativeVndAmountSchema,
+  nonNegativeVndAmountTextSchema,
 ]);
 
 export const draftVndInputSchema = z

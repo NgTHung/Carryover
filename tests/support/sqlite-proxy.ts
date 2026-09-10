@@ -35,6 +35,9 @@ export function openMigratedDatabase(): DatabaseSync {
   database.exec(
     readFileSync(resolve(process.cwd(), 'drizzle/0004_seed-categories.sql'), 'utf8')
   );
+  database.exec(
+    readFileSync(resolve(process.cwd(), 'drizzle/0005_adjustment-effect.sql'), 'utf8')
+  );
   return database;
 }
 

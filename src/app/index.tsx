@@ -119,6 +119,9 @@ export default function StageZeroScreen() {
         <Link href={'/transactions' as never} asChild>
           <Button variant="secondary">Open transactions</Button>
         </Link>
+        <Link href={'/settings/accounts' as never} asChild>
+          <Button variant="secondary">Accounts and reconcile</Button>
+        </Link>
         <Row label="Push result" value={push} />
       </ScrollView>
     </View>

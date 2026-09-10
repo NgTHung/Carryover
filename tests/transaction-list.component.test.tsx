@@ -1,6 +1,9 @@
 import { act, cleanup, render, screen, userEvent, waitFor } from '@testing-library/react-native';
 
-import type { Transaction } from '../src/data/transaction-validation';
+import {
+  parseTransaction,
+  type Transaction,
+} from '../src/data/transaction-validation';
 import type { TransactionListData, TransactionListRow } from '../src/data/transaction-list';
 import TransactionsScreen from '../src/app/transactions/index';
 import { useTransactionFilters } from '../src/ui/transactions/transaction-filters';
@@ -26,10 +29,11 @@ const unknownId = '30000000-0000-4000-8000-000000000002';
 const date = new Date(2026, 0, 12, 10);
 
 function completeTransaction(overrides: Partial<Extract<Transaction, { status: 'complete' }>> = {}): Extract<Transaction, { status: 'complete' }> {
-  return {
+  const transaction = parseTransaction({
     id: transactionId,
     accountId: bankId,
     direction: 'expense',
+    adjustmentEffect: null,
     amount: 125_000,
     categoryId,
     quality: 'need',
@@ -43,13 +47,19 @@ function completeTransaction(overrides: Partial<Extract<Transaction, { status: '
     updatedAt: date,
     deletedAt: null,
     ...overrides,
-  };
+  });
+  if (transaction.status !== 'complete') {
+    throw new Error('Expected a complete transaction fixture');
+  }
+  return transaction;
 }
 
 function draftTransaction(): Extract<Transaction, { status: 'draft' }> {
   return {
-    ...completeTransaction({ id: unknownId, amount: 125_000, categoryId: null, quality: null }),
+    ...completeTransaction({ id: unknownId, amount: 125_000 }),
     amount: null,
+    categoryId: null,
+    quality: null,
     status: 'draft',
   };
 }
@@ -78,6 +88,22 @@ function transferRow(): TransactionListRow {
     transfer: { id: '50000000-0000-4000-8000-000000000001', amount: 50_000, occurredAt: date, createdAt: date },
     fromAccount: { id: bankId, name: 'Bank', kind: 'bank' },
     toAccount: { id: cashId, name: 'Cash', kind: 'cash' },
+  };
+}
+
+function adjustmentRow(): TransactionListRow {
+  return {
+    kind: 'transaction',
+    transaction: completeTransaction({
+      id: '60000000-0000-4000-8000-000000000001',
+      direction: 'adjustment',
+      adjustmentEffect: 'increase',
+      amount: 50_000,
+      categoryId: null,
+      quality: null,
+    }),
+    account: { id: bankId, name: 'Bank', kind: 'bank' },
+    category: null,
   };
 }
 
@@ -161,6 +187,27 @@ test('keeps filter choices visible and opens only transaction rows', async () =>
   await user.press(screen.getByRole('button', { name: 'Groceries' }));
   await waitFor(() => expect(screen.getByText('No transactions match these filters.')).toBeTruthy());
   expect(screen.getByRole('button', { name: 'Groceries' })).toBeTruthy();
+});
+
+test('shows a positive adjustment distinctly and opens its read-only route', async () => {
+  const adjustment = adjustmentRow();
+  const user = userEvent.setup();
+  await render(
+    <TransactionsScreen
+      data={repository([adjustment])}
+      subscribe={() => () => undefined}
+    />
+  );
+
+  await waitFor(() => expect(screen.getByText('₫50.000')).toBeTruthy());
+  expect(screen.getByText('Balance increased')).toBeTruthy();
+  const open = screen.getByRole('button', {
+    name: /Open adjustment, Balance increased/,
+  });
+  await user.press(open);
+  expect(mockNavigate).toHaveBeenCalledWith(
+    '/transactions/60000000-0000-4000-8000-000000000001'
+  );
 });
 
 test('reloads after an external committed ledger change', async () => {

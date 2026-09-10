@@ -16,6 +16,7 @@ import {
   transactionListData,
 } from '../data/database';
 import type { CategoryEditorData } from './categories/category-editor-contract';
+import type { AccountReconcileData } from './accounts/account-reconcile-contract';
 import type {
   LedgerChange,
   LedgerChangeListener,
@@ -29,6 +30,10 @@ export function useLedgerMigrations() {
 
 export function getCategoryEditorData(): CategoryEditorData {
   return categoryData;
+}
+
+export function getAccountReconcileData(): AccountReconcileData {
+  return accountData;
 }
 
 export function readTransaction(id: string) {

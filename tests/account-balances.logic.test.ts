@@ -32,6 +32,12 @@ test('account balances derive opening balance, transactions, and transfers', () 
         payerContactId: null,
       },
       { accountId: bankId, direction: 'transfer', amount: 500_000 },
+      {
+        accountId: bankId,
+        direction: 'adjustment',
+        amount: 50_000,
+        adjustmentEffect: 'increase',
+      },
     ],
     transfers: [
       { fromAccountId: bankId, toAccountId: cashId, amount: 300_000 },
@@ -39,7 +45,7 @@ test('account balances derive opening balance, transactions, and transfers', () 
   });
 
   assert.equal(balances[0]?.accountId, bankId);
-  assert.equal(balances[0]?.balance, 500_000);
+  assert.equal(balances[0]?.balance, 550_000);
   assert.equal(balances[1]?.accountId, cashId);
   assert.equal(balances[1]?.balance, 400_000);
 });
@@ -71,11 +77,31 @@ test('transfer arithmetic preserves the combined balance and allows overdraft ba
   );
 });
 
-test('balance derivation rejects adjustments, unknown accounts, and unsafe results', () => {
+test('balance derivation applies adjustment effects and rejects missing effects', () => {
+  const adjusted = deriveAccountBalances({
+    accounts: [{ accountId: bankId, openingBalance: 100 }],
+    transactions: [
+      {
+        accountId: bankId,
+        direction: 'adjustment',
+        amount: 25,
+        adjustmentEffect: 'decrease',
+      },
+    ],
+    transfers: [],
+  });
+  assert.equal(adjusted[0]?.balance, 75);
   assert.throws(() =>
     deriveAccountBalances({
       accounts: [{ accountId: bankId, openingBalance: 0 }],
-      transactions: [{ accountId: bankId, direction: 'adjustment', amount: 1 }],
+      transactions: [
+        {
+          accountId: bankId,
+          direction: 'adjustment',
+          amount: 1,
+          adjustmentEffect: null,
+        },
+      ],
       transfers: [],
     })
   );

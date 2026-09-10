@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { getTransactionEditorData } from '../../ui/ledger-access';
 import { loadTransactionRoute, parseTransactionRoute } from '../../ui/transactions/load-transaction-route';
 import { TransactionEditor } from '../../ui/transactions/TransactionEditor';
+import { TransactionAdjustmentDetail } from '../../ui/transactions/TransactionAdjustmentDetail';
 import {
   TransactionRouteView,
   type TransactionRouteState,
@@ -71,6 +72,16 @@ export default function TransactionRouteScreen({ data = getTransactionEditorData
   }, [data, transactionId]);
 
   if (state.status === 'ready') {
+    if (state.transaction.direction === 'adjustment') {
+      const account = state.accounts.find((candidate) => candidate.accountId === state.transaction.accountId);
+      return (
+        <TransactionAdjustmentDetail
+          transaction={state.transaction}
+          account={account}
+          onDone={() => router.replace('/transactions' as Href)}
+        />
+      );
+    }
     return (
       <TransactionEditor
         transaction={state.transaction}

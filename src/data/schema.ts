@@ -129,6 +129,9 @@ export const transactions = sqliteTable(
     direction: text('direction', {
       enum: ['expense', 'income', 'adjustment', 'transfer'],
     }).notNull(),
+    adjustmentEffect: text('adjustment_effect', {
+      enum: ['increase', 'decrease'],
+    }),
     amount: vndAmount('amount'),
     categoryId: text('category_id').references(() => categories.id),
     quality: text('quality', {
@@ -153,6 +156,14 @@ export const transactions = sqliteTable(
     check(
       'transactions_direction_value',
       sql`${table.direction} IN ('expense', 'income', 'adjustment', 'transfer')`
+    ),
+    check(
+      'transactions_adjustment_effect_value',
+      sql`(
+        (${table.direction} = 'adjustment' AND ${table.adjustmentEffect} IS NOT NULL AND ${table.adjustmentEffect} IN ('increase', 'decrease'))
+        OR
+        (${table.direction} <> 'adjustment' AND ${table.adjustmentEffect} IS NULL)
+      )`
     ),
     check(
       'transactions_quality_value',

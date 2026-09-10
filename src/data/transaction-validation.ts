@@ -15,6 +15,7 @@ import {
 
 const idSchema = z.string().uuid();
 const directionSchema = z.enum(['expense', 'income', 'adjustment', 'transfer']);
+const adjustmentEffectSchema = z.enum(['increase', 'decrease']);
 const qualitySchema = z.enum(['need', 'want', 'regret']);
 const payerSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('you') }).strict(),
@@ -22,9 +23,11 @@ const payerSchema = z.discriminatedUnion('kind', [
 ]);
 
 export const transactionDirectionSchema = directionSchema;
+export const transactionAdjustmentEffectSchema = adjustmentEffectSchema;
 export const transactionQualitySchema = qualitySchema;
 export const transactionPayerSchema = payerSchema;
 export type TransactionQuality = z.infer<typeof qualitySchema>;
+export type AdjustmentEffect = z.infer<typeof adjustmentEffectSchema>;
 
 const nullableIdInputSchema = idSchema.nullable().optional().default(null);
 const nullableQualityInputSchema = qualitySchema.nullable().optional().default(null);
@@ -37,6 +40,7 @@ const transactionBaseShape = {
   id: idSchema,
   accountId: idSchema,
   direction: directionSchema,
+  adjustmentEffect: adjustmentEffectSchema.nullable(),
   categoryId: idSchema.nullable(),
   quality: qualitySchema.nullable(),
   payer: payerSchema,
@@ -65,6 +69,7 @@ function addTransactionSemanticIssues(
   input: {
     status: 'draft' | 'complete';
     direction: z.infer<typeof directionSchema>;
+    adjustmentEffect: z.infer<typeof adjustmentEffectSchema> | null;
     categoryId: string | null;
     sourceLabel: string | null;
   },
@@ -100,6 +105,22 @@ function addTransactionSemanticIssues(
       message: 'Only income transactions can have a source label',
     });
   }
+
+  if (input.direction === 'adjustment' && input.adjustmentEffect === null) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['adjustmentEffect'],
+      message: 'Adjustment transactions require an effect',
+    });
+  }
+
+  if (input.direction !== 'adjustment' && input.adjustmentEffect !== null) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['adjustmentEffect'],
+      message: 'Only adjustment transactions can have an adjustment effect',
+    });
+  }
 }
 
 export const transactionSchema = z
@@ -109,7 +130,53 @@ export const transactionSchema = z
   ])
   .superRefine(addTransactionSemanticIssues);
 
-export type Transaction = z.infer<typeof transactionSchema>;
+type TransactionDirectionFields =
+  | { direction: 'expense' | 'income' | 'transfer'; adjustmentEffect: null }
+  | { direction: 'adjustment'; adjustmentEffect: AdjustmentEffect };
+
+type WithTransactionDirection<T> = T extends {
+  direction: z.infer<typeof directionSchema>;
+  adjustmentEffect: AdjustmentEffect | null;
+}
+  ? Omit<T, 'direction' | 'adjustmentEffect'> & TransactionDirectionFields
+  : never;
+
+function withValidatedAdjustmentEffect<
+  T extends {
+    direction: z.infer<typeof directionSchema>;
+    adjustmentEffect: AdjustmentEffect | null;
+  },
+>(value: T): Omit<T, 'direction' | 'adjustmentEffect'> & TransactionDirectionFields {
+  if (value.direction === 'adjustment') {
+    if (value.adjustmentEffect === null) {
+      throw new Error('Validated adjustment is missing its effect');
+    }
+    return {
+      ...value,
+      direction: value.direction,
+      adjustmentEffect: value.adjustmentEffect,
+    };
+  }
+  if (value.adjustmentEffect !== null) {
+    throw new Error('Validated non-adjustment carries an adjustment effect');
+  }
+  return {
+    ...value,
+    direction: value.direction,
+    adjustmentEffect: null,
+  };
+}
+
+type ParsedTransaction = z.infer<typeof transactionSchema>;
+export type Transaction = WithTransactionDirection<ParsedTransaction>;
+
+export function parseTransaction(input: unknown): Transaction {
+  const parsed = transactionSchema.parse(input);
+  return parsed.status === 'draft'
+    ? withValidatedAdjustmentEffect(parsed)
+    : withValidatedAdjustmentEffect(parsed);
+}
+
 export type DraftTransaction = Extract<Transaction, { status: 'draft' }>;
 export type CompleteTransaction = Extract<
   Transaction,
@@ -120,6 +187,7 @@ export type TransactionPayer = Payer;
 const transactionInputBaseShape = {
   accountId: idSchema,
   direction: directionSchema,
+  adjustmentEffect: adjustmentEffectSchema.nullable().optional().default(null),
   categoryId: nullableIdInputSchema,
   quality: nullableQualityInputSchema,
   payer: nullablePayerInputSchema,
@@ -163,14 +231,25 @@ export const createTransactionInputSchema = z.preprocess(
   transactionCreateUnionSchema
 );
 
-export type CreateTransactionInput = z.infer<
-  typeof createTransactionInputSchema
+type ParsedCreateTransactionInput = z.infer<typeof createTransactionInputSchema>;
+export type CreateTransactionInput = WithTransactionDirection<
+  ParsedCreateTransactionInput
 >;
+
+export function parseCreateTransactionInput(
+  input: unknown
+): CreateTransactionInput {
+  const parsed = createTransactionInputSchema.parse(input);
+  return parsed.status === 'draft'
+    ? withValidatedAdjustmentEffect(parsed)
+    : withValidatedAdjustmentEffect(parsed);
+}
 
 const transactionEditChangesSchema = z
   .object({
     accountId: idSchema,
     direction: directionSchema,
+    adjustmentEffect: adjustmentEffectSchema.nullable(),
     amount: draftVndInputSchema,
     categoryId: idSchema.nullable(),
     quality: qualitySchema.nullable(),
@@ -203,6 +282,7 @@ export const completeDraftInputSchema = z
       .object({
         accountId: idSchema,
         direction: directionSchema,
+        adjustmentEffect: adjustmentEffectSchema.nullable(),
         quality: qualitySchema.nullable(),
         occurredAt: z.date(),
         note: z.string().nullable(),

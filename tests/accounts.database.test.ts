@@ -1,5 +1,6 @@
 import { strict as assert } from 'node:assert';
 
+import { MAX_VND_AMOUNT } from '../src/money/currency';
 import { createAccountData } from '../src/data/accounts';
 import { createProxyDatabase, openMigratedDatabase } from './support/sqlite-proxy';
 
@@ -237,26 +238,329 @@ test('account balance reads have no stored running-total column', () => {
   }
 });
 
-test('active account choices remain readable when an adjustment blocks balance projection', async () => {
+test('active account choices remain readable after an adjustment', async () => {
   const database = openMigratedDatabase();
   try {
     const bankId = accountId(database, 'Bank');
     const data = createAccountData(createProxyDatabase(database));
     database
       .prepare(
-        "INSERT INTO transactions (account_id, direction, amount, occurred_at, status) VALUES (?, 'adjustment', 50000, ?, 'complete')"
+        "INSERT INTO transactions (account_id, direction, adjustment_effect, amount, occurred_at, status) VALUES (?, 'adjustment', 'increase', 50000, ?, 'complete')"
       )
       .run(bankId, occurredAt.getTime());
 
-    await assert.rejects(
-      data.readAccountBalances(),
-      /Adjustment polarity is not defined/
-    );
+    assert.equal((await data.readAccountBalances())[0]?.balance, 50_000);
     const choices = await data.listActiveAccounts();
     assert.equal(
       choices.map((account) => account.name).sort().join(','),
       'Bank,Cash'
     );
+  } finally {
+    database.close();
+  }
+});
+
+test('reconcile writes one positive adjustment atomically and preserves report totals', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const bankId = accountId(database, 'Bank');
+    const changes: string[] = [];
+    const data = createAccountData(
+      createProxyDatabase(database, {
+        afterQuery(query, _params, _method) {
+          if (query.toLowerCase().includes('insert into') && query.toLowerCase().includes('transactions')) {
+            changes.push(query);
+          }
+        },
+      })
+    );
+    await data.updateOpeningBalance({ accountId: bankId, openingBalance: 1_000_000 });
+    const beforeReports = reportTotals(database);
+    const result = await data.reconcileAccount({
+      accountId: bankId,
+      statedBalance: 1_250_000,
+      occurredAt,
+    });
+
+    assert.equal(result.status, 'adjusted');
+    if (result.status !== 'adjusted') {
+      throw new Error('Expected an adjustment');
+    }
+    assert.equal(result.adjustmentAmount, 250_000);
+    assert.equal(result.adjustmentEffect, 'increase');
+    assert.equal(changes.length, 1);
+    const row = database
+      .prepare(
+        "SELECT amount, adjustment_effect, direction, status FROM transactions WHERE id = ?"
+      )
+      .get(result.adjustmentId) as {
+      amount: unknown;
+      adjustment_effect: unknown;
+      direction: unknown;
+      status: unknown;
+    };
+    assert.equal(row.amount, 250_000);
+    assert.equal(row.adjustment_effect, 'increase');
+    assert.equal(row.direction, 'adjustment');
+    assert.equal(row.status, 'complete');
+    assert.equal((await data.readAccountBalances())[0]?.balance, 1_250_000);
+    assert.deepEqual(reportTotals(database), beforeReports);
+  } finally {
+    database.close();
+  }
+});
+
+test('reconcile uses the same balance semantics for contacts, drafts, transfers, and deleted rows', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const bankId = accountId(database, 'Bank');
+    const cashId = accountId(database, 'Cash');
+    const data = createAccountData(createProxyDatabase(database));
+    await data.updateOpeningBalance({ accountId: bankId, openingBalance: 1_000_000 });
+    const contact = database
+      .prepare("INSERT INTO contacts (name) VALUES ('Lan') RETURNING id")
+      .get() as IdRow;
+    if (typeof contact.id !== 'string') {
+      throw new Error('Expected contact id');
+    }
+    database
+      .prepare(
+        "INSERT INTO transactions (account_id, direction, amount, payer_contact_id, occurred_at, status) VALUES (?, 'expense', 100000, ?, ?, 'complete')"
+      )
+      .run(bankId, contact.id, occurredAt.getTime());
+    database
+      .prepare(
+        "INSERT INTO transactions (account_id, direction, amount, occurred_at, status) VALUES (?, 'expense', NULL, ?, 'draft')"
+      )
+      .run(bankId, occurredAt.getTime());
+    database
+      .prepare(
+        "INSERT INTO transactions (account_id, direction, amount, occurred_at, status, deleted_at) VALUES (?, 'income', 400000, ?, 'complete', ?)"
+      )
+      .run(bankId, occurredAt.getTime(), occurredAt.getTime());
+    database
+      .prepare(
+        'INSERT INTO transfers (from_account_id, to_account_id, amount, occurred_at) VALUES (?, ?, 200000, ?)'
+      )
+      .run(bankId, cashId, occurredAt.getTime());
+
+    const result = await data.reconcileAccount({
+      accountId: bankId,
+      statedBalance: 700_000,
+      occurredAt,
+    });
+    assert.equal(result.status, 'adjusted');
+    if (result.status !== 'adjusted') {
+      throw new Error('Expected an adjustment');
+    }
+    assert.equal(result.adjustmentAmount, 100_000);
+    assert.equal(result.adjustmentEffect, 'decrease');
+  } finally {
+    database.close();
+  }
+});
+
+test('reconciling downward stores a decrease, while a no-op stays unchanged and silent', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const bankId = accountId(database, 'Bank');
+    const events: string[] = [];
+    const data = createAccountData(
+      createProxyDatabase(database),
+      {
+        notify(change) {
+          events.push(`${change.table}:${change.mutation}`);
+        },
+        subscribe() {
+          return () => undefined;
+        },
+      }
+    );
+    await data.updateOpeningBalance({ accountId: bankId, openingBalance: 1_000_000 });
+    const result = await data.reconcileAccount({
+      accountId: bankId,
+      statedBalance: 750_000,
+      occurredAt,
+    });
+    assert.equal(result.status, 'adjusted');
+    if (result.status !== 'adjusted') {
+      throw new Error('Expected an adjustment');
+    }
+    assert.equal(result.adjustmentAmount, 250_000);
+    assert.equal(result.adjustmentEffect, 'decrease');
+
+    const beforeNoOp = database
+      .prepare('SELECT COUNT(*) AS count FROM transactions')
+      .get() as { count: number };
+    const noOp = await data.reconcileAccount({
+      accountId: bankId,
+      statedBalance: 750_000,
+      occurredAt,
+    });
+    const afterNoOp = database
+      .prepare('SELECT COUNT(*) AS count FROM transactions')
+      .get() as { count: number };
+    assert.deepEqual(noOp, { status: 'unchanged', accountId: bankId, balance: 750_000 });
+    assert.equal(afterNoOp.count, beforeNoOp.count);
+    assert.deepEqual(events, [
+      'accounts:edited',
+      'transactions:created',
+    ]);
+  } finally {
+    database.close();
+  }
+});
+
+test('reconcile rejects inactive or unsafe accounts without writing', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const bankId = accountId(database, 'Bank');
+    const data = createAccountData(createProxyDatabase(database));
+    const before = database
+      .prepare('SELECT COUNT(*) AS count FROM transactions')
+      .get() as { count: number };
+
+    await assert.rejects(
+      data.reconcileAccount({
+        accountId: '33333333-3333-4333-8333-333333333333',
+        statedBalance: 1,
+        occurredAt,
+      }),
+      /not found/i
+    );
+    database
+      .prepare('UPDATE accounts SET deleted_at = ? WHERE id = ?')
+      .run(occurredAt.getTime(), bankId);
+    await assert.rejects(
+      data.reconcileAccount({ accountId: bankId, statedBalance: 1, occurredAt }),
+      /not found/i
+    );
+    assert.equal(
+      (database.prepare('SELECT COUNT(*) AS count FROM transactions').get() as { count: number }).count,
+      before.count
+    );
+  } finally {
+    database.close();
+  }
+});
+
+test('reconcile rejects a delta outside the safe VND range without writing', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const bankId = accountId(database, 'Bank');
+    const data = createAccountData(createProxyDatabase(database));
+    database
+      .prepare('UPDATE accounts SET opening_balance = 0 WHERE id = ?')
+      .run(bankId);
+    database
+      .prepare(
+        "INSERT INTO transactions (account_id, direction, amount, occurred_at, status) VALUES (?, 'expense', ?, ?, 'complete')"
+      )
+      .run(bankId, MAX_VND_AMOUNT, occurredAt.getTime());
+    const before = database
+      .prepare('SELECT COUNT(*) AS count FROM transactions')
+      .get() as { count: number };
+
+    await assert.rejects(
+      data.reconcileAccount({
+        accountId: bankId,
+        statedBalance: MAX_VND_AMOUNT,
+        occurredAt,
+      }),
+      /safe VND|range|delta/i
+    );
+    assert.equal(
+      (database.prepare('SELECT COUNT(*) AS count FROM transactions').get() as { count: number }).count,
+      before.count
+    );
+  } finally {
+    database.close();
+  }
+});
+
+test('reconcile rejects an unsafe balance aggregate before adding it', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const bankId = accountId(database, 'Bank');
+    const data = createAccountData(createProxyDatabase(database));
+    database
+      .prepare(
+        "INSERT INTO transactions (account_id, direction, amount, occurred_at, status) VALUES (?, 'income', ?, ?, 'complete'), (?, 'income', ?, ?, 'complete')"
+      )
+      .run(
+        bankId,
+        MAX_VND_AMOUNT,
+        occurredAt.getTime(),
+        bankId,
+        MAX_VND_AMOUNT,
+        occurredAt.getTime()
+      );
+
+    await assert.rejects(
+      data.reconcileAccount({
+        accountId: bankId,
+        statedBalance: 0,
+        occurredAt,
+      }),
+      /safe VND range/
+    );
+    assert.equal(
+      (database.prepare('SELECT COUNT(*) AS count FROM transactions').get() as {
+        count: number;
+      }).count,
+      2
+    );
+  } finally {
+    database.close();
+  }
+});
+
+test('reconcile reports a concurrent ledger change after an empty atomic insert', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const bankId = accountId(database, 'Bank');
+    const events: string[] = [];
+    let changed = false;
+    const data = createAccountData(
+      createProxyDatabase(database, {
+        afterQuery(query) {
+          if (
+            !changed &&
+            query.toLowerCase().includes('insert into') &&
+            query.toLowerCase().includes('transactions')
+          ) {
+            changed = true;
+            database
+              .prepare('UPDATE accounts SET opening_balance = 1 WHERE id = ?')
+              .run(bankId);
+          }
+        },
+      }),
+      {
+        notify(change) {
+          events.push(`${change.table}:${change.mutation}`);
+        },
+        subscribe() {
+          return () => undefined;
+        },
+      }
+    );
+
+    await assert.rejects(
+      data.reconcileAccount({
+        accountId: bankId,
+        statedBalance: 0,
+        occurredAt,
+      }),
+      /changed during reconcile/
+    );
+    assert.equal(
+      (database.prepare('SELECT COUNT(*) AS count FROM transactions').get() as {
+        count: number;
+      }).count,
+      0
+    );
+    assert.deepEqual(events, []);
   } finally {
     database.close();
   }

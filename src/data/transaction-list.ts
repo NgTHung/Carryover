@@ -11,7 +11,6 @@ import {
   gte,
   isNull,
   lt,
-  ne,
   or,
   sql,
   type SQL,
@@ -146,9 +145,9 @@ function transactionPredicates(
     predicates.push(eq(transactions.accountId, filters.accountId));
   }
   if (filters.quality === 'unrated') {
-    predicates.push(isNull(transactions.quality), ne(transactions.direction, 'transfer'));
+    predicates.push(isNull(transactions.quality), eq(transactions.direction, 'expense'));
   } else if (filters.quality !== null) {
-    predicates.push(eq(transactions.quality, filters.quality), ne(transactions.direction, 'transfer'));
+    predicates.push(eq(transactions.quality, filters.quality), eq(transactions.direction, 'expense'));
   }
   return predicates.filter((predicate): predicate is SQL => predicate !== undefined);
 }

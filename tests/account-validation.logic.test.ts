@@ -2,12 +2,31 @@ import { strict as assert } from 'node:assert';
 
 import { MAX_VND_AMOUNT } from '../src/money/currency';
 import {
+  reconcileAccountSchema,
   recordTransferSchema,
   updateAccountOpeningBalanceSchema,
 } from '../src/data/account-validation';
 
 const bankId = '11111111-1111-4111-8111-111111111111';
 const cashId = '22222222-2222-4222-8222-222222222222';
+
+test('reconcile validation accepts zero and rejects fractional or unsafe stated balances', () => {
+  const input = {
+    accountId: bankId,
+    statedBalance: 0,
+    occurredAt: new Date(1735689600000),
+  };
+  assert.equal(reconcileAccountSchema.parse(input).statedBalance, 0);
+
+  for (const statedBalance of [-1, 12.5, MAX_VND_AMOUNT + 1, '1000']) {
+    assert.throws(() =>
+      reconcileAccountSchema.parse({ ...input, statedBalance })
+    );
+  }
+  assert.throws(() =>
+    reconcileAccountSchema.parse({ ...input, occurredAt: '2025-01-01' })
+  );
+});
 
 test('account opening balance validation accepts zero and the safe maximum', () => {
   assert.equal(

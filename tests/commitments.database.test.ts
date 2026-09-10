@@ -354,6 +354,7 @@ test('reserved unpaid ignores non-payments, deleted rows, and inactive commitmen
     const adjustment = await transactions.createTransaction({
       accountId: bank,
       direction: 'adjustment',
+      adjustmentEffect: 'increase',
       status: 'complete',
       amount: 200_000,
       categoryId: null,

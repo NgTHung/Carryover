@@ -19,6 +19,7 @@ const occurredAt = new Date(1735689600000);
 const completeFields = {
   id: transactionId,
   accountId,
+  adjustmentEffect: null,
   quality: null,
   payer: { kind: 'you' as const },
   occurredAt,
@@ -76,6 +77,7 @@ test('direction carries the sign and every direction accepts positive integer mo
     const parsed = transactionSchema.parse({
       ...completeFields,
       direction,
+      adjustmentEffect: direction === 'adjustment' ? 'increase' : null,
       categoryId: direction === 'expense' ? categoryId : null,
       sourceLabel: direction === 'income' ? 'Salary' : null,
     });
@@ -141,10 +143,38 @@ test('income, adjustment, and transfer cannot carry a category', () => {
       transactionSchema.parse({
         ...completeFields,
         direction,
+        adjustmentEffect: direction === 'adjustment' ? 'increase' : null,
         categoryId,
       })
     );
   }
+});
+
+test('adjustments require an explicit effect, while other directions reject one', () => {
+  assert.doesNotThrow(() =>
+    transactionSchema.parse({
+      ...completeFields,
+      direction: 'adjustment',
+      adjustmentEffect: 'decrease',
+      categoryId: null,
+    })
+  );
+  assert.throws(() =>
+    transactionSchema.parse({
+      ...completeFields,
+      direction: 'adjustment',
+      adjustmentEffect: null,
+      categoryId: null,
+    })
+  );
+  assert.throws(() =>
+    transactionSchema.parse({
+      ...completeFields,
+      direction: 'expense',
+      adjustmentEffect: 'increase',
+      categoryId,
+    })
+  );
 });
 
 test('draft completion accepts optional full-field changes', () => {
