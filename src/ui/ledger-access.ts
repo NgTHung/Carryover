@@ -5,7 +5,9 @@
  * need a platform boundary outside src/app.
  */
 import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
+import { AppState } from 'react-native';
 
+import { startSnapshotFreshness } from '../budget/snapshot-freshness';
 import {
   createSnapshotPublisher,
   startSnapshotPublisher,
@@ -60,7 +62,18 @@ const budgetSnapshotPublisher = createSnapshotPublisher({
 });
 
 export function startBudgetSnapshotPublication(): () => void {
-  return startSnapshotPublisher(budgetSnapshotPublisher, ledgerChangeNotifier);
+  const stopPublication = startSnapshotPublisher(
+    budgetSnapshotPublisher,
+    ledgerChangeNotifier
+  );
+  const stopFreshness = startSnapshotFreshness(
+    budgetSnapshotPublisher,
+    AppState
+  );
+  return () => {
+    stopFreshness();
+    stopPublication();
+  };
 }
 
 export function refreshBudgetSnapshot(): Promise<void> {
