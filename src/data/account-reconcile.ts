@@ -88,10 +88,8 @@ const currentBalanceSql = () => {
   `;
   return sql<number | null>`
     CASE
-      WHEN (${transactionEffect}) BETWEEN -${maxBalance} AND ${maxBalance}
-        AND (${transferEffect}) BETWEEN -${maxBalance} AND ${maxBalance}
-        AND a.opening_balance + (${transactionEffect}) + (${transferEffect})
-          BETWEEN -${maxBalance} AND ${maxBalance}
+      WHEN a.opening_balance + (${transactionEffect}) + (${transferEffect})
+        BETWEEN -${maxBalance} AND ${maxBalance}
       THEN a.opening_balance + (${transactionEffect}) + (${transferEffect})
       ELSE NULL
     END

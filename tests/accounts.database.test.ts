@@ -515,6 +515,46 @@ test('reconcile rejects an unsafe balance aggregate before adding it', async () 
   }
 });
 
+test('reconcile accepts a safe final balance after an exact subtotal exceeds the safe VND amount', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const bankId = accountId(database, 'Bank');
+    const data = createAccountData(createProxyDatabase(database));
+    await data.updateOpeningBalance({
+      accountId: bankId,
+      openingBalance: MAX_VND_AMOUNT,
+    });
+    database
+      .prepare(
+        "INSERT INTO transactions (account_id, direction, amount, occurred_at, status) VALUES (?, 'expense', ?, ?, 'complete'), (?, 'expense', 1, ?, 'complete')"
+      )
+      .run(
+        bankId,
+        MAX_VND_AMOUNT,
+        occurredAt.getTime(),
+        bankId,
+        occurredAt.getTime()
+      );
+
+    assert.equal((await data.readAccountBalances())[0]?.balance, -1);
+    const result = await data.reconcileAccount({
+      accountId: bankId,
+      statedBalance: 0,
+      occurredAt,
+    });
+
+    assert.equal(result.status, 'adjusted');
+    if (result.status !== 'adjusted') {
+      throw new Error('Expected an adjustment');
+    }
+    assert.equal(result.adjustmentAmount, 1);
+    assert.equal(result.adjustmentEffect, 'increase');
+    assert.equal((await data.readAccountBalances())[0]?.balance, 0);
+  } finally {
+    database.close();
+  }
+});
+
 test('reconcile reports a concurrent ledger change after an empty atomic insert', async () => {
   const database = openMigratedDatabase();
   try {
