@@ -1,7 +1,7 @@
 ---
 id: "DATA-007"
 title: "Reconcile writes a visible adjustment"
-status: In Progress
+status: Done
 priority: "Medium"
 type: "Feature"
 milestone: "0.3.0"
@@ -30,5 +30,5 @@ An adjustment stores a positive amount and an explicit increase or decrease effe
 - [x] The adjustment appears distinctly in the transaction list and opens a read-only detail view.
 - [x] The expense and income report-total contract excludes adjustments, asserted by a test.
 - [x] Reconciling to the current balance writes nothing.
-- [ ] Reconcile accepts a safe final balance when exact intermediate ledger totals exceed the safe VND amount.
-- [ ] The accounts screen keeps reconcile controls reachable while the iOS keyboard is open.
+- [x] Reconcile accepts a safe final balance when exact intermediate ledger totals exceed the safe VND amount.
+- [x] The accounts screen keeps reconcile controls reachable while the iOS keyboard is open.
