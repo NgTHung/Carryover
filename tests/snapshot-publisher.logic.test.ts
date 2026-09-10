@@ -109,11 +109,21 @@ test('a failed write clears a prior ready snapshot and retry rereads committed i
 test('uses the injected clock and the default budget computer', async () => {
   const store = createSnapshotStore();
   const writtenTimestamps: string[] = [];
+  const times = [
+    new Date('2026-09-10T11:59:59.000Z'),
+    new Date('2026-09-10T12:00:00.000Z'),
+  ];
   const publisher = createSnapshotPublisher({
     store,
-    now: () => new Date('2026-09-10T12:00:00.000Z'),
+    now: () => {
+      const time = times.shift();
+      if (time === undefined) {
+        throw new Error('Clock was read too many times');
+      }
+      return time;
+    },
     readInput: (now) => {
-      assert.equal(now.toISOString(), '2026-09-10T12:00:00.000Z');
+      assert.equal(now.toISOString(), '2026-09-10T11:59:59.000Z');
       return budgetInput();
     },
     writer: (snapshot) => {

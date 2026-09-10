@@ -67,9 +67,8 @@ export function createSnapshotPublisher(
 
     const run = queue.then(async () => {
       try {
-        const currentTime = now();
-        const updatedAt = currentTime.toISOString();
-        const input = await options.readInput(currentTime);
+        const input = await options.readInput(now());
+        const updatedAt = now().toISOString();
         const snapshot = compute({ ...input, updatedAt });
         await options.writer(snapshot);
         if (request !== requestNumber) {
