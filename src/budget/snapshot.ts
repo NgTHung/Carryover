@@ -17,9 +17,8 @@ export {
  * or app state, so it cannot compute anything. Both the home screen and the
  * widget render this object instead, which is why the two can never disagree.
  *
- * `computeBudget` does not exist yet. Stage 0 proves the pipeline and the
- * widget install; app:BUDGET-001 supplies the real implementation behind this
- * same type.
+ * `computeBudget` is re-exported from the pure engine so this module remains
+ * the stable contract imported by the home screen and widget.
  */
 
 export type BudgetSnapshot = {
@@ -29,8 +28,8 @@ export type BudgetSnapshot = {
 
   horizonDate: string;
   daysToHorizon: number;
-  perDay: number;
-  runwayDays: number;
+  perDay: number | null;
+  runwayDays: number | null;
 
   spentThisMonth: number;
   regrettedThisMonth: number;
@@ -44,7 +43,7 @@ export type BudgetSnapshot = {
  * Stand-in numbers for the stage 0 spike. A widget that renders these proves it
  * installed; a widget that renders anything else proves the app reached it.
  */
-export const FIXTURE_SNAPSHOT: BudgetSnapshot = {
+export const FIXTURE_SNAPSHOT = {
   balanceTotal: 4_250_000,
   reservedUnpaid: 3_000_000,
   discretionary: 1_250_000,
@@ -60,4 +59,11 @@ export const FIXTURE_SNAPSHOT: BudgetSnapshot = {
 
   unloggedDrafts: 2,
   updatedAt: new Date(0).toISOString(),
-};
+} satisfies BudgetSnapshot;
+
+export {
+  computeBudget,
+  type BudgetInput,
+  type BudgetShare,
+  type BudgetTransaction,
+} from './compute-budget';
