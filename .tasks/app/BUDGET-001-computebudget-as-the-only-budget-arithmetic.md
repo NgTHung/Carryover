@@ -1,7 +1,7 @@
 ---
 id: "BUDGET-001"
 title: "computeBudget as the only budget arithmetic"
-status: In Progress
+status: Done
 priority: "High"
 type: "Feature"
 milestone: "0.3.0"
@@ -29,12 +29,12 @@ zero runway.
 
 ## Acceptance Criteria
 
-- [ ] `computeBudget(input: BudgetInput): BudgetSnapshot` is pure, with no database, clock, or filesystem access inside it.
-- [ ] No component, hook, screen, or widget computes a budget figure. Budget arithmetic appears in one module.
-- [ ] Every money intermediate is an integer. Per day uses mathematical floor, and runway uses one integer division over the thirty day burn total.
-- [ ] Spending counts your own share of a split, never the full transaction amount.
-- [ ] Settlements, transfers, and adjustments are excluded from spending and income.
-- [ ] Drafts with known amounts count as spending. Unknown drafts are returned as `unloggedDrafts` and are never treated as zero.
-- [ ] A zero-day horizon returns null per day, zero burn returns null runway, and non-positive discretionary returns zero runway.
-- [ ] `tests/` covers a zero-day horizon, a zero burn rate, negative discretionary, a period with no transactions, and a split where your share is not half.
-- [ ] `tests/` asserts the same input produces the same snapshot on repeated runs.
+- [x] `computeBudget(input: BudgetInput): BudgetSnapshot` is pure, with no database, clock, or filesystem access inside it.
+- [x] No component, hook, screen, or widget computes a budget figure. Budget arithmetic appears in one module.
+- [x] Every money intermediate is an integer. Per day uses mathematical floor, and runway uses one integer division over the thirty day burn total.
+- [x] Spending counts your own share of a split, never the full transaction amount.
+- [x] Settlements, transfers, and adjustments are excluded from spending and income.
+- [x] Drafts with known amounts count as spending. Unknown drafts are returned as `unloggedDrafts` and are never treated as zero.
+- [x] A zero-day horizon returns null per day, zero burn returns null runway, and non-positive discretionary returns zero runway.
+- [x] `tests/` covers a zero-day horizon, a zero burn rate, negative discretionary, a period with no transactions, and a split where your share is not half.
+- [x] `tests/` asserts the same input produces the same snapshot on repeated runs.
