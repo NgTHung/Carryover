@@ -1,7 +1,7 @@
 ---
 id: "BUDGET-002"
 title: "Write the snapshot to shared storage on every mutation"
-status: To Do
+status: In Progress
 priority: "Medium"
 type: "Feature"
 milestone: "0.3.0"
@@ -9,7 +9,7 @@ depends_on: ["BUDGET-001", "build:WIDGET-001"]
 risk: "Medium"
 impact: "The only data path between the app and the widget. A stale snapshot is worse than no widget, because a wrong number on the home screen still looks authoritative."
 tags: ["budget", "widget", "ios"]
-last_updated: 2026-09-06
+last_updated: 2026-09-10
 ---
 
 ## Summary
@@ -20,13 +20,19 @@ WIDGET-001 landed the group resolution this depends on. The App Group is resolve
 
 `UserDefaults(suiteName:)` fails open and returns a process-local store when the entitlement is missing, so a round trip inside the app proves nothing about the shared container. `containerURL` fails closed and is the honest probe.
 
+Normal native builds request the App Group from this task onward, while the
+widget target stays gated until build:WIDGET-002. A missing current-period month
+config is an error because this service cannot invent the frozen totals. Until
+app:SPLIT-001 lands, the input supplies no shares and a zero receivable.
+
 ## Acceptance Criteria
 
 - [ ] Every mutation that can change a budget figure recomputes the snapshot and writes it.
 - [ ] The write uses the runtime-resolved App Group from build:WIDGET-001, not a configured constant.
 - [ ] `updatedAt` on the written snapshot is the write time.
 - [ ] A failed write surfaces an error rather than leaving a stale snapshot in place silently.
-- [ ] The home screen reads the written snapshot, so both surfaces read one artifact.
+- [ ] The app-facing store contains the exact written artifact; app:UI-003 reads it without adding another data path.
 - [ ] A Zustand store exposes the published snapshot with explicit loading, ready, and error states. Store actions and selectors perform no budget arithmetic.
 - [ ] Startup computes and writes a fresh snapshot from committed data before showing ready. A failed database mutation publishes no replacement; a failed shared-storage write exposes an error and supports retry from committed data.
 - [ ] Tests assert that the ready store contains exactly the written snapshot and that publication failures cannot present a stale snapshot as current.
+- [ ] Native builds request their variant-specific App Group without enabling the widget target, and a missing current-period month config fails explicitly instead of creating frozen totals.
