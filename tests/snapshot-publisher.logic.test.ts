@@ -43,11 +43,18 @@ test('publishes the exact written snapshot only after the writer succeeds', asyn
   const store = createSnapshotStore();
   const write = deferred<void>();
   let written: BudgetSnapshot | undefined;
+  const times = [
+    new Date('2026-09-10T08:29:59.000Z'),
+    new Date('2026-09-10T08:30:00.000Z'),
+  ];
 
   const publisher = createSnapshotPublisher({
     store,
-    now: () => new Date('2026-09-10T08:30:00.000Z'),
-    readInput: () => budgetInput(),
+    now: () => times.shift() ?? new Date('invalid'),
+    readInput: (now) => {
+      assert.equal(now.toISOString(), '2026-09-10T08:29:59.000Z');
+      return budgetInput();
+    },
     writer: (snapshot) => {
       written = snapshot;
       return write.promise;
@@ -104,42 +111,6 @@ test('a failed write clears a prior ready snapshot and retry rereads committed i
   await publisher.retry();
   assert.equal(reads, 3);
   assert.equal(store.getState().status, 'ready');
-});
-
-test('uses the injected clock and the default budget computer', async () => {
-  const store = createSnapshotStore();
-  const writtenTimestamps: string[] = [];
-  const times = [
-    new Date('2026-09-10T11:59:59.000Z'),
-    new Date('2026-09-10T12:00:00.000Z'),
-  ];
-  const publisher = createSnapshotPublisher({
-    store,
-    now: () => {
-      const time = times.shift();
-      if (time === undefined) {
-        throw new Error('Clock was read too many times');
-      }
-      return time;
-    },
-    readInput: (now) => {
-      assert.equal(now.toISOString(), '2026-09-10T11:59:59.000Z');
-      return budgetInput();
-    },
-    writer: (snapshot) => {
-      writtenTimestamps.push(snapshot.updatedAt);
-    },
-  });
-
-  await publisher.refresh();
-
-  assert.deepEqual(writtenTimestamps, ['2026-09-10T12:00:00.000Z']);
-  const readyState = store.getState();
-  assert.equal(readyState.status, 'ready');
-  if (readyState.status !== 'ready') {
-    throw new Error('snapshot should be ready');
-  }
-  assert.equal(readyState.snapshot.discretionary, 900);
 });
 
 test('queued refreshes write in order and only the newest publishes ready', async () => {

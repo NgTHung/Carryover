@@ -5,7 +5,6 @@ import type { MonthConfig } from '../src/data/month-config-validation';
 import type { Transaction } from '../src/data/transaction-validation';
 import { readBudgetInput, type BudgetSnapshotReads } from '../src/budget/snapshot-source';
 
-const occurredAt = new Date(2026, 8, 15, 12, 0, 0);
 const storedConfig: MonthConfig = {
   period: '2026-09',
   openingBalance: 4_000_000,
@@ -98,22 +97,8 @@ test('reads the stored current config and all budget source values', async () =>
   const { reads, calls } = readsFor({
     config: storedConfig,
     accounts: [
-      {
-        accountId: 'bank-account',
-        name: 'Bank',
-        kind: 'bank',
-        isDefault: true,
-        openingBalance: 0,
-        balance: 1_250_000,
-      },
-      {
-        accountId: 'cash-account',
-        name: 'Cash',
-        kind: 'cash',
-        isDefault: false,
-        openingBalance: 0,
-        balance: 300_000,
-      },
+      { accountId: 'bank-account', name: 'Bank', kind: 'bank', isDefault: true, openingBalance: 0, balance: 1_250_000 },
+      { accountId: 'cash-account', name: 'Cash', kind: 'cash', isDefault: false, openingBalance: 0, balance: 300_000 },
     ],
     reservedUnpaid: 275_000,
   });
@@ -130,6 +115,8 @@ test('reads the stored current config and all budget source values', async () =>
   assert.deepEqual(calls.reservePeriods, ['2026-09']);
   assert.equal(calls.accountReads, 1);
   assert.equal(calls.transactionReads, 1);
+  assert.deepEqual(input.shares, []);
+  assert.equal(input.owedToYou, 0);
 });
 
 test('maps local dates and preserves complete amounts and unknown draft nulls', async () => {
@@ -166,15 +153,6 @@ test('maps local dates and preserves complete amounts and unknown draft nulls', 
       amount: null,
     },
   ]);
-});
-
-test('supplies empty pre-SPLIT shares and zero receivables', async () => {
-  const { reads } = readsFor({ config: storedConfig });
-
-  const input = await readBudgetInput(reads, occurredAt);
-
-  assert.deepEqual(input.shares, []);
-  assert.equal(input.owedToYou, 0);
 });
 
 test('reports an explicit error when the current period has no stored config', async () => {
