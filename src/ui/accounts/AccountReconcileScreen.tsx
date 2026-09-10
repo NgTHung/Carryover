@@ -119,7 +119,9 @@ export function AccountReconcileScreen({
   return (
     <ScrollView
       testID="accounts-screen"
+      automaticallyAdjustKeyboardInsets
       contentContainerClassName="gap-5 bg-ground-light px-5 pb-16 pt-16 dark:bg-ground-dark"
+      keyboardDismissMode="interactive"
       keyboardShouldPersistTaps="handled"
     >
       <View className="gap-1">
