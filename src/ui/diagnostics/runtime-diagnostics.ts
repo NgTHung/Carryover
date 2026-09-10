@@ -7,6 +7,7 @@
 import { requireNativeModule } from 'expo-modules-core';
 
 import { CarryoverWidget } from '../../../widgets/CarryoverWidget';
+import { refreshBudgetSnapshot } from '../ledger-access';
 import type { SigningFacts, WidgetPushResult } from './runtime-diagnostics.types';
 
 export function readSigningFacts(): SigningFacts | string {
@@ -21,9 +22,8 @@ export function readSigningFacts(): SigningFacts | string {
   }
 }
 
-export async function pushFixtureToWidget(): Promise<WidgetPushResult> {
-  CarryoverWidget.updateSnapshot({ perDay: 12_000, runwayDays: 7, unloggedDrafts: 0 });
-  CarryoverWidget.reload();
+export async function publishCurrentSnapshotToWidget(): Promise<WidgetPushResult> {
+  await refreshBudgetSnapshot();
   const timeline = await CarryoverWidget.getTimeline();
   return { status: 'pushed', timelineEntries: timeline.length };
 }

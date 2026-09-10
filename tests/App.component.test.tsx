@@ -19,7 +19,7 @@ const mockSigningFacts = {
 };
 
 const mockUseMigrations = jest.fn();
-const mockPushFixtureToWidget = jest.fn();
+const mockPublishCurrentSnapshotToWidget = jest.fn();
 const mockStopBudgetSnapshotPublication = jest.fn();
 const mockStartBudgetSnapshotPublication = jest.fn(
   () => mockStopBudgetSnapshotPublication
@@ -37,7 +37,7 @@ jest.mock('../src/ui/ledger-access', () => ({
 
 jest.mock('../src/ui/diagnostics/runtime-diagnostics', () => ({
   readSigningFacts: () => mockSigningFacts,
-  pushFixtureToWidget: () => mockPushFixtureToWidget(),
+  publishCurrentSnapshotToWidget: () => mockPublishCurrentSnapshotToWidget(),
 }));
 
 jest.mock('expo-status-bar', () => ({
@@ -56,7 +56,10 @@ afterEach(async () => {
 
 beforeEach(() => {
   mockUseMigrations.mockReturnValue({ success: false, error: undefined });
-  mockPushFixtureToWidget.mockResolvedValue({ status: 'pushed', timelineEntries: 1 });
+  mockPublishCurrentSnapshotToWidget.mockResolvedValue({
+    status: 'pushed',
+    timelineEntries: 1,
+  });
 });
 
 test('shows the migration loading state before the ledger is ready', async () => {
@@ -64,7 +67,7 @@ test('shows the migration loading state before the ledger is ready', async () =>
 
   expect(screen.getByText('Applying the ledger schema…')).toBeTruthy();
   expect(screen.queryByText('Signing facts')).toBeNull();
-  expect(screen.queryByText('Push ₫12k to widget')).toBeNull();
+  expect(screen.queryByText('Republish current snapshot')).toBeNull();
 });
 
 test('shows a migration error and keeps the route tree unavailable', async () => {
@@ -77,18 +80,22 @@ test('shows a migration error and keeps the route tree unavailable', async () =>
 
   expect(screen.getByText('Migration failed: database is locked')).toBeTruthy();
   expect(screen.queryByText('Signing facts')).toBeNull();
-  expect(screen.queryByText('Push ₫12k to widget')).toBeNull();
+  expect(screen.queryByText('Republish current snapshot')).toBeNull();
 });
 
-test('pushes the widget snapshot through the native boundary', async () => {
+test('republishes the current snapshot through the application service', async () => {
   mockUseMigrations.mockReturnValue({ success: true, error: undefined });
 
   await render(<StageZeroScreen />);
   const user = userEvent.setup();
-  await user.press(screen.getByText('Push ₫12k to widget'));
+  await user.press(screen.getByText('Republish current snapshot'));
 
-  expect(mockPushFixtureToWidget).toHaveBeenCalledTimes(1);
-  expect(await screen.findByText('Wrote ₫12k and read back 1 entry(s). Check the widget.')).toBeTruthy();
+  expect(mockPublishCurrentSnapshotToWidget).toHaveBeenCalledTimes(1);
+  expect(
+    await screen.findByText(
+      'Published the current snapshot and read back 1 entry(s). Check the widget.'
+    )
+  ).toBeTruthy();
 });
 
 test('mounts the native stack only after migration succeeds', async () => {

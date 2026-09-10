@@ -7,7 +7,7 @@ export function readSigningFacts(): SigningFacts | string {
   return 'Signing facts are only available in an installed iOS build.';
 }
 
-export async function pushFixtureToWidget(): Promise<WidgetPushResult> {
+export async function publishCurrentSnapshotToWidget(): Promise<WidgetPushResult> {
   return {
     status: 'unavailable',
     reason: 'The widget is only available in an installed iOS build.',

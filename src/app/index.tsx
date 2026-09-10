@@ -9,10 +9,12 @@ import { Link } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { FIXTURE_SNAPSHOT, formatVnd } from '../budget/snapshot';
 import { CrossFade } from '../ui/CrossFade';
 import { Button } from '../ui/Button';
-import { pushFixtureToWidget, readSigningFacts } from '../ui/diagnostics/runtime-diagnostics';
+import {
+  publishCurrentSnapshotToWidget,
+  readSigningFacts,
+} from '../ui/diagnostics/runtime-diagnostics';
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
@@ -36,10 +38,10 @@ export default function StageZeroScreen() {
 
   const pushToWidget = async () => {
     try {
-      const result = await pushFixtureToWidget();
+      const result = await publishCurrentSnapshotToWidget();
       setPush(
         result.status === 'pushed'
-          ? `Wrote ₫12k and read back ${result.timelineEntries} entry(s). Check the widget.`
+          ? `Published the current snapshot and read back ${result.timelineEntries} entry(s). Check the widget.`
           : result.reason
       );
     } catch (error) {
@@ -113,9 +115,9 @@ export default function StageZeroScreen() {
 
         <Text style={styles.section}>WIDGET</Text>
         <Text style={styles.note}>
-          {`Fixture is ${formatVnd(FIXTURE_SNAPSHOT.perDay)}. Pushing writes ₫12k, so a widget that changes is reading this app's store.`}
+          Republish from the committed ledger to check the app's shared storage.
         </Text>
-        <Button onPress={pushToWidget}>Push ₫12k to widget</Button>
+        <Button onPress={pushToWidget}>Republish current snapshot</Button>
         <Link href={'/transactions' as never} asChild>
           <Button variant="secondary">Open transactions</Button>
         </Link>
