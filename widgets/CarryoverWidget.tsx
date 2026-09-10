@@ -31,8 +31,8 @@ const MUTED = '#97AAA5';
 const ALERT = '#E08A58';
 
 export type CarryoverWidgetProps = {
-  perDay?: number;
-  runwayDays?: number;
+  perDay?: number | null;
+  runwayDays?: number | null;
   unloggedDrafts?: number;
 };
 
@@ -42,8 +42,12 @@ const CarryoverWidgetView = (
 ) => {
   'widget';
 
-  const perDay = props?.perDay ?? FIXTURE_SNAPSHOT.perDay;
-  const runwayDays = props?.runwayDays ?? FIXTURE_SNAPSHOT.runwayDays;
+  const perDay =
+    props?.perDay === undefined ? FIXTURE_SNAPSHOT.perDay : props.perDay;
+  const runwayDays =
+    props?.runwayDays === undefined
+      ? FIXTURE_SNAPSHOT.runwayDays
+      : props.runwayDays;
   const unloggedDrafts = props?.unloggedDrafts ?? FIXTURE_SNAPSHOT.unloggedDrafts;
 
   return (
@@ -61,10 +65,12 @@ const CarryoverWidgetView = (
       <Text
         modifiers={[font({ size: 30, weight: 'bold' }), foregroundStyle(INK)]}
       >
-        {formatVndCompact(perDay, CURRENCY_EXPONENT)}
+        {perDay === null
+          ? 'No per day'
+          : formatVndCompact(perDay, CURRENCY_EXPONENT)}
       </Text>
       <Text modifiers={[font({ size: 12 }), foregroundStyle(MUTED)]}>
-        {`${runwayDays}d runway`}
+        {runwayDays === null ? 'No runway' : `${runwayDays}d runway`}
       </Text>
       {unloggedDrafts > 0 ? (
         <Text
