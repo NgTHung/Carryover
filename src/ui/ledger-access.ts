@@ -7,11 +7,17 @@
 import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
 
 import {
+  createSnapshotPublisher,
+  startSnapshotPublisher,
+} from '../budget/snapshot-publisher';
+import { writeSharedSnapshot } from '../budget/snapshot-writer';
+import {
   accountData,
   categoryData,
   ledgerChangeNotifier,
   ledgerDb,
   ledgerMigrations,
+  readCommittedBudgetInput,
   transactionData,
   transactionListData,
 } from '../data/database';
@@ -46,6 +52,23 @@ export function getTransactionListData(): TransactionListData<'sync'> {
 
 export function subscribeLedgerChanges(listener: LedgerChangeListener): () => void {
   return ledgerChangeNotifier.subscribe(listener);
+}
+
+const budgetSnapshotPublisher = createSnapshotPublisher({
+  readInput: readCommittedBudgetInput,
+  writer: writeSharedSnapshot,
+});
+
+export function startBudgetSnapshotPublication(): () => void {
+  return startSnapshotPublisher(budgetSnapshotPublisher, ledgerChangeNotifier);
+}
+
+export function refreshBudgetSnapshot(): Promise<void> {
+  return budgetSnapshotPublisher.refresh();
+}
+
+export function retryBudgetSnapshot(): Promise<void> {
+  return budgetSnapshotPublisher.retry();
 }
 
 const transactionEditorData: TransactionEditorData = {

@@ -7,12 +7,23 @@
 import '../../global.css';
 
 import { Stack } from 'expo-router';
+import { useEffect } from 'react';
 
-import { useLedgerMigrations } from '../ui/ledger-access';
+import {
+  startBudgetSnapshotPublication,
+  useLedgerMigrations,
+} from '../ui/ledger-access';
 import { MigrationStatus } from '../ui/MigrationStatus';
 
 export default function RootLayout() {
   const { success, error } = useLedgerMigrations();
+
+  useEffect(() => {
+    if (!success) {
+      return undefined;
+    }
+    return startBudgetSnapshotPublication();
+  }, [success]);
 
   if (error) {
     return <MigrationStatus message={`Migration failed: ${error.message}`} />;

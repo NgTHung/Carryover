@@ -24,6 +24,10 @@ jest.mock('drizzle-orm/expo-sqlite/migrator', () => ({
 jest.mock('../src/data/database', () => ({
   ledgerDb: {},
   ledgerMigrations: {},
+  ledgerChangeNotifier: { subscribe: jest.fn(() => () => undefined) },
+  readCommittedBudgetInput: jest.fn(async () => {
+    throw new Error('Snapshot input is unavailable in router tests.');
+  }),
   transactionData: {
     readTransaction: (...args: unknown[]) => mockReadTransaction(...args),
     editTransaction: jest.fn(),

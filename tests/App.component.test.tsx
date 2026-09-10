@@ -20,19 +20,19 @@ const mockSigningFacts = {
 
 const mockUseMigrations = jest.fn();
 const mockPushFixtureToWidget = jest.fn();
-
-jest.mock('drizzle-orm/expo-sqlite/migrator', () => ({
-  useMigrations: (...args: unknown[]) => mockUseMigrations(...args),
-}));
+const mockStopBudgetSnapshotPublication = jest.fn();
+const mockStartBudgetSnapshotPublication = jest.fn(
+  () => mockStopBudgetSnapshotPublication
+);
 
 jest.mock('expo-router', () => ({
   Link: ({ children }: { children: ReactNode }) => children,
   Stack: () => null,
 }));
 
-jest.mock('../src/data/database', () => ({
-  ledgerDb: {},
-  ledgerMigrations: {},
+jest.mock('../src/ui/ledger-access', () => ({
+  useLedgerMigrations: () => mockUseMigrations(),
+  startBudgetSnapshotPublication: () => mockStartBudgetSnapshotPublication(),
 }));
 
 jest.mock('../src/ui/diagnostics/runtime-diagnostics', () => ({
@@ -94,10 +94,14 @@ test('pushes the widget snapshot through the native boundary', async () => {
 test('mounts the native stack only after migration succeeds', async () => {
   mockUseMigrations.mockReturnValue({ success: true, error: undefined });
 
-  await render(<NativeRootLayout />);
+  const view = await render(<NativeRootLayout />);
 
   expect(screen.queryByText('Applying the ledger schema…')).toBeNull();
   expect(screen.queryByText('Migration failed: database is locked')).toBeNull();
+  expect(mockStartBudgetSnapshotPublication).toHaveBeenCalledTimes(1);
+
+  await view.unmount();
+  expect(mockStopBudgetSnapshotPublication).toHaveBeenCalledTimes(1);
 });
 
 test('mounts the browser stack without opening the ledger', async () => {
