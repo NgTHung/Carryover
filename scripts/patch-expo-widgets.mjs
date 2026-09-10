@@ -139,6 +139,59 @@ public enum WidgetsStorage {
   ],
 ]);
 
+patch('node_modules/expo-widgets/ios/WidgetsExceptions.swift', [
+  [
+    `internal final class UpdatedTimelineWithoutLayout: GenericException<String>, @unchecked Sendable {
+  override var reason: String {
+    "Cannot update widget timeline without a layout, first register a layout for: \\(param)"
+  }
+}`,
+    `internal final class UpdatedTimelineWithoutLayout: GenericException<String>, @unchecked Sendable {
+  override var reason: String {
+    "Cannot update widget timeline without a layout, first register a layout for: \\(param)"
+  }
+}
+
+// ${MARKER}
+internal final class AppGroupContainerUnavailableException: Exception, @unchecked Sendable {
+  override var reason: String {
+    "Cannot update widget timeline because the App Group container is unavailable"
+  }
+}`,
+    1,
+  ],
+]);
+
+patch('node_modules/expo-widgets/ios/WidgetObject.swift', [
+  [
+    `import ExpoModulesCore
+import WidgetKit`,
+    `import ExpoModulesCore
+import Foundation
+import WidgetKit`,
+    1,
+  ],
+  [
+    `  func updateTimeline(entries: [WidgetsJSTimelineEntry]) throws {
+    if WidgetsStorage.getString(forKey: "__expo_widgets_\\(name)_layout") == nil {
+      throw UpdatedTimelineWithoutLayout(name)
+    }
+    WidgetsStorage.set(entries.map { $0.toDictionary() }, forKey: "__expo_widgets_\\(name)_timeline")`,
+    `  func updateTimeline(entries: [WidgetsJSTimelineEntry]) throws {
+    // ${MARKER}: UserDefaults(suiteName:) can fail open into a process-local
+    // store, so prove the shared App Group container before writing.
+    guard let appGroupIdentifier = WidgetsStorage.appGroupIdentifier,
+          FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) != nil else {
+      throw AppGroupContainerUnavailableException()
+    }
+    if WidgetsStorage.getString(forKey: "__expo_widgets_\\(name)_layout") == nil {
+      throw UpdatedTimelineWithoutLayout(name)
+    }
+    WidgetsStorage.set(entries.map { $0.toDictionary() }, forKey: "__expo_widgets_\\(name)_timeline")`,
+    1,
+  ],
+]);
+
 patch('node_modules/expo-widgets/ios/Widgets/EntryView.swift', [
   [
     `createRedBox(message: "No layout found for \\(WidgetsStorage.appGroupIdentifier ?? "")::\\(entry.name)")`,

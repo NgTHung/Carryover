@@ -68,7 +68,7 @@ The team identifier is stable for an Apple ID, so the rewritten names are stable
 
 `expo-widgets` reads the group name from `ExpoWidgetsAppGroupIdentifier`, a custom Info.plist key written at build time. No signing tool rewrites it, because no signing tool knows it exists. So even under iloader, the app and the extension ask for `group.com.bbq.carryover` while the grant is `group.com.bbq.carryover.<TEAM>`.
 
-`scripts/patch-expo-widgets.mjs` makes both processes read the granted groups from their own `embedded.mobileprovision` and prefer one whose container resolves, falling back to the configured value. A normal Xcode build is unaffected, because the configured name resolves there and is used as-is.
+`scripts/patch-expo-widgets.mjs` makes both processes read the granted groups from their own `embedded.mobileprovision` and prefer one whose container resolves, falling back to the configured value. `WidgetObject.updateTimeline` now probes that resolved identifier with `containerURL` before writing and raises an Expo exception when no shared container exists. This prevents the fail-open `UserDefaults` behavior from reporting a successful local-only write. A normal Xcode build is unaffected, because the configured name resolves there and is used as-is.
 
 `TimelineProvider` read the Info.plist key directly in two more places, bypassing `WidgetsStorage`, so it goes through the resolver as well.
 

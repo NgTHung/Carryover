@@ -64,6 +64,12 @@ module.exports = {
     ios: {
       bundleIdentifier: BUNDLE_ID,
       supportsTablet: false,
+      // Keep the app's entitlement aligned with its variant even when the
+      // widget extension is gated off. Native code can then fail closed by
+      // probing this variant's App Group container.
+      entitlements: {
+        'com.apple.security.application-groups': [`group.${BUNDLE_ID}`],
+      },
     },
     plugins,
   },

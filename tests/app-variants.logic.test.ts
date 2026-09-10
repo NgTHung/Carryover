@@ -23,7 +23,12 @@ test('default and explicit release preserve the installed app identity', () => {
   expect(release).toMatchObject({
     name: 'Carryover',
     scheme: 'carryover',
-    ios: { bundleIdentifier: 'com.bbq.carryover' },
+    ios: {
+      bundleIdentifier: 'com.bbq.carryover',
+      entitlements: {
+        'com.apple.security.application-groups': ['group.com.bbq.carryover'],
+      },
+    },
     plugins: ['expo-router', 'expo-sqlite'],
   });
 });
@@ -32,7 +37,12 @@ test.each(['0', '1'])('development isolates installation and launch with widget=
   expect(config('development', widget)).toMatchObject({
     name: 'Carryover Dev',
     scheme: 'carryover-dev',
-    ios: { bundleIdentifier: 'com.bbq.carryover.dev' },
+    ios: {
+      bundleIdentifier: 'com.bbq.carryover.dev',
+      entitlements: {
+        'com.apple.security.application-groups': ['group.com.bbq.carryover.dev'],
+      },
+    },
     plugins: [
       'expo-router',
       'expo-sqlite',
@@ -43,6 +53,11 @@ test.each(['0', '1'])('development isolates installation and launch with widget=
 
 test('release can still opt into the existing widget identity', () => {
   expect(config('release', '1')).toMatchObject({
+    ios: {
+      entitlements: {
+        'com.apple.security.application-groups': ['group.com.bbq.carryover'],
+      },
+    },
     plugins: expect.arrayContaining([
       ['expo-widgets', expect.objectContaining({
         bundleIdentifier: 'com.bbq.carryover.widgets',

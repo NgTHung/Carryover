@@ -4,9 +4,9 @@ Carryover is built for iOS without a Mac. Every iOS binary must be compiled by X
 
 ## How a build reaches your phone
 
-Push to any branch. The `iOS unsigned IPA` workflow runs `expo prebuild` to generate the native project, installs pods, builds with signing disabled, wraps the `.app` in a `Payload/` directory, and uploads the result as a workflow artifact. Download the artifact, unzip it, and sideload the IPA with AltStore, SideStore, or Sideloadly.
+Push to any branch. The `iOS unsigned IPA` workflow runs `expo prebuild` to generate the native project, installs pods, builds with signing disabled, wraps the `.app` in a `Payload/` directory, and uploads the result as a workflow artifact. Download the artifact, unzip it, and sideload the IPA with iloader. Normal builds now require the App Group, which AltStore and SideStore do not register.
 
-The build excludes the widget extension. WIDGET-001 settled that a sideloaded IPA can carry a working widget, so the two-variant control build has done its job and stage 6 owns the rest. To build one, dispatch the workflow manually and set the `widget` input, which passes `CARRYOVER_WIDGET=1` through to `app.config.js`.
+The build excludes the widget extension. WIDGET-001 settled that a sideloaded IPA can carry a working widget, so the two-variant control build has done its job and stage 6 owns the rest. The app still carries its variant-specific App Group entitlement in both release and development binaries; only the widget extension is gated. To build one, dispatch the workflow manually and set the `widget` input, which passes `CARRYOVER_WIDGET=1` through to `app.config.js`.
 
 Commits that touch only Markdown, `docs/`, or `.tasks/` do not build. Pushing twice cancels the first run.
 
@@ -25,7 +25,7 @@ The browser displays an explicit preview notice. The current stage 0 screen only
 Use the iPhone development build when you need iOS rendering or native behavior:
 
 1. Open the `iOS unsigned IPA` workflow in GitHub Actions and select **Run workflow**.
-2. Set `development` to true. The widget stays disabled for this build.
+2. Set `development` to true. The widget extension stays disabled for this build, while the app keeps the `group.com.bbq.carryover.dev` entitlement used by the native shared-storage guard.
 3. Download `carryover-development-ipa`, sign `carryover.ipa` with your existing on-device signer, and install it. Keep its identifier distinct from the release app if your signer rewrites identifiers. The app should appear as Carryover Dev beside Carryover.
 4. Start Metro on this machine:
 
@@ -35,7 +35,7 @@ Use the iPhone development build when you need iOS rendering or native behavior:
 
 5. Keep the phone and this machine on the same network. Enable Developer Mode if iOS requests it and allow local network access. Open Carryover Dev and select the displayed development server. You can also scan Metro's QR code.
 
-The workflow sets `CARRYOVER_VARIANT=development` for development builds. The Metro command sets the same value and uses the `carryover-dev` URL scheme. The development bundle identifier is `com.bbq.carryover.dev`; release keeps `com.bbq.carryover`. Separate identities give each app its own ledger storage. Development always disables the widget, even if `CARRYOVER_WIDGET=1` is set. The release app keeps its existing URL configuration. This follows Expo's [app variant guidance](https://docs.expo.dev/build-reference/variants/).
+The workflow sets `CARRYOVER_VARIANT=development` for development builds. The Metro command sets the same value and uses the `carryover-dev` URL scheme. The development bundle identifier is `com.bbq.carryover.dev`, with `group.com.bbq.carryover.dev` as its App Group; release keeps `com.bbq.carryover` and `group.com.bbq.carryover`. Separate identities give each app its own ledger storage and shared container. Development always disables the widget extension, even if `CARRYOVER_WIDGET=1` is set. The release app keeps its existing URL configuration. This follows Expo's [app variant guidance](https://docs.expo.dev/build-reference/variants/).
 
 After installing, confirm both apps still appear and Metro opens Carryover Dev. Once transaction screens exist, add a test transaction in Carryover Dev, restart both apps, and confirm it exists only in development. Use test data in Carryover Dev. An older development IPA used the release identifier; installing the new variant does not move that older app's data.
 
