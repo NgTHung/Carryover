@@ -21,6 +21,10 @@ import { createWidget, type WidgetEnvironment } from 'expo-widgets';
 
 import { FIXTURE_SNAPSHOT } from '../src/budget/snapshot';
 import {
+  decodeNullableFigure,
+  type SharedBudgetSnapshot,
+} from '../src/budget/snapshot-storage';
+import {
   CURRENCY_EXPONENT,
   formatVndCompact,
 } from '../src/money/currency';
@@ -30,11 +34,7 @@ const INK = '#E4EAE7';
 const MUTED = '#97AAA5';
 const ALERT = '#E08A58';
 
-export type CarryoverWidgetProps = {
-  perDay?: number | null;
-  runwayDays?: number | null;
-  unloggedDrafts?: number;
-};
+export type CarryoverWidgetProps = Partial<SharedBudgetSnapshot>;
 
 const CarryoverWidgetView = (
   props: CarryoverWidgetProps,
@@ -42,12 +42,13 @@ const CarryoverWidgetView = (
 ) => {
   'widget';
 
-  const perDay =
-    props?.perDay === undefined ? FIXTURE_SNAPSHOT.perDay : props.perDay;
+  const perDay = props?.perDay === undefined
+    ? FIXTURE_SNAPSHOT.perDay
+    : decodeNullableFigure(props.perDay);
   const runwayDays =
     props?.runwayDays === undefined
       ? FIXTURE_SNAPSHOT.runwayDays
-      : props.runwayDays;
+      : decodeNullableFigure(props.runwayDays);
   const unloggedDrafts = props?.unloggedDrafts ?? FIXTURE_SNAPSHOT.unloggedDrafts;
 
   return (
