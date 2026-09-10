@@ -1,7 +1,7 @@
 ---
 id: "BUDGET-001"
 title: "computeBudget as the only budget arithmetic"
-status: To Do
+status: In Progress
 priority: "High"
 type: "Feature"
 milestone: "0.3.0"
@@ -9,7 +9,7 @@ depends_on: ["DATA-004", "DATA-005", "DATA-006"]
 risk: "High"
 impact: "The single most important structural decision in the codebase. A second implementation anywhere means the home screen and the widget can disagree, and the one on the home screen is the one you would believe."
 tags: ["budget", "engine", "invariant"]
-last_updated: 2026-09-02
+last_updated: 2026-09-10
 ---
 
 ## Summary
@@ -20,13 +20,21 @@ Discretionary is the carryover balance minus unpaid reserves. Per day is discret
 
 Spending counts your own split share only. Settlements, transfers, and adjustments move neither spending nor income. Drafts with no amount are reported as a count of unknowns and never as zero, which is what stops the figure being optimistic exactly when you have been too busy to log.
 
+The caller supplies active normalized ledger facts, the stored period and
+horizon, today's local calendar date, and the publication timestamp. A draft
+with a known amount counts immediately. The thirty day burn window includes
+today and the preceding twenty-nine calendar days. Zero divisors produce null;
+negative per day uses mathematical floor, while non-positive discretionary has
+zero runway.
+
 ## Acceptance Criteria
 
 - [ ] `computeBudget(input: BudgetInput): BudgetSnapshot` is pure, with no database, clock, or filesystem access inside it.
 - [ ] No component, hook, screen, or widget computes a budget figure. Budget arithmetic appears in one module.
-- [ ] Every intermediate value is an integer. Rounding is deterministic and documented where it happens.
+- [ ] Every money intermediate is an integer. Per day uses mathematical floor, and runway uses one integer division over the thirty day burn total.
 - [ ] Spending counts your own share of a split, never the full transaction amount.
 - [ ] Settlements, transfers, and adjustments are excluded from spending and income.
-- [ ] Unknown drafts are returned as `unloggedDrafts` and are never treated as zero.
+- [ ] Drafts with known amounts count as spending. Unknown drafts are returned as `unloggedDrafts` and are never treated as zero.
+- [ ] A zero-day horizon returns null per day, zero burn returns null runway, and non-positive discretionary returns zero runway.
 - [ ] `tests/` covers a zero-day horizon, a zero burn rate, negative discretionary, a period with no transactions, and a split where your share is not half.
 - [ ] `tests/` asserts the same input produces the same snapshot on repeated runs.
