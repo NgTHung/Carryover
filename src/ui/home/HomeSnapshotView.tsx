@@ -1,3 +1,8 @@
+/**
+ * Renders the app's budget publication and its stable home actions.
+ * The view accepts a discriminated store state so unavailable data never looks
+ * like a zero-valued budget.
+ */
 import { Link } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,11 +20,6 @@ import {
   homeAccessibilityLabel,
 } from './home-presentation';
 
-/**
- * Renders the app's budget publication and its stable home actions.
- * The view accepts a discriminated store state so unavailable data never looks
- * like a zero-valued budget.
- */
 export type HomeSnapshotViewProps = {
   state: SnapshotState;
   onRetry?: () => void;

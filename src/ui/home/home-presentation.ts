@@ -1,11 +1,11 @@
-import { formatVnd } from '../../money/currency';
-import type { BudgetSnapshot } from '../../budget/snapshot';
-
 /**
  * Formats values already computed in a published snapshot for the home view.
  * Keeping this boundary free of arithmetic prevents presentation from becoming
  * a second budget engine.
  */
+import { formatVnd } from '../../money/currency';
+import type { BudgetSnapshot } from '../../budget/snapshot';
+
 export function formatPerDay(snapshot: BudgetSnapshot): string {
   if (snapshot.perDay === null) {
     return 'Per day unavailable';

@@ -8,9 +8,15 @@ import WebHomeRoute from '../src/app/index.web';
 import { HomeSnapshotView } from '../src/ui/home/HomeSnapshotView';
 
 const mockRetryBudgetSnapshot = jest.fn();
+const mockNavigate = jest.fn();
 
 jest.mock('expo-router', () => ({
-  Link: ({ children }: { children: ReactNode }) => children,
+  Link: ({ children, href }: { children: ReactNode; href: string }) => {
+    const React = require('react') as typeof import('react');
+    return React.cloneElement(children as never, {
+      onPress: () => mockNavigate(href),
+    });
+  },
 }));
 
 jest.mock('../src/ui/CrossFade', () => ({
@@ -39,6 +45,7 @@ const snapshot: BudgetSnapshot = {
 afterEach(() => {
   cleanup();
   snapshotStore.setState({ status: 'loading' }, true);
+  mockNavigate.mockReset();
   jest.clearAllMocks();
 });
 
@@ -120,6 +127,17 @@ test('keeps the capture affordance present in the thumb-reach area', async () =>
   const capture = screen.getByRole('button', { name: 'Capture' });
   expect(capture.props.accessibilityState?.disabled).toBe(true);
   expect(capture.props.accessibilityHint).toBe('Capture is not available yet.');
+});
+
+test('keeps existing transaction and account routes reachable from home', async () => {
+  await render(<HomeSnapshotView state={{ status: 'ready', snapshot }} />);
+  const user = userEvent.setup();
+
+  await user.press(screen.getByRole('button', { name: 'Transactions' }));
+  await user.press(screen.getByRole('button', { name: 'Accounts' }));
+
+  expect(mockNavigate).toHaveBeenNthCalledWith(1, '/transactions');
+  expect(mockNavigate).toHaveBeenNthCalledWith(2, '/settings/accounts');
 });
 
 test('native route subscribes to the published snapshot store', async () => {
