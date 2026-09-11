@@ -50,11 +50,6 @@ jest.mock('../src/data/database', () => ({
   },
 }));
 
-jest.mock('../src/ui/diagnostics/runtime-diagnostics', () => ({
-  readSigningFacts: () => 'Signing facts are unavailable in router tests.',
-  publishCurrentSnapshotToWidget: jest.fn(),
-}));
-
 jest.mock('../src/ui/QualityChip', () => ({
   QualityChip: ({ quality }: { quality: string }) => {
     const { Text } = require('react-native');
@@ -119,7 +114,7 @@ test('opens a transaction URL and provides a reliable route home', async () => {
     fireEvent.press(view.getByText('Back to home'));
   });
 
-  await waitFor(() => expect(view.getByText('Signing facts unavailable')).toBeTruthy());
+  await waitFor(() => expect(view.getByText('Per day unavailable')).toBeTruthy());
 });
 
 test('keeps a direct transaction URL behind the migration gate', async () => {
@@ -147,7 +142,7 @@ test('recovers from an unknown URL through the real router', async () => {
     fireEvent.press(view.getByText('Back to home'));
   });
 
-  await waitFor(() => expect(view.getByText('Signing facts unavailable')).toBeTruthy());
+  await waitFor(() => expect(view.getByText('Per day unavailable')).toBeTruthy());
 });
 
 test('opens the category editor through the settings route', async () => {

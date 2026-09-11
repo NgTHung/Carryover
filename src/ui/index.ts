@@ -10,3 +10,7 @@ export {
   type MotionPlan,
 } from './motion-plan';
 export { uiTokens, type UiTokens } from './tokens';
+export {
+  HomeSnapshotView,
+  type HomeSnapshotViewProps,
+} from './home/HomeSnapshotView';

@@ -1,25 +1,7 @@
-import { cleanup, render, screen, userEvent } from '@testing-library/react-native';
+import { cleanup, render, screen } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
-import { Platform } from 'react-native';
-
-const mockSigningFacts = {
-  bundleIdentifier: 'com.example.carryover',
-  configuredAppGroup: 'group.com.example.carryover',
-  resolvedAppGroup: 'group.com.example.carryover',
-  grantedAppGroups: ['group.com.example.carryover'],
-  grantedAppGroupsResolving: ['group.com.example.carryover'],
-  containerPath: '/tmp/carryover',
-  profileFound: true,
-  profileName: 'Carryover Development',
-  teamIdentifier: 'TEAM123',
-  entitlementKeys: ['com.apple.security.application-groups'],
-  entitlements: {
-    'com.apple.security.application-groups': 'group.com.example.carryover',
-  },
-};
 
 const mockUseMigrations = jest.fn();
-const mockPublishCurrentSnapshotToWidget = jest.fn();
 const mockStopBudgetSnapshotPublication = jest.fn();
 const mockStartBudgetSnapshotPublication = jest.fn(
   () => mockStopBudgetSnapshotPublication
@@ -35,18 +17,12 @@ jest.mock('../src/ui/ledger-access', () => ({
   startBudgetSnapshotPublication: () => mockStartBudgetSnapshotPublication(),
 }));
 
-jest.mock('../src/ui/diagnostics/runtime-diagnostics', () => ({
-  readSigningFacts: () => mockSigningFacts,
-  publishCurrentSnapshotToWidget: () => mockPublishCurrentSnapshotToWidget(),
-}));
-
 jest.mock('expo-status-bar', () => ({
   StatusBar: () => null,
 }));
 
 import NativeRootLayout from '../src/app/_layout';
 import WebRootLayout from '../src/app/_layout.web';
-import StageZeroScreen from '../src/app/index';
 
 afterEach(async () => {
   await cleanup();
@@ -56,18 +32,13 @@ afterEach(async () => {
 
 beforeEach(() => {
   mockUseMigrations.mockReturnValue({ success: false, error: undefined });
-  mockPublishCurrentSnapshotToWidget.mockResolvedValue({
-    status: 'pushed',
-    timelineEntries: 1,
-  });
 });
 
 test('shows the migration loading state before the ledger is ready', async () => {
   await render(<NativeRootLayout />);
 
   expect(screen.getByText('Applying the ledger schema…')).toBeTruthy();
-  expect(screen.queryByText('Signing facts')).toBeNull();
-  expect(screen.queryByText('Republish current snapshot')).toBeNull();
+  expect(screen.queryByText('Home')).toBeNull();
 });
 
 test('shows a migration error and keeps the route tree unavailable', async () => {
@@ -79,23 +50,7 @@ test('shows a migration error and keeps the route tree unavailable', async () =>
   await render(<NativeRootLayout />);
 
   expect(screen.getByText('Migration failed: database is locked')).toBeTruthy();
-  expect(screen.queryByText('Signing facts')).toBeNull();
-  expect(screen.queryByText('Republish current snapshot')).toBeNull();
-});
-
-test('republishes the current snapshot through the application service', async () => {
-  mockUseMigrations.mockReturnValue({ success: true, error: undefined });
-
-  await render(<StageZeroScreen />);
-  const user = userEvent.setup();
-  await user.press(screen.getByText('Republish current snapshot'));
-
-  expect(mockPublishCurrentSnapshotToWidget).toHaveBeenCalledTimes(1);
-  expect(
-    await screen.findByText(
-      'Published the current snapshot and read back 1 entry(s). Check the widget.'
-    )
-  ).toBeTruthy();
+  expect(screen.queryByText('Home')).toBeNull();
 });
 
 test('mounts the native stack only after migration succeeds', async () => {
@@ -114,15 +69,5 @@ test('mounts the native stack only after migration succeeds', async () => {
 test('mounts the browser stack without opening the ledger', async () => {
   await render(<WebRootLayout />);
 
-  expect(mockUseMigrations).not.toHaveBeenCalled();
-});
-
-test('labels the browser as a preview without opening the ledger', async () => {
-  jest.replaceProperty(Platform, 'OS', 'web');
-  await render(<StageZeroScreen />);
-
-  expect(
-    screen.getByText('Browser preview. The ledger and iOS widget are not connected.')
-  ).toBeTruthy();
   expect(mockUseMigrations).not.toHaveBeenCalled();
 });

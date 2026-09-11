@@ -1,0 +1,146 @@
+import { act, cleanup, render, screen, userEvent, waitFor } from '@testing-library/react-native';
+import type { ReactNode } from 'react';
+
+import type { BudgetSnapshot } from '../src/budget/snapshot';
+import { snapshotStore } from '../src/budget/snapshot-store';
+import NativeHomeRoute from '../src/app/index';
+import WebHomeRoute from '../src/app/index.web';
+import { HomeSnapshotView } from '../src/ui/home/HomeSnapshotView';
+
+const mockRetryBudgetSnapshot = jest.fn();
+
+jest.mock('expo-router', () => ({
+  Link: ({ children }: { children: ReactNode }) => children,
+}));
+
+jest.mock('../src/ui/CrossFade', () => ({
+  CrossFade: ({ children }: { children: ReactNode }) => children,
+}));
+
+jest.mock('../src/ui/ledger-access', () => ({
+  retryBudgetSnapshot: () => mockRetryBudgetSnapshot(),
+}));
+
+const snapshot: BudgetSnapshot = {
+  balanceTotal: 4_250_000,
+  reservedUnpaid: 3_000_000,
+  discretionary: 1_250_000,
+  horizonDate: '2026-09-30',
+  daysToHorizon: 29,
+  perDay: 43_000,
+  runwayDays: 21,
+  spentThisMonth: 780_000,
+  regrettedThisMonth: 145_000,
+  owedToYou: 0,
+  unloggedDrafts: 0,
+  updatedAt: '2026-09-11T00:00:00.000Z',
+};
+
+afterEach(() => {
+  cleanup();
+  snapshotStore.setState({ status: 'loading' }, true);
+  jest.clearAllMocks();
+});
+
+test('keeps all figures out of the loading state', async () => {
+  await render(
+    <HomeSnapshotView
+      state={{ status: 'loading' }}
+      onRetry={mockRetryBudgetSnapshot}
+    />
+  );
+
+  expect(screen.getByText('Preparing your per day…')).toBeTruthy();
+  expect(screen.queryByTestId('home-ready')).toBeNull();
+  expect(screen.queryByText(/₫/)).toBeNull();
+});
+
+test('shows publication errors and retries without a stale figure', async () => {
+  await render(
+    <HomeSnapshotView
+      state={{ status: 'error', error: new Error('shared storage unavailable') }}
+      onRetry={mockRetryBudgetSnapshot}
+    />
+  );
+
+  expect(screen.getByRole('alert')).toHaveTextContent('shared storage unavailable');
+  expect(screen.queryByTestId('home-ready')).toBeNull();
+  expect(screen.queryByText(/₫/)).toBeNull();
+
+  await userEvent.setup().press(screen.getByRole('button', { name: 'Try again' }));
+  expect(mockRetryBudgetSnapshot).toHaveBeenCalledTimes(1);
+});
+
+test('renders ready snapshot fields with no unknown badge or estimate marker', async () => {
+  await render(<HomeSnapshotView state={{ status: 'ready', snapshot }} />);
+
+  expect(screen.getByTestId('home-hero')).toHaveTextContent('₫43.000');
+  expect(screen.getByText('to spend today')).toBeTruthy();
+  expect(screen.getByText('₫4.250.000')).toBeTruthy();
+  expect(screen.getByText('₫1.250.000')).toBeTruthy();
+  expect(screen.getByText('21 days runway')).toBeTruthy();
+  expect(screen.queryByTestId('home-unknown')).toBeNull();
+  expect(screen.queryByText(/receivable/)).toBeNull();
+  expect(screen.queryByText('~₫43.000')).toBeNull();
+});
+
+test('marks a ready figure as approximate and shows unknowns and receivables', async () => {
+  await render(
+    <HomeSnapshotView
+      state={{
+        status: 'ready',
+        snapshot: { ...snapshot, owedToYou: 200_000, unloggedDrafts: 2 },
+      }}
+    />
+  );
+
+  expect(screen.getByTestId('home-hero')).toHaveTextContent('~₫43.000');
+  expect(screen.getByTestId('home-unknown')).toHaveTextContent('2 unlogged drafts');
+  expect(screen.getByText('₫200.000 receivable')).toBeTruthy();
+});
+
+test('renders unavailable nullable figures instead of substituting zero', async () => {
+  await render(
+    <HomeSnapshotView
+      state={{
+        status: 'ready',
+        snapshot: { ...snapshot, perDay: null, runwayDays: null },
+      }}
+    />
+  );
+
+  expect(screen.getByTestId('home-hero')).toHaveTextContent('Per day unavailable');
+  expect(screen.getByText('Runway unavailable')).toBeTruthy();
+  expect(screen.queryByText('₫0')).toBeNull();
+});
+
+test('keeps the capture affordance present in the thumb-reach area', async () => {
+  await render(<HomeSnapshotView state={{ status: 'ready', snapshot }} />);
+
+  const capture = screen.getByRole('button', { name: 'Capture' });
+  expect(capture.props.accessibilityState?.disabled).toBe(true);
+  expect(capture.props.accessibilityHint).toBe('Capture is not available yet.');
+});
+
+test('native route subscribes to the published snapshot store', async () => {
+  snapshotStore.setState({ status: 'ready', snapshot }, true);
+  await render(<NativeHomeRoute />);
+
+  expect(screen.getByTestId('home-hero')).toHaveTextContent('₫43.000');
+
+  await act(async () => {
+    snapshotStore.setState({
+      status: 'ready',
+      snapshot: { ...snapshot, perDay: 40_000, updatedAt: '2026-09-11T00:01:00.000Z' },
+    }, true);
+  });
+
+  await waitFor(() => expect(screen.getByTestId('home-hero')).toHaveTextContent('₫40.000'));
+});
+
+test('browser route uses the presentation preview without opening the ledger', async () => {
+  await render(<WebHomeRoute />);
+
+  expect(screen.getByText('Browser preview. The ledger and iOS widget are not connected.')).toBeTruthy();
+  expect(screen.getByTestId('home-hero')).toHaveTextContent('~₫43.000');
+});

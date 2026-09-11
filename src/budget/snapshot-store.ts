@@ -17,6 +17,11 @@ export type SnapshotState =
 
 export type SnapshotStore = StoreApi<SnapshotState>;
 
+/** Select the whole publication union without transforming its figures. */
+export function selectSnapshotState(state: SnapshotState): SnapshotState {
+  return state;
+}
+
 export function createSnapshotStore(): SnapshotStore {
   return createStore<SnapshotState>(() => ({ status: 'loading' }));
 }
