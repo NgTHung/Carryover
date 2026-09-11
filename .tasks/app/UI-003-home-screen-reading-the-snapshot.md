@@ -1,7 +1,7 @@
 ---
 id: "UI-003"
 title: "Home screen reading the snapshot"
-status: To Do
+status: In Progress
 priority: "High"
 type: "Feature"
 milestone: "0.3.0"
@@ -9,7 +9,7 @@ depends_on: ["BUDGET-002", "UI-006", "UI-007"]
 risk: "Medium"
 impact: "The screen that decides whether the app gets trusted. If it computes anything itself it can disagree with the widget."
 tags: ["ui", "budget"]
-last_updated: 2026-09-07
+last_updated: 2026-09-11
 ---
 
 ## Summary
