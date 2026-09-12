@@ -1,7 +1,7 @@
 ---
 id: "UI-012"
 title: "Compute and read stored period summaries"
-status: In Progress
+status: Done
 priority: "High"
 type: "Feature"
 parent: "UI-004"
@@ -19,8 +19,15 @@ Build a pure period-summary engine and a consistent SQLite read model for the se
 
 ## Acceptance Criteria
 
-- [ ] The pure report aggregates own expense shares by group, leaf, and need, want, regret, or unrated quality.
-- [ ] Income, transfers, adjustments, and unknown drafts appear in no money total; known drafts remain visible under No group yet.
-- [ ] Group and quality totals equal total spending exactly, with deterministic ordering and integer VND validation.
-- [ ] The read model returns the selected period's stored month_config and active ledger rows from one consistent SQLite view.
-- [ ] Logic and real-SQLite tests cover historical config snapshots, deleted labels, transfers, adjustments, drafts, and invalid shares.
+- [x] The pure report aggregates own expense shares by group, leaf, and need, want, regret, or unrated quality.
+- [x] Income, transfers, adjustments, and unknown drafts appear in no money total; known drafts remain visible under No group yet.
+- [x] Group and quality totals equal total spending exactly, with deterministic ordering and integer VND validation.
+- [x] The read model returns the selected period's stored month_config and active ledger rows from one consistent SQLite view.
+- [x] Logic and real-SQLite tests cover historical config snapshots, deleted labels, transfers, adjustments, drafts, and invalid shares.
+
+## Verification
+
+- `npm run test:logic -- --runInBand` passed 22 suites and 87 tests.
+- `npm run test:database -- --runInBand` passed 15 suites and 76 tests.
+- `npm run typecheck` passed.
+- The report engine uses `bigint` intermediates, the shared own-share resolver, deterministic ordering, and a neutral unrated quality bucket.
