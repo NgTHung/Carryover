@@ -6,7 +6,7 @@
  */
 import { z } from 'zod';
 
-import { dateOnlyFromLocalDate } from './date-only';
+import { dateOnlyFromLocalDate, dateOnlySchema, type DateOnly } from './date-only';
 
 export const PERIOD_START_DAY = 1;
 
@@ -90,4 +90,30 @@ export function periodEndDate(period: unknown): string {
   const { end } = periodBounds(period);
   end.setDate(end.getDate() - 1);
   return dateOnlyFromLocalDate(end);
+}
+
+export function periodDayCount(period: unknown): number {
+  const parsed = periodSchema.parse(period);
+  const { year, month } = periodParts(parsed);
+  return new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+}
+
+export function periodDayDate(period: unknown, day: number): DateOnly {
+  const parsed = periodSchema.parse(period);
+  if (!Number.isInteger(day) || day < 1 || day > periodDayCount(parsed)) {
+    throw new RangeError(`day ${day} does not belong to period ${parsed}`);
+  }
+  const { year, month } = periodParts(parsed);
+  return dateOnlySchema.parse(
+    `${year.toString().padStart(4, '0')}-${(month + 1)
+      .toString()
+      .padStart(2, '0')}-${day.toString().padStart(2, '0')}`
+  );
+}
+
+export function periodWeekdayIndex(period: unknown, day: number): number {
+  const parsed = periodSchema.parse(period);
+  const date = periodDayDate(parsed, day);
+  const weekday = new Date(`${date}T00:00:00Z`).getUTCDay();
+  return (weekday + 6) % 7;
 }
