@@ -1,15 +1,15 @@
 ---
 id: "UI-004"
 title: "Month summary"
-status: To Do
+status: In Progress
 priority: "Medium"
 type: "Feature"
 milestone: "0.3.0"
 depends_on: ["BUDGET-001", "DATA-005", "UI-001"]
-risk: "Low"
-impact: "The only place the need, want, regret axis pays off. It also proves the stored month config is being read rather than recomputed."
+risk: "High"
+impact: "The only place the need, want, regret axis pays off. It also proves the stored month config is being read rather than recomputed, while sharing split interpretation with the budget snapshot."
 tags: ["ui", "reports"]
-last_updated: 2026-09-06
+last_updated: 2026-09-12
 ---
 
 ## Summary
@@ -21,6 +21,14 @@ Past periods read their stored `month_config`. That is the visible payoff of DAT
 `docs/DESIGN.md` section 8 specifies both charts. Spend by group is ranked horizontal bars rather than a pie, because the comparison that matters is between quantities that sit close together. Quality is one stacked bar with 2px gaps and direct labels, which the palette section marks as mandatory rather than polish.
 
 The two day-level charts in that section are UI-005. They wait because the pace line has nothing to draw until a period has completed.
+
+## Execution Notes
+
+Split this work into read-only money inputs, the pure period-summary report, and the route and charts so each change stays reviewable. The read path may support existing split rows, but SPLIT-001 still owns contacts, split writes, and settlements.
+
+A known-amount draft without a leaf is reported under `No group yet` and `unrated`. A draft without an amount is an explicit unknown count and contributes no total. A period without a stored `month_config` is unavailable, never an empty zero-valued report. The quality bar includes a neutral `unrated` segment. The pace line and day calendar remain UI-005.
+
+The route uses the UI-001 selected-period store. The report read returns the stored `month_config` and ledger rows from one SQLite view, and all money aggregation remains in pure code with integer VND and `bigint` intermediates.
 
 ## Acceptance Criteria
 
