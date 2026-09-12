@@ -67,6 +67,8 @@ test('builds daily own spending, income, unknowns, and a current cutoff', () => 
       transaction({ id: 'today', direction: 'expense', status: 'complete', amount: 300, occurredOn: '2026-09-15' }),
       transaction({ id: 'transfer', direction: 'transfer', status: 'complete', amount: 800, occurredOn: '2026-09-11', group: null, leaf: null }),
       transaction({ id: 'adjustment', direction: 'adjustment', status: 'complete', amount: 900, occurredOn: '2026-09-13', group: null, leaf: null }),
+      transaction({ id: 'transfer-draft', direction: 'transfer', status: 'draft', amount: null, occurredOn: '2026-09-12', group: null, leaf: null }),
+      transaction({ id: 'adjustment-draft', direction: 'adjustment', status: 'draft', amount: null, occurredOn: '2026-09-12', group: null, leaf: null }),
       transaction({ id: 'future', direction: 'expense', status: 'complete', amount: 700, occurredOn: '2026-09-16' }),
     ], {
       monthConfig: {

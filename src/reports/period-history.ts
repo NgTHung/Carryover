@@ -224,14 +224,13 @@ function addTransactionToDay(
   transaction: MonthSummaryTransaction,
   ownShareByTransaction: ReadonlyMap<string, bigint>
 ): void {
-  if (transaction.status === 'draft' && transaction.amount === null) {
-    accumulator.unknownDrafts += 1;
-    const detail = toHistoryTransaction(transaction, null);
-    if (detail !== null) accumulator.transactions.push(detail);
-    return;
-  }
-
   if (transaction.direction === 'expense') {
+    if (transaction.status === 'draft' && transaction.amount === null) {
+      accumulator.unknownDrafts += 1;
+      const detail = toHistoryTransaction(transaction, null);
+      if (detail !== null) accumulator.transactions.push(detail);
+      return;
+    }
     const amount = ownExpenseAmount(transaction, ownShareByTransaction);
     accumulator.spend += amount;
     const detail = toHistoryTransaction(transaction, toSafeNumber(amount, `transaction ${transaction.id} own share`));
