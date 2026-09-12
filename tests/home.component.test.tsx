@@ -134,10 +134,12 @@ test('keeps existing transaction and account routes reachable from home', async 
   const user = userEvent.setup();
 
   await user.press(screen.getByRole('button', { name: 'Transactions' }));
+  await user.press(screen.getByRole('button', { name: 'Summary' }));
   await user.press(screen.getByRole('button', { name: 'Accounts' }));
 
   expect(mockNavigate).toHaveBeenNthCalledWith(1, '/transactions');
-  expect(mockNavigate).toHaveBeenNthCalledWith(2, '/settings/accounts');
+  expect(mockNavigate).toHaveBeenNthCalledWith(2, '/summary');
+  expect(mockNavigate).toHaveBeenNthCalledWith(3, '/settings/accounts');
 });
 
 test('native route subscribes to the published snapshot store', async () => {

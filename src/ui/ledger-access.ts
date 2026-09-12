@@ -53,8 +53,10 @@ export function getTransactionListData(): TransactionListData<'sync'> {
   return transactionListData;
 }
 
+const monthSummaryData = { readMonthSummary: readCommittedMonthSummary };
+
 export function getMonthSummaryData() {
-  return { readMonthSummary: readCommittedMonthSummary };
+  return monthSummaryData;
 }
 
 export function subscribeLedgerChanges(listener: LedgerChangeListener): () => void {

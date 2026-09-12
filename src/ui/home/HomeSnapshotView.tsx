@@ -57,10 +57,15 @@ export function HomeSnapshotView({
         </View>
 
         <View className="mt-auto gap-4">
-          <View className="flex-row gap-2">
+          <View className="flex-row flex-wrap gap-2">
             <Link href={'/transactions' as never} asChild>
               <Button variant="secondary" fullWidth className="flex-1">
                 Transactions
+              </Button>
+            </Link>
+            <Link href={'/summary' as never} asChild>
+              <Button variant="secondary" fullWidth className="flex-1">
+                Summary
               </Button>
             </Link>
             <Link href={'/settings/accounts' as never} asChild>

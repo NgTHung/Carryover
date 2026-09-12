@@ -9,6 +9,7 @@ import { ExpoRoot } from 'expo-router';
 import { getMockContext } from 'expo-router/testing-library';
 
 import type { Transaction } from '../src/data/transaction-validation';
+import { FIXTURE_MONTH_SUMMARY } from '../src/reports/month-summary-fixture';
 
 const transactionId = '11111111-1111-4111-8111-111111111111';
 const mockUseMigrations = jest.fn();
@@ -16,6 +17,7 @@ const mockReadTransaction = jest.fn();
 const mockListCategories = jest.fn();
 const mockReadAccounts = jest.fn();
 const mockReadAccountBalances = jest.fn();
+const mockReadMonthSummary = jest.fn();
 
 jest.mock('drizzle-orm/expo-sqlite/migrator', () => ({
   useMigrations: (...args: unknown[]) => mockUseMigrations(...args),
@@ -28,6 +30,7 @@ jest.mock('../src/data/database', () => ({
   readCommittedBudgetInput: jest.fn(async () => {
     throw new Error('Snapshot input is unavailable in router tests.');
   }),
+  readCommittedMonthSummary: (...args: unknown[]) => mockReadMonthSummary(...args),
   transactionData: {
     readTransaction: (...args: unknown[]) => mockReadTransaction(...args),
     editTransaction: jest.fn(),
@@ -96,6 +99,7 @@ beforeEach(() => {
       balance: 0,
     },
   ]);
+  mockReadMonthSummary.mockResolvedValue(FIXTURE_MONTH_SUMMARY);
 });
 
 test('opens a transaction URL and provides a reliable route home', async () => {
@@ -129,6 +133,15 @@ test('keeps a direct transaction URL behind the migration gate', async () => {
 
   expect(view.getByText('Applying the ledger schema…')).toBeTruthy();
   expect(mockReadTransaction).not.toHaveBeenCalled();
+});
+
+test('opens the month summary route through the real router', async () => {
+  const view = await render(
+    <ExpoRoot context={getMockContext('./src/app')} location="/summary" />
+  );
+
+  await waitFor(() => expect(view.getByText('Spend by group')).toBeTruthy());
+  expect(mockReadMonthSummary).toHaveBeenCalled();
 });
 
 test('recovers from an unknown URL through the real router', async () => {

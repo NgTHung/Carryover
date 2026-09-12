@@ -59,6 +59,8 @@ export type MonthSummaryLeaf = SummaryCategory & {
 
 export type MonthSummaryGroup = SummaryCategory & {
   amount: number;
+  /** Flex weight left beside the bar, computed once with the report. */
+  barRemainder: number;
   leaves: MonthSummaryLeaf[];
 };
 
@@ -207,6 +209,9 @@ export function computeMonthSummary(input: MonthSummaryInput): MonthSummary {
     };
   });
 
+  const sortedGroups = [...groups.values()].sort(compareAmountThenName);
+  const largestGroupAmount = sortedGroups[0]?.amount ?? 0n;
+
   return {
     period,
     monthConfig,
@@ -216,12 +221,15 @@ export function computeMonthSummary(input: MonthSummaryInput): MonthSummary {
       'regretted report total'
     ),
     unknownDrafts,
-    groups: [...groups.values()]
-      .sort(compareAmountThenName)
+    groups: sortedGroups
       .map((group) => ({
         id: group.id,
         name: group.name,
         amount: toSafeNumber(group.amount, `group ${group.id} total`),
+        barRemainder: toSafeNumber(
+          largestGroupAmount - group.amount,
+          `group ${group.id} bar remainder`
+        ),
         leaves: [...group.leaves.values()]
           .sort(compareAmountThenName)
           .map((leaf) => ({

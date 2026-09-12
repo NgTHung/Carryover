@@ -65,16 +65,18 @@ test('aggregates groups, leaves, quality, and known drafts deterministically', (
       id: 'food',
       name: 'Food',
       amount: 150,
+      barRemainder: 0,
       leaves: [
         { id: 'groceries', name: 'Groceries', amount: 100 },
         { id: 'coffee', name: 'Coffee', amount: 50 },
       ],
     },
-    { id: 'uncategorized', name: 'No group yet', amount: 40, leaves: [] },
+    { id: 'uncategorized', name: 'No group yet', amount: 40, barRemainder: 110, leaves: [] },
     {
       id: 'bills',
       name: 'Bills',
       amount: 25,
+      barRemainder: 125,
       leaves: [{ id: 'rent', name: 'Rent', amount: 25 }],
     },
   ]);
