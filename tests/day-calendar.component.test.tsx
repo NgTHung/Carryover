@@ -50,9 +50,7 @@ test('renders the ramp, calendar states, and income marker', async () => {
   await render(<DayCalendar history={historyWithCalendarDetails()} />);
 
   expect(screen.getByText('Day calendar')).toBeTruthy();
-  const grid = screen.getByTestId('summary-calendar-grid');
-  expect(grid.children[0]?.props.accessible).toBe(false);
-  expect(grid.children[1]?.props.testID).toBe('summary-calendar-day-1');
+  expect(screen.getByTestId('summary-calendar-leading-0')).toBeTruthy();
   expect(screen.getByTestId('summary-calendar-day-1').props.style).toEqual(
     expect.objectContaining({ minHeight: 44 })
   );

@@ -98,6 +98,7 @@ export function DayCalendar({ history }: { history: PeriodHistory }) {
               key={`leading-${index}`}
               accessible={false}
               style={{ aspectRatio: 1, width: '14.2857%' }}
+              testID={`summary-calendar-leading-${index}`}
             />
           ))}
           {history.days.map((day) => {
