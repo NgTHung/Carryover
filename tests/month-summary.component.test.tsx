@@ -16,6 +16,7 @@ import {
   MonthSummaryView,
   type MonthSummaryLoadState,
 } from '../src/ui/month-summary/MonthSummaryView';
+import { CumulativePaceChart } from '../src/ui/month-summary/CumulativePaceChart';
 import { useTransactionFilters } from '../src/ui/transactions/transaction-filters';
 
 jest.mock('../src/ui/ledger-access', () => ({
@@ -136,4 +137,62 @@ test('browser route stays on fixture data and names the preview boundary', async
   expect(screen.getByText('Browser preview. This report uses fixture data and does not connect to the ledger.')).toBeTruthy();
   expect(screen.getByText('Month summary')).toBeTruthy();
   expect(screen.getByText('Spend by group')).toBeTruthy();
+});
+
+test('renders pace lines, direct labels, and a neutral usual-pace caption', async () => {
+  await render(<CumulativePaceChart history={FIXTURE_MONTH_SUMMARY.history} />);
+
+  expect(screen.getByText('Pace')).toBeTruthy();
+  expect(screen.getByTestId('summary-pace-actual-line')).toBeTruthy();
+  expect(screen.getByTestId('summary-pace-reference-line')).toBeTruthy();
+  expect(screen.getByText('₫100.000 above your usual pace by day 14.')).toBeTruthy();
+  expect(screen.queryByText(/arrow|congrat/i)).toBeNull();
+});
+
+test('names one previous period and explains an unavailable reference', async () => {
+  const onePrevious = {
+    ...FIXTURE_MONTH_SUMMARY.history,
+    reference: {
+      status: 'available' as const,
+      label: 'August 2026',
+      sampleCount: 1,
+      points: FIXTURE_MONTH_SUMMARY.history.reference.status === 'available'
+        ? FIXTURE_MONTH_SUMMARY.history.reference.points
+        : [],
+    },
+  };
+  const { rerender } = await render(<CumulativePaceChart history={onePrevious} />);
+  expect(screen.getByText('₫100.000 above August 2026\'s pace by day 14.')).toBeTruthy();
+
+  await rerender(
+    <CumulativePaceChart
+      history={{
+        ...FIXTURE_MONTH_SUMMARY.history,
+        reference: { status: 'none' },
+        gap: null,
+      }}
+    />
+  );
+  expect(screen.getByText('No previous month to compare yet.')).toBeTruthy();
+  expect(screen.queryByTestId('summary-pace-reference-line')).toBeNull();
+});
+
+test('scrubbing shows both series values and releases the crosshair', async () => {
+  await render(<CumulativePaceChart history={FIXTURE_MONTH_SUMMARY.history} />);
+  const scrubber = screen.getByTestId('summary-pace-scrubber');
+  const responderProps = scrubber.props as {
+    onResponderMove?: (event: { nativeEvent: { locationX: number } }) => void;
+    onResponderRelease?: () => void;
+  };
+
+  await act(async () => {
+    responderProps.onResponderMove?.({ nativeEvent: { locationX: 8 } });
+  });
+  expect(screen.getByTestId('summary-pace-scrub-value')).toHaveTextContent('Day 1: You ₫0. Reference ₫100.000.');
+  expect(screen.getByTestId('summary-pace-scrub-value').props.accessibilityLabel).toContain('Day 1');
+
+  await act(async () => {
+    responderProps.onResponderRelease?.();
+  });
+  expect(screen.queryByTestId('summary-pace-scrub-value')).toBeNull();
 });

@@ -2,9 +2,10 @@ import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { Period } from '../../data/period';
-import type { MonthSummary } from '../../reports/month-summary';
+import type { MonthSummaryWithHistory } from '../../reports/month-summary';
 import { Button } from '../Button';
 import { PeriodSelector } from '../PeriodSelector';
+import { CumulativePaceChart } from './CumulativePaceChart';
 import { GroupSpendChart } from './GroupSpendChart';
 import { QualityBreakdown } from './QualityBreakdown';
 import {
@@ -14,7 +15,7 @@ import {
 
 export type MonthSummaryLoadState =
   | { status: 'loading' }
-  | { status: 'ready'; summary: MonthSummary }
+  | { status: 'ready'; summary: MonthSummaryWithHistory }
   | { status: 'unavailable' }
   | { status: 'error'; message: string };
 
@@ -108,7 +109,7 @@ function MonthSummaryState({
   return <ReadySummary summary={state.summary} />;
 }
 
-function ReadySummary({ summary }: { summary: MonthSummary }) {
+function ReadySummary({ summary }: { summary: MonthSummaryWithHistory }) {
   return (
     <View className="gap-8">
       <GroupSpendChart summary={summary} />
@@ -124,6 +125,7 @@ function ReadySummary({ summary }: { summary: MonthSummary }) {
           </Text>
         ) : null}
       </View>
+      <CumulativePaceChart history={summary.history} />
     </View>
   );
 }
