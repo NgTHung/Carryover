@@ -1,9 +1,9 @@
 import { Text, View } from 'react-native';
 
 import type { TransactionListRow } from '../../data/transaction-list';
-import type { Period } from '../../data/period';
 import { QualityChip } from '../QualityChip';
 import { Button } from '../Button';
+import { PeriodSelector } from '../PeriodSelector';
 import type { TransactionFilterStore } from './transaction-filters';
 
 type Choice = { id: string; label: string };
@@ -38,14 +38,6 @@ function uniqueChoices(values: Choice[]): Choice[] {
   });
 }
 
-function shiftPeriod(period: Period, offset: -1 | 1): Period {
-  const [yearText, monthText] = period.split('-');
-  const date = new Date(Number(yearText), Number(monthText) - 1 + offset, 1);
-  return `${date.getFullYear().toString().padStart(4, '0')}-${(date.getMonth() + 1)
-    .toString()
-    .padStart(2, '0')}` as Period;
-}
-
 export function TransactionListFilters({
   rows,
   filters,
@@ -74,27 +66,7 @@ export function TransactionListFilters({
 
   return (
     <View className="gap-3 rounded-surface border border-faint-light bg-surface-light p-4 dark:border-faint-dark dark:bg-surface-dark">
-      <View className="flex-row items-center justify-between gap-2">
-        <Button
-          size="compact"
-          variant="secondary"
-          accessibilityLabel="Previous period"
-          onPress={() => filters.setSelectedPeriod(shiftPeriod(filters.selectedPeriod, -1))}
-        >
-          ‹
-        </Button>
-        <Text accessibilityRole="header" className="text-body font-semibold text-ink-light dark:text-ink-dark">
-          {filters.selectedPeriod}
-        </Text>
-        <Button
-          size="compact"
-          variant="secondary"
-          accessibilityLabel="Next period"
-          onPress={() => filters.setSelectedPeriod(shiftPeriod(filters.selectedPeriod, 1))}
-        >
-          ›
-        </Button>
-      </View>
+      <PeriodSelector period={filters.selectedPeriod} onChange={filters.setSelectedPeriod} />
 
       <Text className="text-detail font-semibold text-muted-light dark:text-muted-dark">Leaf</Text>
       <View className="flex-row flex-wrap gap-2">

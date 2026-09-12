@@ -2,8 +2,10 @@ import { strict as assert } from 'node:assert';
 
 import {
   currentPeriod,
+  formatPeriod,
   periodBounds,
   periodSchema,
+  shiftPeriod,
 } from '../src/data/period';
 import { createLedgerChangeNotifier } from '../src/data/ledger-change-notifier';
 import { createTransactionFilterStore } from '../src/ui/transactions/transaction-filters';
@@ -23,6 +25,9 @@ test('period schema and bounds use local calendar months', () => {
   assert.equal(end.getDate(), 1);
   assert.equal(end.getHours(), 0);
   assert.equal(currentPeriod(new Date(2026, 8, 9, 23, 59)), '2026-09');
+  assert.equal(shiftPeriod('2026-01', -1), '2025-12');
+  assert.equal(shiftPeriod('2026-12', 1), '2027-01');
+  assert.equal(formatPeriod('2026-09'), 'September 2026');
 });
 
 test('transaction filter store keeps only choices and resets them', () => {

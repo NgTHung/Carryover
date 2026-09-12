@@ -39,6 +39,36 @@ export function currentPeriod(now: Date = new Date()): Period {
   return periodSchema.parse(`${year}-${month}`);
 }
 
+export function shiftPeriod(period: Period, offset: -1 | 1): Period {
+  const { year, month } = periodParts(periodSchema.parse(period));
+  const shifted = localDateAtMidnight(year, month + offset, PERIOD_START_DAY);
+  return periodSchema.parse(
+    `${shifted.getFullYear().toString().padStart(4, '0')}-${(shifted.getMonth() + 1)
+      .toString()
+      .padStart(2, '0')}`
+  );
+}
+
+const PERIOD_MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+] as const;
+
+export function formatPeriod(period: Period): string {
+  const { year, month } = periodParts(periodSchema.parse(period));
+  return `${PERIOD_MONTH_NAMES[month]} ${year}`;
+}
+
 export function periodBounds(period: unknown): PeriodBounds {
   const parsed = periodSchema.parse(period);
   const { year, month } = periodParts(parsed);
