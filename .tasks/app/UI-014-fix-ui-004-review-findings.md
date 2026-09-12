@@ -1,7 +1,7 @@
 ---
 id: "UI-014"
 title: "Fix UI-004 review findings"
-status: In Progress
+status: Done
 priority: "High"
 type: "Bug"
 milestone: "0.3.0"
@@ -18,6 +18,12 @@ Keep shared split reads aligned with active transactions and identify every dire
 
 ## Acceptance Criteria
 
-- [ ] Normal share reads exclude rows whose transaction is soft-deleted, while audit reads can still include them.
-- [ ] Deleting a split transaction cannot make budget own-share resolution fail.
-- [ ] Every visible direct quality segment label includes the quality name and amount.
+- [x] Normal share reads exclude rows whose transaction is soft-deleted, while audit reads can still include them.
+- [x] Deleting a split transaction cannot make budget own-share resolution fail.
+- [x] Every visible direct quality segment label includes the quality name and amount.
+
+## Verification
+
+- `npm test -- --runInBand` passed 48 suites and 229 tests.
+- `npm run typecheck` passed.
+- `npm run web:export` passed.
