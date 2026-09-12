@@ -57,8 +57,8 @@ export function GroupSpendChart({ summary }: { summary: MonthSummary }) {
                   className="h-2 flex-row overflow-hidden rounded-chip bg-ground-light dark:bg-ground-dark"
                 >
                   <View
-                    className="rounded-chip bg-spend-4-light dark:bg-spend-4-dark"
-                    style={{ flexBasis: 0, flexGrow: group.amount }}
+                    className="bg-spend-4-light dark:bg-spend-4-dark"
+                    style={{ borderRadius: 4, flexBasis: 0, flexGrow: group.amount }}
                   />
                   <View
                     className="bg-transparent"
