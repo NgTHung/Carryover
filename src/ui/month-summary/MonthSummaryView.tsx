@@ -6,6 +6,7 @@ import type { MonthSummaryWithHistory } from '../../reports/month-summary';
 import { Button } from '../Button';
 import { PeriodSelector } from '../PeriodSelector';
 import { CumulativePaceChart } from './CumulativePaceChart';
+import { DayCalendar } from './DayCalendar';
 import { GroupSpendChart } from './GroupSpendChart';
 import { QualityBreakdown } from './QualityBreakdown';
 import {
@@ -126,6 +127,7 @@ function ReadySummary({ summary }: { summary: MonthSummaryWithHistory }) {
         ) : null}
       </View>
       <CumulativePaceChart history={summary.history} />
+      <DayCalendar history={summary.history} />
     </View>
   );
 }
