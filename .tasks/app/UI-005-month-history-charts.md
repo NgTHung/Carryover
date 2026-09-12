@@ -1,7 +1,7 @@
 ---
 id: "UI-005"
 title: "Month history charts"
-status: "To Do"
+status: In Progress
 priority: "Medium"
 type: "Feature"
 milestone: "0.3.0"
@@ -9,7 +9,7 @@ depends_on: ["UI-004"]
 risk: "Medium"
 impact: "The pace line is the first month-over-month comparison the app can make without becoming a trend chart, and the calendar is the first screen that shows a day you spent nothing."
 tags: ["ui", "reports", "charts"]
-last_updated: "2026-09-06"
+last_updated: 2026-09-12
 ---
 
 ## Summary
@@ -23,6 +23,16 @@ A calendar grid, one cell per day, tinted from the four-step spend ramp in secti
 This is a separate task from UI-004 because it needs a different query shape. UI-004 aggregates a period by group; both charts here aggregate it by day, and building them together writes that query once.
 
 It stays in stage 2 with the rest of the summary screen. The calendar is useful on day one. The pace line has nothing to draw until a period has completed, so its empty state is specified rather than left to chance, and rendering that state honestly is an acceptance criterion.
+
+## Execution Notes
+
+Split this work into four child tasks so the pure report model, the SQLite read shape, and the two chart surfaces remain reviewable. UI-015 owns integer-only day aggregation and historical reference points. UI-016 loads the selected period and complete stored reference periods from one consistent SQLite view. UI-017 renders the cumulative pace line and its optional scrubber. UI-018 renders the day calendar and in-place transaction details.
+
+The selected period uses today as its cutoff when it is current, the period end when it is complete, and no actual points when it is in the future. A previous period is a reference only when it has a stored month_config and ended before today. A shorter reference period carries its final cumulative total through later day numbers so the median remains a cumulative staircase. Even reference samples use bigint midpoint division with a floor; no money value becomes a float. One reference is labelled with its period name, two with `2-period median`, and three or more with `usual`.
+
+The calendar threshold comes from the stored period configuration, not current settings. Route the frozen baseline of opening balance plus income minus reserves through the single budget engine, using the stored horizon distance from the period start. Spend-ramp comparisons use integer multiplication. A null or nonpositive threshold puts positive spending in the highest step; zero stays untinted.
+
+Known-amount drafts count as spending. Unknown drafts stay explicit and never become zero. Both charts count your own split shares only. Income is a calendar corner mark. Transfers, adjustments, and settlements are absent from chart totals and expanded day details. The summary order is group, quality and regretted sentence, cumulative pace, then calendar. No streak, best-day, reward, arrow, or congratulatory copy is permitted.
 
 ## Acceptance Criteria
 
