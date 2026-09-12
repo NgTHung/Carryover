@@ -2,6 +2,7 @@ import { strict as assert } from 'node:assert';
 
 import { createProxyDatabase, openMigratedDatabase } from './support/sqlite-proxy';
 import { createShareData } from '../src/data/shares';
+import { resolveOwnShareAmounts } from '../src/money/own-expense';
 
 function idFor(database: ReturnType<typeof openMigratedDatabase>, query: string): string {
   const row = database.prepare(query).get() as { id: string } | undefined;
@@ -58,6 +59,18 @@ test('share reads hide soft-deleted rows and preserve the own participant', asyn
     assert.equal(activeRows[0]?.transactionId, transactionId);
     assert.equal(activeRows[0]?.contactId, null);
     assert.equal(activeRows[0]?.shareAmount, 40_000);
+
+    database
+      .prepare('UPDATE transactions SET deleted_at = 1735689600000 WHERE id = ?')
+      .run(transactionId);
+    const rowsAfterTransactionDeletion = await data.readShares();
+    assert.equal(rowsAfterTransactionDeletion.length, 0);
+    assert.equal(resolveOwnShareAmounts([], rowsAfterTransactionDeletion).size, 0);
+
+    const auditRows = await data.readShares({ includeDeleted: true });
+    assert.equal(auditRows.length, 2);
+    assert.equal(auditRows[0]?.transactionId, transactionId);
+    assert.equal(auditRows[1]?.transactionId, transactionId);
   } finally {
     database.close();
   }

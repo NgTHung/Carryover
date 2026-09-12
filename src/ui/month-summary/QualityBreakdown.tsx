@@ -39,7 +39,7 @@ export function QualityBreakdown({ summary }: { summary: MonthSummary }) {
             >
               {item.showDirectLabel ? (
                 <Text className="px-1 text-detail font-semibold text-ground-dark" numberOfLines={1}>
-                  {formatQualityAmount(item.amount)}
+                  {qualityAccessibilityLabel(item)}
                 </Text>
               ) : null}
             </View>

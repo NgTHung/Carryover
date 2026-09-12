@@ -49,6 +49,9 @@ test('renders ranked groups, expandable leaves, quality labels, and regret', asy
   expect(screen.getByText('₫1.000.000 regretted this month.')).toBeTruthy();
   expect(screen.getByText('2 unknown drafts excluded from these totals.')).toBeTruthy();
   expect(screen.getByText('Unrated')).toBeTruthy();
+  expect(screen.getByText('Need, ₫2.000.000')).toBeTruthy();
+  expect(screen.getByText('Want, ₫1.200.000')).toBeTruthy();
+  expect(screen.getByText('Regret, ₫1.000.000')).toBeTruthy();
   expect(screen.queryByText('Groceries')).toBeNull();
 
   await user.press(screen.getByRole('button', { name: /Food, ₫2\.200\.000/ }));
