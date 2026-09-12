@@ -29,9 +29,7 @@ import {
   resolveOwnShareAmounts,
   type OwnExpenseShare,
 } from '../money/own-expense';
-import {
-  transactionQualitySchema,
-} from '../data/transaction-validation';
+import { transactionQualitySchema } from '../data/transaction-validation';
 import type { MonthSummaryInput, MonthSummaryTransaction } from './month-summary';
 import type {
   HistoryTransaction,
