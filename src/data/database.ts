@@ -20,6 +20,7 @@ import { createCommitmentData } from './commitments';
 import { ledgerChangeNotifier } from './ledger-change-notifier';
 import { createLedgerReads } from './ledger-reads';
 import { createMonthConfigData } from './month-config';
+import { createMonthSummaryData } from './month-summary';
 import { ledgerTables } from './schema';
 import { createShareData } from './shares';
 import { createTransactionData } from './transactions';
@@ -35,6 +36,7 @@ export const categoryData = createCategoryData(ledgerDb, ledgerChangeNotifier);
 export const commitmentData = createCommitmentData(ledgerDb, ledgerChangeNotifier);
 export const monthConfigData = createMonthConfigData(ledgerDb, ledgerChangeNotifier);
 export const shareData = createShareData(ledgerDb);
+export const monthSummaryData = createMonthSummaryData(ledgerDb);
 export const ledgerReads = createLedgerReads(ledgerDb);
 export const transactionData = createTransactionData(
   ledgerDb,
@@ -73,6 +75,17 @@ export async function readCommittedBudgetInput(
     throw new Error('Budget input transaction completed without a result');
   }
   return input;
+}
+
+export async function readCommittedMonthSummary(period: unknown) {
+  let summary: Awaited<ReturnType<typeof monthSummaryData.readMonthSummary>>;
+
+  await sqlite.withExclusiveTransactionAsync(async (transaction) => {
+    const transactionDb = drizzle(transaction, { schema: ledgerTables });
+    summary = await createMonthSummaryData(transactionDb).readMonthSummary(period);
+  });
+
+  return summary;
 }
 
 export { ledgerChangeNotifier };

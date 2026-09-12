@@ -1,7 +1,7 @@
 ---
 id: "UI-012"
 title: "Compute and read stored period summaries"
-status: "To Do"
+status: In Progress
 priority: "High"
 type: "Feature"
 parent: "UI-004"
@@ -10,7 +10,7 @@ depends_on: ["DATA-010", "DATA-005"]
 risk: "High"
 impact: "The report arithmetic is the source of truth for period group and quality totals, including historical month config and split shares."
 tags: ["reports"]
-last_updated: "2026-09-12"
+last_updated: 2026-09-12
 ---
 
 ## Summary

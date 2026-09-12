@@ -19,6 +19,7 @@ import {
   ledgerChangeNotifier,
   ledgerDb,
   ledgerMigrations,
+  readCommittedMonthSummary,
   readCommittedBudgetInput,
   transactionData,
   transactionListData,
@@ -50,6 +51,10 @@ export function readTransaction(id: string) {
 
 export function getTransactionListData(): TransactionListData<'sync'> {
   return transactionListData;
+}
+
+export function getMonthSummaryData() {
+  return { readMonthSummary: readCommittedMonthSummary };
 }
 
 export function subscribeLedgerChanges(listener: LedgerChangeListener): () => void {

@@ -13,6 +13,7 @@ export const getCategoryEditorData = unavailable;
 export const getAccountReconcileData = unavailable;
 export const readTransaction = unavailable;
 export const getTransactionListData = unavailable;
+export const getMonthSummaryData = unavailable;
 export const subscribeLedgerChanges = unavailable;
 export const getTransactionEditorData = unavailable;
 export const retryBudgetSnapshot = unavailable;

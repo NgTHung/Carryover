@@ -10,6 +10,7 @@ export type LedgerChangeTable =
   | 'categories'
   | 'accounts'
   | 'month_config'
+  | 'splits'
   | 'commitments';
 
 export type LedgerChangeMutation =
