@@ -1,7 +1,7 @@
 ---
 id: "UI-005"
 title: "Month history charts"
-status: In Progress
+status: Done
 priority: "Medium"
 type: "Feature"
 milestone: "0.3.0"
