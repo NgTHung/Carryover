@@ -77,12 +77,15 @@ export async function readCommittedBudgetInput(
   return input;
 }
 
-export async function readCommittedMonthSummary(period: unknown) {
+export async function readCommittedMonthSummary(
+  period: unknown,
+  today?: unknown
+) {
   let summary: Awaited<ReturnType<typeof monthSummaryData.readMonthSummary>>;
 
   await sqlite.withExclusiveTransactionAsync(async (transaction) => {
     const transactionDb = drizzle(transaction, { schema: ledgerTables });
-    summary = await createMonthSummaryData(transactionDb).readMonthSummary(period);
+    summary = await createMonthSummaryData(transactionDb).readMonthSummary(period, today);
   });
 
   return summary;

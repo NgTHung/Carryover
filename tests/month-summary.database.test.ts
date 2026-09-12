@@ -139,3 +139,172 @@ test('missing month config produces no report instead of recomputing one', async
     database.close();
   }
 });
+
+test('reads selected days and complete reference periods for history charts', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const proxy = createProxyDatabase(database);
+    const data = createMonthSummaryData(proxy);
+    const bankId = idFor(database, "SELECT id FROM accounts WHERE name = 'Bank'");
+    const groceriesId = idFor(
+      database,
+      "SELECT id FROM categories WHERE name = 'Groceries' AND deleted_at IS NULL"
+    );
+    const contactId = '44444444-4444-4444-8444-444444444444';
+    database
+      .prepare('INSERT INTO contacts (id, name) VALUES (?, ?)')
+      .run(contactId, 'Alex');
+    const periods = [
+      ['2026-07', 1_000_000, 0, 0, '2026-07-31'],
+      ['2026-08', 1_000_000, 0, 0, '2026-08-31'],
+      ['2026-09', 2_000_000, 1_000_000, 0, '2026-09-30'],
+    ] as const;
+    for (const [period, openingBalance, incomeTotal, reservedTotal, horizonDate] of periods) {
+      database
+        .prepare(
+          `INSERT INTO month_config
+            (period, opening_balance, income_total, reserved_total, horizon_date)
+           VALUES (?, ?, ?, ?, ?)`
+        )
+        .run(period, openingBalance, incomeTotal, reservedTotal, horizonDate);
+    }
+
+    const insertExpense = (
+      id: string,
+      amount: number,
+      occurredAt: number,
+      categoryId: string | null = groceriesId
+    ) => {
+      database
+        .prepare(
+          `INSERT INTO transactions
+            (id, account_id, direction, amount, category_id, occurred_at, status)
+           VALUES (?, ?, 'expense', ?, ?, ?, 'complete')`
+        )
+        .run(id, bankId, amount, categoryId, occurredAt);
+    };
+
+    insertExpense('77777777-7777-4777-8777-777777777701', 100, new Date(2026, 6, 1, 10).getTime());
+    insertExpense('77777777-7777-4777-8777-777777777702', 400, new Date(2026, 6, 15, 10).getTime());
+    insertExpense('77777777-7777-4777-8777-777777777703', 200, new Date(2026, 7, 1, 10).getTime());
+    insertExpense('77777777-7777-4777-8777-777777777704', 300, new Date(2026, 7, 15, 10).getTime());
+    insertExpense('77777777-7777-4777-8777-777777777705', 300, new Date(2026, 8, 1, 10).getTime());
+
+    const splitId = '77777777-7777-4777-8777-777777777706';
+    insertExpense(splitId, 1_000, new Date(2026, 8, 14, 10).getTime());
+    database
+      .prepare(
+        `INSERT INTO splits (id, transaction_id, contact_id, share_amount)
+         VALUES (?, ?, ?, ?)`
+      )
+      .run('88888888-8888-4888-8888-888888888801', splitId, null, 250);
+    database
+      .prepare(
+        `INSERT INTO splits (id, transaction_id, contact_id, share_amount)
+         VALUES (?, ?, ?, ?)`
+      )
+      .run(
+        '88888888-8888-4888-8888-888888888802',
+        splitId,
+        contactId,
+        750
+      );
+
+    database
+      .prepare(
+        `INSERT INTO transactions
+          (id, account_id, direction, amount, occurred_at, status)
+         VALUES (?, ?, 'income', ?, ?, 'complete')`
+      )
+      .run(
+        '77777777-7777-4777-8777-777777777707',
+        bankId,
+        900,
+        new Date(2026, 8, 15, 10).getTime()
+      );
+    database
+      .prepare(
+        `INSERT INTO transactions
+          (id, account_id, direction, amount, category_id, occurred_at, status)
+         VALUES (?, ?, 'expense', ?, ?, ?, 'complete')`
+      )
+      .run(
+        '77777777-7777-4777-8777-777777777708',
+        bankId,
+        700,
+        groceriesId,
+        new Date(2026, 8, 16, 10).getTime()
+      );
+    database
+      .prepare(
+        `INSERT INTO transactions
+          (id, account_id, direction, amount, occurred_at, status)
+         VALUES (?, ?, 'transfer', ?, ?, 'complete')`
+      )
+      .run(
+        '77777777-7777-4777-8777-777777777709',
+        bankId,
+        800,
+        new Date(2026, 8, 15, 11).getTime()
+      );
+    database
+      .prepare(
+        `INSERT INTO transactions
+          (id, account_id, direction, adjustment_effect, amount, occurred_at, status)
+         VALUES (?, ?, 'adjustment', 'increase', ?, ?, 'complete')`
+      )
+      .run(
+        '77777777-7777-4777-8777-777777777710',
+        bankId,
+        500,
+        new Date(2026, 8, 15, 12).getTime()
+      );
+    database
+      .prepare(
+        `INSERT INTO transactions
+          (id, account_id, direction, amount, occurred_at, status)
+         VALUES (?, ?, 'expense', NULL, ?, 'draft')`
+      )
+      .run(
+        '77777777-7777-4777-8777-777777777711',
+        bankId,
+        new Date(2026, 8, 12, 10).getTime()
+      );
+
+    const deletedId = '77777777-7777-4777-8777-777777777712';
+    insertExpense(deletedId, 999, new Date(2026, 8, 2, 10).getTime());
+    database
+      .prepare('UPDATE transactions SET deleted_at = ? WHERE id = ?')
+      .run(new Date(2026, 8, 3, 10).getTime(), deletedId);
+
+    const summary = await data.readMonthSummary('2026-09', '2026-09-15');
+    assert.ok(summary);
+    assert.equal(summary.history.perDay, 103_448);
+    assert.equal(summary.history.actualPoints.length, 15);
+    assert.equal(summary.history.actualPoints[14]?.amount, 550);
+    assert.equal(summary.history.days[0]?.spend, 300);
+    assert.equal(summary.history.days[13]?.spend, 250);
+    assert.equal(summary.history.days[14]?.income, 900);
+    assert.equal(summary.history.days[15]?.phase, 'future');
+    assert.equal(summary.history.days[15]?.spend, 0);
+    assert.equal(summary.history.days[11]?.unknownDrafts, 1);
+    assert.deepEqual(
+      summary.history.days[14]?.transactions.map(({ direction, amount }) => ({ direction, amount })),
+      [{ direction: 'income', amount: 900 }]
+    );
+    assert.equal(summary.history.reference.status, 'available');
+    if (summary.history.reference.status === 'available') {
+      assert.equal(summary.history.reference.label, '2-period median');
+      assert.equal(summary.history.reference.sampleCount, 2);
+      assert.equal(summary.history.reference.points[0]?.amount, 150);
+      assert.equal(summary.history.reference.points[14]?.amount, 500);
+    }
+    assert.deepEqual(summary.history.gap, {
+      relation: 'above',
+      amount: 50,
+      day: 15,
+    });
+  } finally {
+    database.close();
+  }
+});

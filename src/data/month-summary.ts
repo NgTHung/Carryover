@@ -14,16 +14,29 @@ import {
 } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 
-import { dateOnlyFromLocalDate } from './date-only';
+import {
+  dateOnlyFromLocalDate,
+  dateOnlySchema,
+  type DateOnly,
+} from './date-only';
 import { createMonthConfigData } from './month-config';
 import { periodBounds, periodSchema, type Period } from './period';
 import { activeRowFilter } from './soft-delete';
-import { ledgerTables, splits, transactions } from './schema';
+import {
+  ledgerTables,
+  monthConfig as monthConfigTable,
+  splits,
+  transactions,
+} from './schema';
 import {
   computeMonthSummary,
-  type MonthSummary,
+  type MonthSummaryInput,
+  type MonthSummaryWithHistory,
   type MonthSummaryTransaction,
 } from '../reports/month-summary';
+import { computePeriodHistory } from '../reports/period-history';
+import type { OwnExpenseShare } from '../money/own-expense';
+import { monthConfigSchema, type MonthConfig } from './month-config-validation';
 
 type LedgerDatabase<TResultKind extends 'sync' | 'async'> = BaseSQLiteDatabase<
   TResultKind,
@@ -36,6 +49,8 @@ type MonthSummaryTransactionRow = typeof transactions.$inferSelect & {
   groupId: string | null;
   groupName: string | null;
 };
+
+type MonthConfigRow = typeof monthConfigTable.$inferSelect;
 
 function summaryTransaction(row: MonthSummaryTransactionRow): MonthSummaryTransaction {
   const group =
@@ -59,16 +74,69 @@ function summaryTransaction(row: MonthSummaryTransactionRow): MonthSummaryTransa
   };
 }
 
+function summaryMonthConfig(row: MonthConfigRow): MonthConfig {
+  return monthConfigSchema.parse({
+    period: row.period,
+    openingBalance: row.openingBalance,
+    incomeTotal: row.incomeTotal,
+    reservedTotal: row.reservedTotal,
+    horizonDate: row.horizonDate,
+  });
+}
+
+async function readReferenceConfigs<TResultKind extends 'sync' | 'async'>(
+  db: LedgerDatabase<TResultKind>,
+  selectedPeriod: Period,
+  today: DateOnly
+): Promise<MonthConfig[]> {
+  const todayPeriod = today.slice(0, 7);
+  const rows = await db
+    .select()
+    .from(monthConfigTable)
+    .where(
+      and(
+        activeRowFilter(monthConfigTable.deletedAt),
+        lt(monthConfigTable.period, selectedPeriod),
+        lt(monthConfigTable.period, todayPeriod)
+      )
+    )
+    .all();
+  return rows
+    .map(summaryMonthConfig)
+    .sort((left, right) => left.period.localeCompare(right.period));
+}
+
+function monthSummaryInput(
+  config: MonthConfig,
+  rowsByPeriod: ReadonlyMap<Period, readonly MonthSummaryTransactionRow[]>,
+  sharesByTransaction: ReadonlyMap<string, readonly OwnExpenseShare[]>
+): MonthSummaryInput {
+  const rows = rowsByPeriod.get(config.period) ?? [];
+  return {
+    period: config.period,
+    monthConfig: config,
+    transactions: rows.map(summaryTransaction),
+    shares: rows.flatMap((row) => sharesByTransaction.get(row.id) ?? []),
+  };
+}
+
 export function createMonthSummaryData<TResultKind extends 'sync' | 'async'>(
   db: LedgerDatabase<TResultKind>
 ) {
   return {
-    async readMonthSummary(periodInput: unknown): Promise<MonthSummary | undefined> {
+    async readMonthSummary(
+      periodInput: unknown,
+      todayInput: unknown = dateOnlyFromLocalDate(new Date())
+    ): Promise<MonthSummaryWithHistory | undefined> {
       const period = periodSchema.parse(periodInput);
+      const today = dateOnlySchema.parse(todayInput);
       const config = await createMonthConfigData(db).readMonthConfig(period);
       if (config === undefined) return undefined;
 
-      const { start, end } = periodBounds(period);
+      const referenceConfigs = await readReferenceConfigs(db, period, today);
+      const earliestPeriod = referenceConfigs[0]?.period ?? period;
+      const { start } = periodBounds(earliestPeriod);
+      const { end } = periodBounds(period);
       const rows = await db
         .select({
           id: transactions.id,
@@ -134,12 +202,37 @@ export function createMonthSummaryData<TResultKind extends 'sync' | 'async'>(
               )
               .all();
 
-      return computeMonthSummary({
-        period,
-        monthConfig: config,
-        transactions: rows.map(summaryTransaction),
-        shares: shareRows,
+      const sharesByTransaction = new Map<string, OwnExpenseShare[]>();
+      for (const share of shareRows) {
+        const existing = sharesByTransaction.get(share.transactionId) ?? [];
+        existing.push(share);
+        sharesByTransaction.set(share.transactionId, existing);
+      }
+
+      const configuredPeriods = new Set<Period>([
+        config.period,
+        ...referenceConfigs.map(({ period: referencePeriod }) => referencePeriod),
+      ]);
+      const rowsByPeriod = new Map<Period, MonthSummaryTransactionRow[]>();
+      for (const row of rows) {
+        const rowPeriod = dateOnlyFromLocalDate(row.occurredAt).slice(0, 7) as Period;
+        if (!configuredPeriods.has(rowPeriod)) continue;
+        const periodRows = rowsByPeriod.get(rowPeriod) ?? [];
+        periodRows.push(row);
+        rowsByPeriod.set(rowPeriod, periodRows);
+      }
+
+      const currentInput = monthSummaryInput(config, rowsByPeriod, sharesByTransaction);
+      const summary = computeMonthSummary(currentInput);
+      const history = computePeriodHistory({
+        current: currentInput,
+        today,
+        references: referenceConfigs.map((referenceConfig) =>
+          monthSummaryInput(referenceConfig, rowsByPeriod, sharesByTransaction)
+        ),
       });
+
+      return { ...summary, history };
     },
   };
 }

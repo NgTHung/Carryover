@@ -24,6 +24,7 @@ import {
   transactionQualitySchema,
   type TransactionQuality,
 } from '../data/transaction-validation';
+import type { PeriodHistory } from './period-history-types';
 
 const MAX_SAFE_INTEGER_BIGINT = BigInt(MAX_VND_AMOUNT);
 const QUALITY_BUCKETS = ['need', 'want', 'regret', 'unrated'] as const;
@@ -78,6 +79,10 @@ export type MonthSummary = {
   unknownDrafts: number;
   groups: MonthSummaryGroup[];
   quality: MonthSummaryQuality[];
+};
+
+export type MonthSummaryWithHistory = MonthSummary & {
+  history: PeriodHistory;
 };
 
 type LeafAccumulator = {
