@@ -1,7 +1,7 @@
 ---
 id: "DATA-010"
 title: "Read own shares for budget and reports"
-status: In Progress
+status: Done
 priority: "High"
 type: "Feature"
 parent: "UI-004"
@@ -19,8 +19,15 @@ Read active split shares and reuse one pure own-expense resolver for budget and 
 
 ## Acceptance Criteria
 
-- [ ] Active share rows are read through a public data boundary with soft-deleted rows excluded.
-- [ ] Unsplit expenses count in full and split expenses count your contactId-null share only.
-- [ ] Invalid, duplicate, orphan, and non-exact share rows fail without producing a wrong total.
-- [ ] The committed budget input and the period report can consume the same share rows.
-- [ ] Logic and database tests cover non-half shares and all invalid-share cases.
+- [x] Active share rows are read through a public data boundary with soft-deleted rows excluded.
+- [x] Unsplit expenses count in full and split expenses count your contactId-null share only.
+- [x] Invalid, duplicate, orphan, and non-exact share rows fail without producing a wrong total.
+- [x] The committed budget input and the period report can consume the same share rows.
+- [x] Logic and database tests cover non-half shares and all invalid-share cases.
+
+## Verification
+
+- `npm run test:logic -- --runInBand tests/budget.logic.test.ts tests/snapshot-source.logic.test.ts` passed 15 tests.
+- `npm run test:database -- --runInBand tests/shares.database.test.ts` passed the active and soft-deleted share read case.
+- `npm run typecheck` passed.
+- No native dependency or migration was added. Split writes, contacts, and settlements remain owned by SPLIT-001.
