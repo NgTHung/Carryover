@@ -36,13 +36,27 @@ Known-amount drafts count as spending. Unknown drafts stay explicit and never be
 
 ## Acceptance Criteria
 
-- [ ] The cumulative line renders spend from day 1 to today and stops at today, never extended forward.
-- [ ] The reference line is the median of previous complete periods at the same day of month, not a straight line to a total.
-- [ ] With no complete previous period there is no reference line and the caption says so; with exactly one it is labelled with that month's name rather than usual.
-- [ ] The caption states the gap in dong flatly, with no arrow, no color, and no congratulation for being under.
-- [ ] The calendar tints each day from the section 3 spend ramp, binned against per day rather than the month maximum.
-- [ ] Zero-spend days are untinted, future days are outlines, and the two are visibly different.
-- [ ] Income renders as a corner mark and never as a second tint competing with spend on the same cell.
-- [ ] Every cell shows its day number, expands that day's transactions on tap, and reads as a sentence under VoiceOver.
-- [ ] No streak count, longest run, best day, or reward for a blank cell appears anywhere on the screen.
-- [ ] Both charts count your own split shares only, and no transfer or adjustment appears in either.
+- [x] The cumulative line renders spend from day 1 to today and stops at today, never extended forward.
+- [x] The reference line is the median of previous complete periods at the same day of month, not a straight line to a total.
+- [x] With no complete previous period there is no reference line and the caption says so; with exactly one it is labelled with that month's name rather than usual.
+- [x] The caption states the gap in dong flatly, with no arrow, no color, and no congratulation for being under.
+- [x] The calendar tints each day from the section 3 spend ramp, binned against per day rather than the month maximum.
+- [x] Zero-spend days are untinted, future days are outlines, and the two are visibly different.
+- [x] Income renders as a corner mark and never as a second tint competing with spend on the same cell.
+- [x] Every cell shows its day number, expands that day's transactions on tap, and reads as a sentence under VoiceOver.
+- [x] No streak count, longest run, best day, or reward for a blank cell appears anywhere on the screen.
+- [x] Both charts count your own split shares only, and no transfer or adjustment appears in either.
+
+## Verification
+
+- `npm run test:logic -- --runInBand` passed 24 suites and 95 tests.
+- `npm run test:database -- --runInBand` passed 15 suites and 77 tests.
+- `npm run test:component -- --runInBand` passed 12 suites and 71 tests.
+- `npm test -- --runInBand` passed all 51 suites and 243 tests.
+- `npm run typecheck` passed.
+- `npm run web:export` passed.
+- `npx expo export --platform ios` passed the iOS JavaScript bundle export.
+- `npm ls react-native-svg --depth=0` reports `react-native-svg@15.15.4`.
+- `taskroot validate` passed with 46 tasks and no warnings.
+
+The report keeps period configuration and history in one committed SQLite read, computes daily money with BigInt and the shared budget engine, and renders the pace chart followed by the day calendar. Current periods stop at the injected cutoff, references are complete stored periods only, short references carry their final cumulative amount, and all captions and accessibility labels use exact integer VND. The calendar exposes own-share expense rows, income rows, and unknown drafts while omitting transfers, adjustments, settlements, and future transactions.
