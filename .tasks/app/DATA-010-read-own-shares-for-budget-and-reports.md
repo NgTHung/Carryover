@@ -1,7 +1,7 @@
 ---
 id: "DATA-010"
 title: "Read own shares for budget and reports"
-status: "To Do"
+status: In Progress
 priority: "High"
 type: "Feature"
 parent: "UI-004"
@@ -10,7 +10,7 @@ depends_on: ["BUDGET-001"]
 risk: "High"
 impact: "A shared read-only split path keeps the home snapshot and period reports consistent about own spending."
 tags: ["budget", "reports"]
-last_updated: "2026-09-12"
+last_updated: 2026-09-12
 ---
 
 ## Summary

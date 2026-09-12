@@ -21,6 +21,7 @@ import { ledgerChangeNotifier } from './ledger-change-notifier';
 import { createLedgerReads } from './ledger-reads';
 import { createMonthConfigData } from './month-config';
 import { ledgerTables } from './schema';
+import { createShareData } from './shares';
 import { createTransactionData } from './transactions';
 import { createTransactionListData } from './transaction-list';
 
@@ -33,6 +34,7 @@ export const accountData = createAccountData(ledgerDb, ledgerChangeNotifier);
 export const categoryData = createCategoryData(ledgerDb, ledgerChangeNotifier);
 export const commitmentData = createCommitmentData(ledgerDb, ledgerChangeNotifier);
 export const monthConfigData = createMonthConfigData(ledgerDb, ledgerChangeNotifier);
+export const shareData = createShareData(ledgerDb);
 export const ledgerReads = createLedgerReads(ledgerDb);
 export const transactionData = createTransactionData(
   ledgerDb,
@@ -56,6 +58,7 @@ export async function readCommittedBudgetInput(
         accounts: createAccountData(transactionDb, ledgerChangeNotifier),
         commitments: createCommitmentData(transactionDb, ledgerChangeNotifier),
         monthConfig: createMonthConfigData(transactionDb, ledgerChangeNotifier),
+        shares: createShareData(transactionDb),
         transactions: createTransactionData(
           transactionDb,
           createCategoryData(transactionDb, ledgerChangeNotifier),

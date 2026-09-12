@@ -2,6 +2,7 @@ import { strict as assert } from 'node:assert';
 
 import type { AccountBalance } from '../src/data/accounts';
 import type { MonthConfig } from '../src/data/month-config-validation';
+import type { LedgerShare } from '../src/data/shares';
 import type { Transaction } from '../src/data/transaction-validation';
 import { readBudgetInput, type BudgetSnapshotReads } from '../src/budget/snapshot-source';
 
@@ -47,6 +48,7 @@ function transaction(
 function readsFor(options: {
   config?: MonthConfig;
   accounts?: AccountBalance[];
+  shares?: LedgerShare[];
   transactions?: Transaction[];
   reservedUnpaid?: number;
 } = {}): {
@@ -56,6 +58,7 @@ function readsFor(options: {
     reservePeriods: unknown[];
     accountReads: number;
     transactionReads: number;
+    shareReads: number;
   };
 } {
   const calls = {
@@ -63,6 +66,7 @@ function readsFor(options: {
     reservePeriods: [] as unknown[],
     accountReads: 0,
     transactionReads: 0,
+    shareReads: 0,
   };
   const reads: BudgetSnapshotReads = {
     accounts: {
@@ -87,6 +91,12 @@ function readsFor(options: {
       readTransactions: async () => {
         calls.transactionReads += 1;
         return options.transactions ?? [];
+      },
+    },
+    shares: {
+      readShares: async () => {
+        calls.shareReads += 1;
+        return options.shares ?? [];
       },
     },
   };
@@ -115,6 +125,7 @@ test('reads the stored current config and all budget source values', async () =>
   assert.deepEqual(calls.reservePeriods, ['2026-09']);
   assert.equal(calls.accountReads, 1);
   assert.equal(calls.transactionReads, 1);
+  assert.equal(calls.shareReads, 1);
   assert.deepEqual(input.shares, []);
   assert.equal(input.owedToYou, 0);
 });
@@ -152,6 +163,27 @@ test('maps local dates and preserves complete amounts and unknown draft nulls', 
       status: 'draft',
       amount: null,
     },
+  ]);
+});
+
+test('maps active share rows into the budget input', async () => {
+  const { reads } = readsFor({
+    config: storedConfig,
+    shares: [
+      { transactionId: 'complete-transaction', contactId: null, shareAmount: 40_000 },
+      {
+        transactionId: 'complete-transaction',
+        contactId: 'contact-id',
+        shareAmount: 48_000,
+      },
+    ],
+  });
+
+  const input = await readBudgetInput(reads, new Date(2026, 8, 15, 12, 0, 0));
+
+  assert.deepEqual(input.shares, [
+    { transactionId: 'complete-transaction', contactId: null, shareAmount: 40_000 },
+    { transactionId: 'complete-transaction', contactId: 'contact-id', shareAmount: 48_000 },
   ]);
 });
 

@@ -15,6 +15,11 @@ import { dateOnlySchema, type DateOnly } from '../data/date-only';
 import type { Payer } from '../data/payer';
 import type { Period } from '../data/period';
 import type { TransactionQuality } from '../data/transaction-validation';
+import {
+  ownExpenseAmount,
+  resolveOwnShareAmounts,
+  type OwnExpenseShare,
+} from '../money/own-expense';
 import type { BudgetSnapshot } from './snapshot';
 
 const DAYS_IN_BURN_WINDOW = 30;
@@ -39,11 +44,7 @@ export type BudgetTransaction =
       amount: number;
     });
 
-export type BudgetShare = {
-  transactionId: string;
-  contactId: string | null;
-  shareAmount: number;
-};
+export type BudgetShare = OwnExpenseShare;
 
 export type BudgetInput = {
   today: DateOnly;
@@ -129,70 +130,6 @@ function ensureUniqueTransactionIds(
   }
 }
 
-function validateShares(
-  transactions: readonly BudgetTransaction[],
-  shares: readonly BudgetShare[]
-): {
-  ownShareByTransaction: ReadonlyMap<string, bigint>;
-} {
-  const transactionsById = new Map(
-    transactions.map((transaction) => [transaction.id, transaction])
-  );
-  const totals = new Map<string, bigint>();
-  const ownShares = new Map<string, bigint>();
-  const participantIdsByTransaction = new Map<string, Set<string | null>>();
-
-  for (const share of shares) {
-    const transaction = transactionsById.get(share.transactionId);
-    if (transaction === undefined) {
-      throw new Error(
-        `Share references unknown transaction ${share.transactionId}`
-      );
-    }
-    if (transaction.direction !== 'expense' || transaction.amount === null) {
-      throw new Error(
-        `Shares require an expense with a known amount ${share.transactionId}`
-      );
-    }
-    const participantIds =
-      participantIdsByTransaction.get(share.transactionId) ?? new Set();
-    if (participantIds.has(share.contactId)) {
-      throw new Error(`Duplicate participant in split ${share.transactionId}`);
-    }
-    participantIds.add(share.contactId);
-    participantIdsByTransaction.set(share.transactionId, participantIds);
-
-    const amount = toPositiveSafeBigInt(
-      share.shareAmount,
-      `share ${share.transactionId} amount`
-    );
-    totals.set(
-      share.transactionId,
-      (totals.get(share.transactionId) ?? 0n) + amount
-    );
-    if (share.contactId === null) {
-      ownShares.set(share.transactionId, amount);
-    }
-  }
-
-  for (const [transactionId, total] of totals) {
-    const transaction = transactionsById.get(transactionId);
-    if (transaction === undefined || transaction.amount === null) {
-      throw new Error(`Invalid split transaction ${transactionId}`);
-    }
-    if (total !== BigInt(transaction.amount)) {
-      throw new Error(
-        `Split shares must equal transaction ${transactionId} amount`
-      );
-    }
-    if (!ownShares.has(transactionId)) {
-      throw new Error(`Split ${transactionId} is missing your share`);
-    }
-  }
-
-  return { ownShareByTransaction: ownShares };
-}
-
 function validateInput(input: BudgetInput): ValidatedBudgetInput {
   const todayDay = toDateDay(input.today, 'today');
   const horizonDay = toDateDay(input.monthConfig.horizonDate, 'horizon date');
@@ -203,23 +140,11 @@ function validateInput(input: BudgetInput): ValidatedBudgetInput {
   }
   assertNonNegativeVndAmount(input.reservedUnpaid, 'reserved unpaid');
   assertNonNegativeVndAmount(input.owedToYou, 'owed to you');
-  const splitData = validateShares(input.transactions, input.shares);
-  return { ...input, todayDay, horizonDay, ...splitData };
-}
-
-function ownExpenseAmount(
-  transaction: BudgetTransaction,
-  ownShareByTransaction: ReadonlyMap<string, bigint>
-): bigint {
-  if (transaction.direction !== 'expense' || transaction.amount === null) {
-    return 0n;
-  }
-  const splitShare = ownShareByTransaction.get(transaction.id);
-  if (splitShare !== undefined) {
-    return splitShare;
-  }
-  // Payer controls cash movement and debt; no share rows means the whole purchase is yours.
-  return BigInt(transaction.amount);
+  const ownShareByTransaction = resolveOwnShareAmounts(
+    input.transactions,
+    input.shares
+  );
+  return { ...input, todayDay, horizonDay, ownShareByTransaction };
 }
 
 function isInPeriod(transaction: BudgetTransaction, period: Period): boolean {

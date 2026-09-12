@@ -10,13 +10,15 @@ import type { CommitmentData } from '../data/commitments';
 import { dateOnlyFromLocalDate } from '../data/date-only';
 import type { MonthConfigData } from '../data/month-config';
 import { currentPeriod } from '../data/period';
+import type { ShareData } from '../data/shares';
 import type { TransactionData } from '../data/transactions';
-import type { BudgetInput } from './compute-budget';
+import type { BudgetInput, BudgetShare } from './compute-budget';
 
 export type BudgetSnapshotReads = {
   accounts: Pick<AccountData<'sync'>, 'readAccountBalances'>;
   commitments: Pick<CommitmentData<'sync'>, 'readReservedUnpaid'>;
   monthConfig: Pick<MonthConfigData<'sync'>, 'readMonthConfig'>;
+  shares: Pick<ShareData<'sync'>, 'readShares'>;
   transactions: Pick<TransactionData<'sync'>, 'readTransactions'>;
 };
 
@@ -32,9 +34,10 @@ export async function readBudgetInput(
     throw new Error(`Current period ${period} has no stored month config`);
   }
 
-  const [accounts, transactions, reservedUnpaid] = await Promise.all([
+  const [accounts, transactions, shares, reservedUnpaid] = await Promise.all([
     reads.accounts.readAccountBalances(),
     reads.transactions.readTransactions(),
+    reads.shares.readShares(),
     reads.commitments.readReservedUnpaid(period),
   ]);
 
@@ -58,7 +61,13 @@ export async function readBudgetInput(
         ? { ...base, status: transaction.status, amount: transaction.amount }
         : { ...base, status: transaction.status, amount: transaction.amount };
     }),
-    shares: [],
+    shares: shares.map(
+      (share): BudgetShare => ({
+        transactionId: share.transactionId,
+        contactId: share.contactId,
+        shareAmount: share.shareAmount,
+      })
+    ),
     owedToYou: 0,
   };
 }
