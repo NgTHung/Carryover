@@ -1,7 +1,7 @@
 ---
 id: "UI-017"
 title: "Render cumulative pace"
-status: In Progress
+status: Done
 priority: "Medium"
 type: "Feature"
 parent: "UI-005"
