@@ -41,6 +41,22 @@ function scrubAccessibilityLabel(history: PeriodHistory, day: number): string {
   return `Day ${day}. You ${actualText}. Reference ${referenceText}.`;
 }
 
+function endValues(history: PeriodHistory): {
+  accessibilityLabel: string;
+  text: string;
+} | null {
+  if (history.cutoffDay === 0) return null;
+  const actual = amountAtDay(history, history.cutoffDay, 'actual');
+  if (actual === null) return null;
+  const reference = amountAtDay(history, history.cutoffDay, 'reference');
+  const referenceText =
+    reference === null ? '' : ` Reference ${formatPaceValue(reference)}.`;
+  return {
+    accessibilityLabel: `Day ${history.cutoffDay}. You ${formatPaceValue(actual)}.${referenceText}`,
+    text: `Day ${history.cutoffDay}: You ${formatPaceValue(actual)}.${referenceText}`,
+  };
+}
+
 export function CumulativePaceChart({ history }: { history: PeriodHistory }) {
   const [scrubDay, setScrubDay] = useState<number | null>(null);
   const [chartWidth, setChartWidth] = useState(PACE_CHART_WIDTH);
@@ -53,6 +69,7 @@ export function CumulativePaceChart({ history }: { history: PeriodHistory }) {
   const scrubLimit = history.cutoffDay > 0 ? history.cutoffDay : 0;
   const scrubbed = scrubDay === null ? null : history.days[scrubDay - 1];
   const caption = formatPaceCaption(history);
+  const endpoint = endValues(history);
 
   return (
     <View className="gap-3" testID="summary-pace">
@@ -68,7 +85,7 @@ export function CumulativePaceChart({ history }: { history: PeriodHistory }) {
       <View
         accessible
         accessibilityRole="image"
-        accessibilityLabel={`Cumulative pace. ${caption}`}
+        accessibilityLabel={`Cumulative pace. ${endpoint === null ? '' : `${endpoint.accessibilityLabel} `}${caption}`}
         className="overflow-hidden rounded-surface border border-faint-light bg-surface-light p-2 dark:border-faint-dark dark:bg-surface-dark"
         testID="summary-pace-chart"
       >
@@ -81,12 +98,26 @@ export function CumulativePaceChart({ history }: { history: PeriodHistory }) {
           }}
           onResponderGrant={(event) => {
             if (scrubLimit > 0) {
-              setScrubDay(paceDayAtX(event.nativeEvent.locationX, scrubLimit, chartWidth));
+              setScrubDay(
+                paceDayAtX(
+                  event.nativeEvent.locationX,
+                  history.days.length,
+                  scrubLimit,
+                  chartWidth
+                )
+              );
             }
           }}
           onResponderMove={(event) => {
             if (scrubLimit > 0) {
-              setScrubDay(paceDayAtX(event.nativeEvent.locationX, scrubLimit, chartWidth));
+              setScrubDay(
+                paceDayAtX(
+                  event.nativeEvent.locationX,
+                  history.days.length,
+                  scrubLimit,
+                  chartWidth
+                )
+              );
             }
           }}
           onResponderRelease={() => setScrubDay(null)}
@@ -193,6 +224,14 @@ export function CumulativePaceChart({ history }: { history: PeriodHistory }) {
             </SvgText>
           </Svg>
         </View>
+        {endpoint !== null ? (
+          <Text
+            className="text-detail tabular-nums text-muted-light dark:text-muted-dark"
+            testID="summary-pace-end-values"
+          >
+            {endpoint.text}
+          </Text>
+        ) : null}
         {scrubbed !== undefined && scrubDay !== null ? (
           <Text
             accessibilityLabel={scrubAccessibilityLabel(history, scrubDay)}

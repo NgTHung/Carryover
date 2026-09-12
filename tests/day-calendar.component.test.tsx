@@ -62,9 +62,11 @@ test('renders the ramp, calendar states, and income marker', async () => {
   expect(screen.getByTestId('summary-calendar-day-14').props.className).toContain('border-2');
   expect(screen.getByTestId('summary-calendar-day-15').props.className).toContain('bg-transparent');
   expect(screen.getByTestId('summary-calendar-income-8')).toBeTruthy();
+  expect(screen.getByTestId('summary-calendar-unknown-1')).toHaveTextContent('?');
   expect(screen.getByText('· spent nothing')).toBeTruthy();
   expect(screen.getByText('░▒▓█ spend ramp')).toBeTruthy();
   expect(screen.getByText('• income')).toBeTruthy();
+  expect(screen.getByText('? unknown draft')).toBeTruthy();
   expect(screen.getByText('□ future')).toBeTruthy();
   expect(screen.queryByText(/streak|reward|best day/i)).toBeNull();
 });

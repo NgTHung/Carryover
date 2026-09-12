@@ -23,10 +23,13 @@ test('projects actual points and the reference as a staircase', () => {
 
 test('maps scrub positions to clamped day numbers', () => {
   const { left, right } = paceChartPlotBounds();
-  assert.equal(paceDayAtX(left, 14), 1);
-  assert.equal(paceDayAtX((left + right) / 2, 14), 8);
-  assert.equal(paceDayAtX(right, 14), 14);
-  assert.equal(paceDayAtX(-100, 14), 1);
-  assert.equal(paceDayAtX(999, 14), 14);
-  assert.equal(paceDayAtX(50, 0), 0);
+  const layout = paceChartLayout(FIXTURE_MONTH_SUMMARY.history);
+
+  assert.equal(paceDayAtX(left, 30, 14), 1);
+  assert.equal(paceDayAtX(layout.actual[6]?.x ?? 0, 30, 14), 7);
+  assert.equal(paceDayAtX(layout.actual[13]?.x ?? 0, 30, 14), 14);
+  assert.equal(paceDayAtX(right, 30, 14), 14);
+  assert.equal(paceDayAtX(-100, 30, 14), 1);
+  assert.equal(paceDayAtX(999, 30, 14), 14);
+  assert.equal(paceDayAtX(50, 0, 0), 0);
 });

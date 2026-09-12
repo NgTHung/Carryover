@@ -119,13 +119,15 @@ export function pacePath(points: readonly PaceChartPoint[]): string {
 export function paceDayAtX(
   locationX: number,
   dayCount: number,
+  maximumDay = dayCount,
   width = PACE_CHART_WIDTH
 ): number {
-  if (dayCount <= 0) return 0;
+  const selectableDayCount = Math.min(dayCount, Math.max(0, maximumDay));
+  if (dayCount <= 0 || selectableDayCount <= 0) return 0;
   const plotWidth = width - PACE_CHART_PLOT_LEFT - PACE_CHART_PLOT_RIGHT;
   const normalized = (locationX - PACE_CHART_PLOT_LEFT) / plotWidth;
   const day = Math.round(normalized * (dayCount - 1)) + 1;
-  return Math.min(dayCount, Math.max(1, day));
+  return Math.min(selectableDayCount, Math.max(1, day));
 }
 
 export function paceChartPlotBounds(width = PACE_CHART_WIDTH) {

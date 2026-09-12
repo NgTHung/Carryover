@@ -124,6 +124,15 @@ export function DayCalendar({ history }: { history: PeriodHistory }) {
                     testID={`summary-calendar-income-${day.day}`}
                   />
                 ) : null}
+                {day.unknownDrafts > 0 ? (
+                  <Text
+                    accessible={false}
+                    className="absolute bottom-0.5 left-1 text-detail font-bold text-ink-light dark:text-ink-dark"
+                    testID={`summary-calendar-unknown-${day.day}`}
+                  >
+                    ?
+                  </Text>
+                ) : null}
               </Pressable>
             );
           })}
@@ -134,6 +143,7 @@ export function DayCalendar({ history }: { history: PeriodHistory }) {
         <Text className="text-detail text-muted-light dark:text-muted-dark">· spent nothing</Text>
         <Text className="text-detail text-muted-light dark:text-muted-dark">░▒▓█ spend ramp</Text>
         <Text className="text-detail text-muted-light dark:text-muted-dark">• income</Text>
+        <Text className="text-detail text-muted-light dark:text-muted-dark">? unknown draft</Text>
         <Text className="text-detail text-muted-light dark:text-muted-dark">□ future</Text>
       </View>
 
