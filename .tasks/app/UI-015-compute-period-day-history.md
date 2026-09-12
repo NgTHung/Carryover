@@ -1,7 +1,7 @@
 ---
 id: "UI-015"
 title: "Compute period day history"
-status: In Progress
+status: Done
 priority: "High"
 type: "Feature"
 parent: "UI-005"
