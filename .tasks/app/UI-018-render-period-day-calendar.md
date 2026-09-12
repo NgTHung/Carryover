@@ -1,7 +1,7 @@
 ---
 id: "UI-018"
 title: "Render period day calendar"
-status: In Progress
+status: Done
 priority: "Medium"
 type: "Feature"
 parent: "UI-005"
