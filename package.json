@@ -6,6 +6,7 @@
   "scripts": {
     "start": "expo start",
     "start:device": "CARRYOVER_VARIANT=development expo start --dev-client --scheme carryover-dev",
+    "start:device:tailscale": "node scripts/start-device-tailscale.mjs",
     "web": "expo start --web",
     "web:export": "expo export --platform web",
     "ios": "expo run:ios",

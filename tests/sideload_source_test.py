@@ -54,14 +54,14 @@ class SourceTests(unittest.TestCase):
         self.assertEqual(version["buildVersion"], "42.2")
         self.assertEqual(version["version"], "0.1.0")
         self.assertEqual(app["downloadURL"], version["downloadURL"])
-        self.assertTrue(app["downloadURL"].endswith("/ios-development/carryover-42.2.ipa"))
+        self.assertTrue(app["downloadURL"].endswith("/ios-source/carryover-42.2.ipa"))
         self.assertEqual(app["appPermissions"]["privacy"], {"NSCameraUsageDescription": "Capture a purchase."})
         self.assertEqual(app["appPermissions"]["entitlements"], ["com.apple.security.application-groups"])
 
-    def test_release_has_its_own_source_and_identity(self):
+    def test_release_uses_shared_source_with_its_own_identity(self):
         self.info["CFBundleIdentifier"] = "com.bbq.carryover"
         app = self.source("release")["apps"][0]
-        self.assertIn("/ios-release/", app["downloadURL"])
+        self.assertIn("/ios-source/", app["downloadURL"])
         self.assertEqual(app["bundleIdentifier"], "com.bbq.carryover")
 
     def test_wrong_channel_build_and_widget_fail(self):
@@ -92,14 +92,17 @@ with open('calls.jsonl', 'a') as log:
 if os.environ['FAILURE'] and os.environ['FAILURE'] in ' '.join(a):
     sys.exit(1)
 if a[0] == 'api' and os.environ['CURRENT']:
-    print('ios-development')
+    print('ios-source')
 if a[:2] == ['release', 'view'] and os.environ['CURRENT']:
     print('source.json')
 if a[:2] == ['release', 'view'] and os.environ['EXISTING']:
     print(os.environ['EXISTING'])
 if a[:2] == ['release', 'download']:
+    apps = [{'bundleIdentifier': 'com.bbq.carryover', 'versions': [{'buildVersion': '200.1'}]}]
+    if os.environ['CURRENT'] != 'other-only':
+        apps.append({'bundleIdentifier': 'com.bbq.carryover.dev', 'versions': [{'buildVersion': os.environ['CURRENT']}]})
     pathlib.Path(a[-1], 'source.json').write_text(json.dumps({
-        'apps': [{'versions': [{'buildVersion': os.environ['CURRENT']}]}]}))
+        'apps': apps}))
 ''')
         fake.chmod(0o755)
         result = subprocess.run(["bash", str(ROOT / "scripts/publish-sideload.sh")], cwd=self.root,
@@ -137,8 +140,18 @@ if a[:2] == ['release', 'download']:
         result, uploads = self.publish(current="41.1", existing="carryover-42.2.ipa\ncarryover-42.2.png")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual([u[3] for u in uploads], ["sideload/source.json"])
+        apps = json.loads((self.root / "sideload/source.json").read_text())["apps"]
+        self.assertEqual([app["bundleIdentifier"] for app in apps], ["com.bbq.carryover", "com.bbq.carryover.dev"])
+        self.assertEqual([app["versions"][0]["buildVersion"] for app in apps], ["200.1", "42.2"])
 
     def test_corrupt_current_source_fails_without_uploading(self):
         result, uploads = self.publish(current="invalid")
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(uploads, [])
+
+    def test_first_development_build_preserves_existing_release(self):
+        result, uploads = self.publish(current="other-only")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(uploads), 3)
+        apps = json.loads((self.root / "sideload/source.json").read_text())["apps"]
+        self.assertEqual([app["bundleIdentifier"] for app in apps], ["com.bbq.carryover", "com.bbq.carryover.dev"])

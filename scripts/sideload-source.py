@@ -44,7 +44,7 @@ def make_source(ipa, native, repository, channel, build_number):
         raise ValueError("Generated App Group entitlement is missing")
 
     website = f"https://github.com/{repository}"
-    base = f"{website}/releases/download/ios-{channel}"
+    base = f"{website}/releases/download/ios-source"
     asset = f"carryover-{build_number}"
     description = (
         "Development build for local Fast Refresh. Requires your Metro server."
@@ -77,8 +77,8 @@ def make_source(ipa, native, repository, channel, build_number):
         "versionDescription": version["localizedDescription"],
     }
     return {
-        "name": f"{app['name']} builds",
-        "identifier": f"com.bbq.carryover.source.{channel}",
+        "name": "Carryover",
+        "identifier": "com.bbq.carryover.source",
         "sourceURL": f"{base}/source.json",
         "website": website,
         "apps": [app],
