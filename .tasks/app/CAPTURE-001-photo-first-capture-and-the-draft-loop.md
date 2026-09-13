@@ -14,16 +14,16 @@ last_updated: 2026-09-13
 
 ## Summary
 
-Stage 3, held at epic size on purpose. Capture is designed after two months of real data from stage 2, because the categories and the fill-in fields will change once you have used the numbers daily.
+Stage 3 completes capture before the UI overhaul. CAPTURE-002 through CAPTURE-006 cover photo storage, capture, completion, the inbox, and notifications. Daily use informs later changes but does not impose a waiting period.
 
-The shape is settled even though the tasks are not. Capture is a photo plus an optional amount on a pre-focused numpad, one tap to skip, closing in about two seconds. Completing a draft needs an amount and a leaf category and nothing else, because a form here produces forty unfilled drafts.
+Capture is a photo plus an optional amount on a pre-focused numpad, one tap to skip, closing in about two seconds. Completing a draft needs an amount and a leaf category and nothing else. Reuse shared controls and keep presentation changes for the later overhaul.
 
 Test capture and draft persistence locally with Jest, real SQLite, and React Native Testing Library. Check camera permissions, photo library access, persistence across restart, and keyboard behavior on the iPhone after a CI build. Follow `docs/app-stack-and-testing.md` when splitting this stage.
 
 ## Exit Criteria
 
 - [ ] Capture is a photo plus an optional amount and closes in about two seconds.
-- [ ] Photos are downscaled at capture to roughly 200KB, kept indefinitely, and excluded from backup.
+- [ ] Photos are downscaled at capture to roughly 200KB, kept indefinitely, and excluded from routine JSON backup.
 - [ ] The draft inbox lists unfinished captures with thumbnails.
 - [ ] Capture and completion reuse DATA-004 Zod schemas. Skipping the amount persists null, preserving an unknown after restart.
 - [ ] Expo Router owns capture routes and the active draft id; Zustand holds only shared capture UI state not represented by those routes. Captured drafts are saved to SQLite before capture is reported as successful and survive an app restart.
@@ -31,4 +31,4 @@ Test capture and draft persistence locally with Jest, real SQLite, and React Nat
 - [ ] A daily local notification nudges while unknowns exist.
 - [ ] Capture and draft-completion transitions use the shared Reanimated helpers and reduced-motion behavior without changing stored amounts or computing budget figures.
 - [ ] Local database and component tests cover skipping an amount, persisted draft recovery, and completion using deterministic photo fixtures. Real capture, restart persistence, keyboard, and permission behavior are checked on the iPhone before release.
-- [ ] The stage is split into Feature tasks before implementation starts.
+- [x] The stage is split into Feature tasks before implementation starts.

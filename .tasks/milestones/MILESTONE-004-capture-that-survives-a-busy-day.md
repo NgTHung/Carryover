@@ -5,7 +5,7 @@ status: To Do
 priority: "Medium"
 type: "Milestone"
 milestone: "0.4.0"
-last_updated: 2026-09-02
+last_updated: 2026-09-13
 ---
 
 ## Summary
@@ -17,7 +17,8 @@ Draft rot is the failure mode this stage has to design against. Unknowns are sur
 ## Exit Criteria
 
 - [ ] Capture is a photo plus an optional amount and closes in about two seconds.
-- [ ] Unfilled drafts are visible as unknowns on the home screen and in the draft inbox.
+- [ ] Drafts without amounts are visible as unknowns on Home and in the inbox; drafts with known amounts remain distinct.
 - [ ] Completing a draft needs an amount and a leaf category and nothing else.
-- [ ] Photos are downscaled at capture and excluded from backup.
-- [ ] The stage is split into Feature tasks before implementation starts.
+- [ ] Photos are downscaled at capture and excluded from routine JSON backup.
+- [ ] The daily nudge follows unknown counts and opens the inbox, with permission denial handled on the iPhone.
+- [x] The stage is split into Feature tasks before implementation starts.

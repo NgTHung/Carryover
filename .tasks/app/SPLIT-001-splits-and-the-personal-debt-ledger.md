@@ -9,12 +9,12 @@ depends_on: ["CAPTURE-001"]
 risk: "High"
 impact: "Four invariants live in this stage. Getting the remainder or the settlement direction wrong corrupts both the debt ledger and every month-over-month comparison."
 tags: ["split", "settlements", "epic"]
-last_updated: 2026-09-06
+last_updated: 2026-09-13
 ---
 
 ## Summary
 
-Stage 4, held at epic size until stage 3 lands. Splits are a ledger problem, not a budgeting one.
+Stage 4 completes the personal debt ledger before the UI overhaul. SPLIT-002 resolves boundary rules, then SPLIT-003 through SPLIT-008 cover contacts, share arithmetic, atomic persistence, derived balances, settlements, and the working screens.
 
 The settled shape: contacts are local records with a nullable `user_id`, which is the hook that lets a real account claim the history later. A split writes one share row per participant including you, and the shares sum to the transaction amount exactly. Remainder dong go to the payer, deterministically, so recomputation is stable.
 
@@ -22,7 +22,7 @@ The payer is named by `transactions.payer_contact_id`, nullable, where null mean
 
 The budget charges your share and the rest is a receivable shown beside discretionary. A repayment is never income. Treating it as income double-counts and corrupts every month-over-month comparison, which is the kind of error you notice six months late.
 
-The entry interface is settled in `docs/DESIGN.md` section 6.1 and it has no modes. Every share is an editable field from the moment the section opens, and the payer's share is the balance, recomputed on each keystroke as the amount minus every other share. The shares therefore sum exactly whatever is typed and every remainder dong lands on the payer by construction, so invariant 3 holds structurally rather than as a rule someone has to remember. There is no remainder readout to drive to zero. The earlier design asked for one and it is rejected: it puts arithmetic in front of you at the worst moment and lets the form sit in a state you have to repair.
+The interaction in docs/DESIGN.md section 6.1 uses editable shares and a payer share that absorbs the balance. SPLIT-002 must resolve its unlimited-input promise against positive integer amounts, payer edits, and insufficient dong for all participants before arithmetic is implemented. Accepted allocations must sum exactly without asking you to repair a remainder. Storage validation remains mandatory.
 
 ## Exit Criteria
 
@@ -32,10 +32,10 @@ The entry interface is settled in `docs/DESIGN.md` section 6.1 and it has no mod
 - [ ] Split entry has no modes: every share is editable throughout, and the payer's share is the balance that absorbs the difference.
 - [ ] Typing in the payer's own field is accepted and redistributes the difference across the other shares, with the last typed value surviving.
 - [ ] Equally and Shares write amounts into the fields and lock nothing afterwards.
-- [ ] No state of the split form can fail validation or block Done.
+- [ ] Every accepted allocation is valid without a remainder repair step; invalid input preserves the last valid allocation and never bypasses money validation, following the resolved SPLIT-002 contract.
 - [ ] The budget charges your own share and never the full transaction amount.
 - [ ] Balances per contact are derived from unsettled shares rather than stored.
 - [ ] Settlements apply oldest first, never touch the budget, and are never income.
 - [ ] Contact, split, and settlement inputs use Zod schemas with shared money validation. Pure functions own share arithmetic, and the data layer checks references and exact share totals before an atomic write.
 - [ ] The People screen shows a balance per contact and settles partial amounts.
-- [ ] The stage is split into Feature tasks before implementation starts.
+- [x] The stage is split into a boundary contract and Feature tasks before implementation starts.
