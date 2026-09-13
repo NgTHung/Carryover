@@ -5,11 +5,11 @@ status: To Do
 priority: "Medium"
 type: "Epic"
 milestone: "0.4.0"
-depends_on: ["UI-003", "build:BUILD-003"]
+depends_on: ["UI-003"]
 risk: "High"
 impact: "Draft rot is the most likely way this app dies: forty unfilled captures and a remaining figure you no longer believe. The unknown badge and the nudge are core, not polish."
 tags: ["capture", "drafts", "epic"]
-last_updated: 2026-09-07
+last_updated: 2026-09-13
 ---
 
 ## Summary
@@ -18,7 +18,7 @@ Stage 3, held at epic size on purpose. Capture is designed after two months of r
 
 The shape is settled even though the tasks are not. Capture is a photo plus an optional amount on a pre-focused numpad, one tap to skip, closing in about two seconds. Completing a draft needs an amount and a leaf category and nothing else, because a form here produces forty unfilled drafts.
 
-Test the capture flow locally with Jest and React Native Testing Library, then extend the on-demand Maestro suite. Camera permissions, photo library access, and keyboard behavior still need an iPhone check after a CI build. Follow `docs/app-stack-and-testing.md` when splitting this stage.
+Test capture and draft persistence locally with Jest, real SQLite, and React Native Testing Library. Check camera permissions, photo library access, persistence across restart, and keyboard behavior on the iPhone after a CI build. Follow `docs/app-stack-and-testing.md` when splitting this stage.
 
 ## Exit Criteria
 
@@ -30,5 +30,5 @@ Test the capture flow locally with Jest and React Native Testing Library, then e
 - [ ] The fill-in screen completes a draft with an amount and a leaf, creating categories inline through the UI-002 module.
 - [ ] A daily local notification nudges while unknowns exist.
 - [ ] Capture and draft-completion transitions use the shared Reanimated helpers and reduced-motion behavior without changing stored amounts or computing budget figures.
-- [ ] Local component tests cover skipping an amount and completing a draft; Maestro covers persisted draft recovery and completion using deterministic photo fixtures. Real camera and permission behavior are checked on the iPhone before release.
+- [ ] Local database and component tests cover skipping an amount, persisted draft recovery, and completion using deterministic photo fixtures. Real capture, restart persistence, keyboard, and permission behavior are checked on the iPhone before release.
 - [ ] The stage is split into Feature tasks before implementation starts.

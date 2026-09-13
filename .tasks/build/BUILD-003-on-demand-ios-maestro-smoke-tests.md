@@ -1,7 +1,7 @@
 ---
 id: "BUILD-003"
 title: "On-demand iOS Maestro smoke tests"
-status: "To Do"
+status: Deferred
 priority: "Medium"
 type: "TestDebt"
 milestone: "0.3.0"
@@ -9,7 +9,7 @@ depends_on: ["BUILD-002", "app:UI-001", "app:UI-003"]
 risk: "Medium"
 impact: "Checks real iOS navigation and persistence without adding a simulator build to every push."
 tags: ["testing", "ci", "ios"]
-last_updated: "2026-09-07"
+last_updated: 2026-09-12
 ---
 
 ## Summary
@@ -25,3 +25,7 @@ Add a small Maestro smoke suite on a GitHub Actions macOS runner. Build a separa
 - [ ] Failures upload Maestro logs and screenshots, and the workflow records the tested revision.
 - [ ] Maestro runs only when requested and before releases, not on every push; Linux fast checks and normal native build checks remain unchanged.
 - [ ] The release checklist requires a passing run for the candidate revision and manual device checks for camera, keyboard, photo access, and later widget behavior.
+
+## Rationale
+
+Overkill for a project that only I use

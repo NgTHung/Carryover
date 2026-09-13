@@ -9,12 +9,12 @@ depends_on: ["BUILD-001"]
 risk: "Medium"
 impact: "Lets you verify money, storage, and component behavior on Linux before paying for an iOS build."
 tags: ["testing", "ci"]
-last_updated: 2026-09-07
+last_updated: 2026-09-13
 ---
 
 ## Summary
 
-Adopt Jest for logic and database tests and jest-expo with React Native Testing Library for component tests. Preserve the existing real SQLite migration coverage while replacing the node:test runner. Keep every test under tests/. Follow docs/app-stack-and-testing.md. This task sets up local and Linux CI checks; BUILD-003 owns iOS end-to-end execution.
+Adopt Jest for logic and database tests and jest-expo with React Native Testing Library for component tests. Preserve the existing real SQLite migration coverage while replacing the node:test runner. Keep every test under tests/. Follow docs/app-stack-and-testing.md. This task sets up local and Linux CI checks; native end-to-end behavior is checked manually on the iPhone while BUILD-003 is deferred.
 
 ## Acceptance Criteria
 

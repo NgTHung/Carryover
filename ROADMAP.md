@@ -2,6 +2,8 @@
 
 Stages come from `docs/spec/carryover-v1.md` and each depends on the one before it. Weeks assume roughly 10 to 15 hours each. One milestone covers one stage, and `.tasks/` holds the work. Stages 1 and 2 are broken into Feature tasks. Stages 3 to 6 are held at one epic each until the earlier work lands, because daily use from the end of stage 2 will change them.
 
+BUILD-003 is deferred. No stage depends on automated iOS end-to-end tests. Fast automated checks, an unsigned device build, and manual checks on the iPhone are the release path.
+
 | Stage | Milestone | Work | Estimate |
 | --- | --- | --- | --- |
 | 0 | 0.1.0 | Pipeline and widget spike | half a day |

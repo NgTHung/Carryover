@@ -61,7 +61,7 @@ The typecheck job runs on Linux and is effectively free. Let it catch what it ca
 
 Run `npm test` and `npm run typecheck` locally before pushing. The existing SQLite tests already run on Linux. BUILD-002 migrated them to Jest and added React Native Testing Library; Linux CI runs the same fast checks before the macOS build.
 
-BUILD-003 adds an on-demand Maestro workflow with its own Simulator .app and the widget disabled. The device IPA cannot run in a Simulator. Run Maestro against the candidate revision before releases; do not add its Simulator build to every code push. Native device build checks keep their existing triggers. See [App stack and testing](../app-stack-and-testing.md) for test ownership and device checks.
+BUILD-003 is deferred. Native device build checks keep their existing triggers, and no product stage depends on a separate Simulator build. Install the candidate IPA and run the manual release checks on the iPhone. See [App stack and testing](../app-stack-and-testing.md) for test ownership and the device checklist.
 
 ## What free signing cannot do
 

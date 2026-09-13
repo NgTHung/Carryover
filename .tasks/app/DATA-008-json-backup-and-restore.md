@@ -9,7 +9,7 @@ depends_on: ["SPLIT-001"]
 risk: "Medium"
 impact: "The only protection against losing the phone. A backup that has never been restored is an assumption, not a backup."
 tags: ["data", "backup", "epic"]
-last_updated: 2026-09-07
+last_updated: 2026-09-13
 ---
 
 ## Summary
@@ -31,5 +31,5 @@ Use a versioned Zod schema for the backup, reusing domain and money validation f
 - [ ] Restore rebuilds a wiped install, and every budget figure matches the source device.
 - [ ] Bulk photo export is available and separate from the JSON export.
 - [ ] A restore has been run on a wiped install before this milestone closes.
-- [ ] Local Jest integration tests exercise restore against real SQLite. The on-demand Maestro suite adds a restore flow using a versioned fixture and verifies the resulting home snapshot before release.
+- [ ] Local Jest integration tests exercise restore against real SQLite with a versioned fixture and verify the newly published snapshot. Before release, the fixture is restored on a wiped iPhone and the resulting home snapshot is checked.
 - [ ] The stage is split into Feature tasks before implementation starts.

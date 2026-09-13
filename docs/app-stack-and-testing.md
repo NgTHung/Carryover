@@ -14,7 +14,7 @@ Decision recorded on 2026-09-07. Use this contract when adding navigation, UI in
 | Animation | Reanimated directly | It covers the required motion without an additional Moti compatibility dependency. |
 | JavaScript engine | Hermes bundled with Expo and React Native | Keep the engine aligned with the native framework and its tooling. |
 | Fast tests | Jest and React Native Testing Library | Logic, storage, and component behavior can be checked on Linux. |
-| End-to-end tests | Maestro on an iOS Simulator in macOS CI | Exercise the native app on demand and before releases. |
+| Native end-to-end checks | Manual checks on the iPhone | Exercise the installed candidate without another macOS CI build. |
 
 TanStack Query and Moti are deferred. Use stable NativeWind rather than its preview release. NativeWind's stable line currently targets Tailwind 3, so select compatible Tailwind Variants and class-merging versions together. Record the resolved versions when implementing UI-007 and commit the lockfile. Install Expo native packages at the versions supported by the project's SDK. Do not upgrade the SDK to satisfy a styling package without a separate decision.
 
@@ -72,17 +72,15 @@ npm run test:watch
 | --- | --- | --- |
 | Typechecking, logic, database, and component tests | Local Linux and Linux CI | During development and on code pushes |
 | Unsigned iOS device build | GitHub Actions macOS runner | Existing code-push and manual triggers, after fast checks pass |
-| Maestro smoke suite | iOS Simulator on a GitHub Actions macOS runner | On demand and before releases |
+| Startup, navigation, editing, restart persistence, and snapshots | Your iPhone | Before releases |
 | Camera, keyboard, photo access, and sideload behavior | Your iPhone | Before releasing affected features |
 | Widget rendering and shared-storage behavior | Your iPhone | When WIDGET-002 resumes |
 
-The widget extension is already excluded from normal builds. Keep it excluded from the default Simulator test build too. Exclusion does not make an iOS Simulator available on Linux.
+BUILD-003 is deferred because a second macOS build and simulator suite cost more than they return for this solo project. No milestone or product stage depends on it. Keep its proposed Maestro workflow optional unless the manual release checks become a repeated source of regressions.
 
-BUILD-003 creates a separate Simulator .app. The unsigned device IPA targets a different platform and cannot be reused for Simulator tests. Keep Maestro off the normal push path so it does not add another native build to each iteration. Run a passing smoke suite against the candidate revision before release and retain logs and screenshots when it fails.
+Install the candidate IPA and manually check startup, navigation, transaction editing, persistence across restart, and the resulting home snapshot. Add capture and restore checks when those features arrive. Camera behavior and sideloaded widget behavior need their own device checks.
 
-Start with startup, navigation, transaction editing, unknown-draft persistence across restart, and the home snapshot. Extend the suite as capture and restore arrive. Use deterministic fixtures and isolate test runs. Real camera behavior and sideloaded widget behavior still need device checks.
-
-Do not add an Android build solely for local end-to-end testing. The local suites cover the fast development loop; native build checks remain required on code commits. See [the pipeline guide](build/ios-unsigned-ipa.md) for the existing build path.
+Do not add an Android build solely for end-to-end testing. The local suites cover the fast development loop; native build checks remain required on code commits. See [the pipeline guide](build/ios-unsigned-ipa.md) for the existing build path.
 
 ## Implementation ownership
 
@@ -94,8 +92,8 @@ Do not add an Android build solely for local end-to-end testing. The local suite
 | UI-007 | Shared NativeWind tokens, typed variants, and Reanimated helpers |
 | UI-001 and UI-002 | First product screens reuse the navigation and UI foundations |
 | UI-003 | Home subscribes to the published snapshot and uses shared presentation helpers |
-| BUILD-003 | On-demand iOS Maestro workflow and release checklist |
+| BUILD-003 | Deferred optional iOS Maestro automation; no current work depends on it |
 | CAPTURE-001 and DATA-008 | Add capture and restore flows when those features exist |
 | WIDGET-002 | Resume widget-specific implementation and device verification |
 
-References: [Expo navigation](https://docs.expo.dev/develop/app-navigation/), [Expo testing](https://docs.expo.dev/develop/unit-testing/), [Maestro iOS](https://docs.maestro.dev/getting-started/build-and-install-your-app/ios), [NativeWind installation](https://www.nativewind.dev/docs/getting-started/installation), [Tailwind Variants](https://www.tailwind-variants.org/docs/introduction), [Reanimated](https://docs.swmansion.com/react-native-reanimated/docs/fundamentals/getting-started/), and [Hermes](https://docs.expo.dev/guides/using-hermes/).
+References: [Expo navigation](https://docs.expo.dev/develop/app-navigation/), [Expo testing](https://docs.expo.dev/develop/unit-testing/), [NativeWind installation](https://www.nativewind.dev/docs/getting-started/installation), [Tailwind Variants](https://www.tailwind-variants.org/docs/introduction), [Reanimated](https://docs.swmansion.com/react-native-reanimated/docs/fundamentals/getting-started/), and [Hermes](https://docs.expo.dev/guides/using-hermes/).

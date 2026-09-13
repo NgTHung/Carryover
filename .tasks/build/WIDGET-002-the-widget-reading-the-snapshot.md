@@ -9,7 +9,7 @@ depends_on: ["WIDGET-001", "app:BUDGET-002"]
 risk: "High"
 impact: "The last stage, and the one with a known unresolved failure. If the extension still renders stale code from a clean device, the problem is in the install layer and the paid membership will not fix it."
 tags: ["widget", "ios", "epic"]
-last_updated: 2026-09-07
+last_updated: 2026-09-13
 ---
 
 ## Summary
@@ -20,7 +20,7 @@ WIDGET-001 left one question open. The extension installed, appeared in the gall
 
 The widget renders per day and the unknown badge, and swaps to runway when runway drops below days to horizon. It reads the snapshot and never queries the database, because it has no database to query.
 
-Keep the extension excluded from normal builds and the default Maestro suite until this stage resumes. Local app tests do not prove widget rendering or shared-container access; this stage keeps its device checks. App routing, Zustand, NativeWind, and Reanimated remain outside the widget runtime.
+Keep the extension excluded from normal builds until this stage resumes. Local app tests do not prove widget rendering or shared-container access; this stage keeps its device checks. App routing, Zustand, NativeWind, and Reanimated remain outside the widget runtime.
 
 ## Exit Criteria
 

@@ -5,7 +5,7 @@ status: To Do
 priority: "High"
 type: "Milestone"
 milestone: "0.3.0"
-last_updated: 2026-09-07
+last_updated: 2026-09-13
 ---
 
 ## Summary
@@ -23,4 +23,4 @@ Daily use starts here. Real data changes the category list before anything is bu
 - [ ] `month_config` is written per period and read back from storage, never recomputed.
 - [ ] The month summary renders spend by group, the quality breakdown, and the day calendar.
 - [ ] The app is installed on the phone and in daily use.
-- [ ] BUILD-003 has a passing iOS Maestro smoke run for the release candidate revision, with device checks completed; ordinary pushes still run fast checks and the native build without Maestro.
+- [ ] Fast tests and the native build pass for the candidate revision. Startup, navigation, transaction editing, restart persistence, and the home snapshot are checked on the iPhone.
