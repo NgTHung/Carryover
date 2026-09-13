@@ -99,9 +99,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.CCACHE_DIR }}
-          key: ccache-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.compiler.outputs.toolchain }}-${{ env.BUILD_CONFIGURATION }}-widget${{ env.CARRYOVER_WIDGET }}-${{ hashFiles('package-lock.json', 'app.config.js', 'plugins/**', 'scripts/patch-expo-widgets.mjs') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: ccache-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.compiler.outputs.toolchain }}-${{ env.BUILD_CONFIGURATION }}-widget${{ env.CARRYOVER_WIDGET }}-${{ hashFiles('package-lock.json', 'app.config.js', 'plugins/**', 'scripts/patch-expo-widgets.mjs', 'scripts/build-ios.sh') }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
-            ccache-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.compiler.outputs.toolchain }}-${{ env.BUILD_CONFIGURATION }}-widget${{ env.CARRYOVER_WIDGET }}-${{ hashFiles('package-lock.json', 'app.config.js', 'plugins/**', 'scripts/patch-expo-widgets.mjs') }}-
+            ccache-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.compiler.outputs.toolchain }}-${{ env.BUILD_CONFIGURATION }}-widget${{ env.CARRYOVER_WIDGET }}-${{ hashFiles('package-lock.json', 'app.config.js', 'plugins/**', 'scripts/patch-expo-widgets.mjs', 'scripts/build-ios.sh') }}-
 
       # The widget is deferred to build:WIDGET-002. Every push and development
       # build excludes it; dispatch a release build with the widget input to opt in.

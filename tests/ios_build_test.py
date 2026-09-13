@@ -18,6 +18,7 @@ class IosBuildTests(unittest.TestCase):
                 binaries = work / 'bin'
                 binaries.mkdir()
                 commands = {
+                    'xcrun': 'echo "/usr/bin/$2"\n',
                     'xcodebuild': (
                         'printf "%s\\n" "$@" > "$BUILD_ARGS"\n'
                         'echo "compiler diagnostic" >&2\n'
@@ -25,7 +26,10 @@ class IosBuildTests(unittest.TestCase):
                         + f'exit {exit_code}\n'
                     ),
                     'ccache': (
-                        'echo "$*" >> "$CACHE_ARGS"\n'
+                        f'echo "$*" >> "{work}/cache-args"\n'
+                        'if [ "$1" = "/usr/bin/clang" ] || [ "$1" = "/usr/bin/clang++" ]; then\n'
+                        f'  printf "%s\\n" "$CCACHE_DIR" "$CCACHE_CONFIGPATH" "$CCACHE_BASEDIR" > "{work}/compiler-env"\n'
+                        'fi\n'
                         'if [ "$1" = "--show-stats" ]; then echo "Hits: 10"; fi\n'
                     ),
                 }
@@ -41,6 +45,10 @@ class IosBuildTests(unittest.TestCase):
                     'GITHUB_STEP_SUMMARY': str(work / 'summary.md'),
                     'BUILD_ARGS': str(work / 'build-args'),
                     'CACHE_ARGS': str(work / 'cache-args'),
+                    'CCACHE_DIR': str(work / 'cache with spaces'),
+                    'CCACHE_BASEDIR': str(work),
+                    'CCACHE_MAXSIZE': '1G',
+                    'CCACHE_COMPILERCHECK': 'content',
                 }
                 build = subprocess.run(
                     ['bash', str(ROOT / 'scripts/build-ios.sh')],
@@ -62,6 +70,14 @@ class IosBuildTests(unittest.TestCase):
                 self.assertIn('compiler diagnostic', (work / 'reports/xcodebuild.log').read_text())
                 self.assertEqual((work / 'cache-args').read_text().splitlines(),
                                  ['--zero-stats', '--show-stats --verbose'])
+                for compiler in ('clang', 'clang++'):
+                    self.assertIn(f'{"CC" if compiler == "clang" else "CXX"}={work}/reports/{compiler}', arguments)
+                    subprocess.run([str(work / 'reports' / compiler), '-c', 'source with spaces.m'],
+                                   env={}, check=True)
+                    self.assertEqual((work / 'compiler-env').read_text().splitlines(), [
+                        env['CCACHE_DIR'], str(work / 'node_modules/react-native/scripts/xcode/ccache.conf'),
+                        str(work),
+                    ])
 
 
 if __name__ == '__main__':
