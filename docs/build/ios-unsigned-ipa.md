@@ -4,11 +4,33 @@ Carryover is built for iOS without a Mac. Every iOS binary must be compiled by X
 
 ## How a build reaches your phone
 
-Push to any branch. The `iOS unsigned IPA` workflow runs `expo prebuild` to generate the native project, installs pods, builds with signing disabled, wraps the `.app` in a `Payload/` directory, and uploads the result as a workflow artifact. Download the artifact, unzip it, and sideload the IPA with iloader. Normal builds now require the App Group, which AltStore and SideStore do not register.
+Push to any branch. The `iOS unsigned IPA` workflow runs `expo prebuild` to generate the native project, installs pods, builds with signing disabled, wraps the `.app` in a `Payload/` directory, and uploads the result as a workflow artifact. Successful default-branch builds also publish a signer source and direct IPA downloads through GitHub Releases. You can still download the artifact, unzip it, and sideload the IPA yourself.
+
+## Install and update through your signer
+
+Add the source URL for the app you want in your signer's repository or source screen. Choose the AltStore format. FlareStore documents compatibility with this format in FlareStore, ESign, and other supporting signers in its [repository guide](https://flarestore.app/repo-creator/).
+
+| App | Source URL |
+| --- | --- |
+| Carryover | `https://github.com/NgTHung/Carryover/releases/download/ios-release/source.json` |
+| Carryover Dev | `https://github.com/NgTHung/Carryover/releases/download/ios-development/source.json` |
+
+These URLs become available after the first successful build and publication for each channel. No GitHub Pages setup, signing certificate, or extra secret is required. Downloads require the repository to remain public. Each source lists only its channel's current build.
+
+1. Run the workflow on `main` with `development` enabled to publish Carryover Dev. Leave `widget` disabled. Normal code pushes to `main` publish Carryover.
+2. Refresh the source in your signer, select the app, then download, sign, and install it with your existing certificate and profile.
+3. For subsequent native builds, refresh the same source and install over the existing app. Keep the same signing identity, bundle identifier, and App Group mapping. Deleting the installed app deletes its local data.
+4. For TypeScript and JavaScript edits in Carryover Dev, run `npm run start:device` and use Fast Refresh. You only need a new IPA when native dependencies or app configuration change.
+
+The source format handles discovery and downloads. Your signer still handles signing and installation. The app requires a working App Group even without the widget; importing an AltStore-format source does not prove your signer can provision that entitlement. The project's verified signing path is recorded in the [widget sideload result](widget-sideload-result.md).
+
+CI sets the native build number to the workflow run number and attempt, such as `42.2`. The generator reads the version, build number, minimum iOS version, privacy descriptions, and byte size from the actual IPA. It reads entitlements from the generated native project. It includes modern version metadata and legacy signer fields. [AltStore checks version and build number for updates](https://faq.altstore.io/developers/updating-apps). A signer that only compares the marketing version may require you to select and reinstall the newer build manually while the app remains at `0.1.0`.
+
+The publisher uploads a distinct IPA and icon for every build before replacing `source.json`. Cached sources retain valid downloads, and retrying an older workflow cannot downgrade the channel. Old assets remain downloadable. Each channel uses a rolling prerelease whose tag anchors its first build; read the source for the current version. Branch builds and widget experiment builds stay available as workflow artifacts and do not replace these sources. A failed publication can be retried without rebuilding the successful IPA.
 
 The build excludes the widget extension. WIDGET-001 settled that a sideloaded IPA can carry a working widget, so the two-variant control build has done its job and stage 6 owns the rest. The app still carries its variant-specific App Group entitlement in both release and development binaries; only the widget extension is gated. To build one, dispatch the workflow manually and set the `widget` input, which passes `CARRYOVER_WIDGET=1` through to `app.config.js`.
 
-Commits that touch only Markdown, `docs/`, or `.tasks/` do not build. Pushing twice cancels the first run.
+Commits that touch only Markdown, `docs/`, or `.tasks/` do not build. Pushing twice cancels the first run for that branch and variant.
 
 ## Local UI development
 
@@ -26,7 +48,7 @@ Use the iPhone development build when you need iOS rendering or native behavior:
 
 1. Open the `iOS unsigned IPA` workflow in GitHub Actions and select **Run workflow**.
 2. Set `development` to true. The widget extension stays disabled for this build, while the app keeps the `group.com.bbq.carryover.dev` entitlement used by the native shared-storage guard.
-3. Download `carryover-development-ipa`, sign `carryover.ipa` with your existing on-device signer, and install it. Keep its identifier distinct from the release app if your signer rewrites identifiers. The app should appear as Carryover Dev beside Carryover.
+3. Refresh the Carryover Dev source in your signer, or download the `carryover-development-ipa` artifact and extract `carryover.ipa`. Sign and install it. Keep its identifier distinct from the release app if your signer rewrites identifiers. The app should appear as Carryover Dev beside Carryover.
 4. Start Metro on this machine:
 
    ```bash
@@ -59,7 +81,7 @@ The typecheck job runs on Linux and is effectively free. Let it catch what it ca
 
 ## Testing workflow
 
-Run `npm test` and `npm run typecheck` locally before pushing. The existing SQLite tests already run on Linux. BUILD-002 migrated them to Jest and added React Native Testing Library; Linux CI runs the same fast checks before the macOS build.
+Run `npm test`, `npm run typecheck`, and `python3 -m unittest discover -s tests -p '*_test.py'` locally before pushing. The Python checks exercise source generation and publication order with temporary IPAs and a fake GitHub CLI; they do not upload releases. The existing SQLite tests already run on Linux. BUILD-002 migrated them to Jest and added React Native Testing Library; Linux CI runs the same fast checks before the macOS build.
 
 BUILD-003 is deferred. Native device build checks keep their existing triggers, and no product stage depends on a separate Simulator build. Install the candidate IPA and run the manual release checks on the iPhone. See [App stack and testing](../app-stack-and-testing.md) for test ownership and the device checklist.
 

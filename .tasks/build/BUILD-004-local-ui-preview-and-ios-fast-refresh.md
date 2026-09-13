@@ -30,7 +30,7 @@ Publish separate development and release sources in the AltStore JSON format so 
 - [ ] TypeScript and JavaScript changes refresh from the local Expo server without rebuilding the native app; native dependency and app configuration changes are documented as rebuild boundaries.
 - [x] The existing release IPA build remains unchanged and all local tests, typechecking, Expo diagnostics, and a production web export pass.
 - [ ] Successful default-branch builds publish separate development and release source URLs with IPA metadata, unique build numbers, and direct downloads. Branch and widget experiment builds remain artifacts only.
-- [ ] Source generation and publication checks pass locally, and documentation explains source import, update signing, and preservation of app identity and data.
+- [x] Source generation and publication checks pass locally, and documentation explains source import, update signing, and preservation of app identity and data.
 - [ ] The published source imports in your signer and a subsequent build installs as an update while preserving the ledger.
 
 ## Verification
@@ -44,5 +44,9 @@ The on-demand development workflow passed on 2026-09-13 at https://github.com/Ng
 Current local verification on 2026-09-13 passed a clean dependency install, all 243 tests, strict typechecking, all 21 Expo diagnostics, and the production web export. Development and release prebuilds kept their distinct bundle identifiers, URL schemes, and App Groups, with one application target and no widget target. Metro served a development manifest with the same development identity. The default release path also passed GitHub Actions after variant isolation was added. SDK 57 patch dependencies were aligned because current Expo diagnostics no longer accepted the older resolved versions.
 
 The standalone React Native DevTools app could not start because this Linux machine lacks libnspr4.so. Metro still started and served the development manifest successfully.
+
+Signer source implementation on 2026-09-13 passed all 244 app tests, 10 Python distribution tests, strict typechecking, all 21 Expo diagnostics, the production web export, and actionlint 1.7.12. Temporary development and release prebuilds both wrote version 0.1.0 and build 42.2 to the native Info.plist. Distribution tests cover binary metadata, identity mismatches, widget exclusion, failed uploads, old-run downgrade prevention, corrupt existing metadata, and publication retries that reuse the successful build's assets. No dependencies or signing credentials were added.
+
+The workflow publishes separate AltStore-format sources from successful default-branch builds through public GitHub Releases. Sources and IPA URLs are documented in docs/build/ios-unsigned-ipa.md. These changes are committed locally; initial CI publication and source import on the iPhone remain unverified until the commits are pushed and both channels build. Keep the publication and device criteria open until those checks pass.
 
 Signed iPhone checks remain required. Verify both apps install together, Metro opens the development app, TypeScript and JavaScript edits refresh without rebuilding, and development transactions do not change the release ledger. Pushing requires explicit user consent.

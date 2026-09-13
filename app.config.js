@@ -11,6 +11,10 @@ if (variant !== 'release' && variant !== 'development') {
 }
 const development = variant === 'development';
 const widgetEnabled = !development && process.env.CARRYOVER_WIDGET === '1';
+const buildNumber = process.env.CARRYOVER_BUILD_NUMBER;
+if (buildNumber !== undefined && !/^[1-9]\d*\.[1-9]\d*$/.test(buildNumber)) {
+  throw new Error('CARRYOVER_BUILD_NUMBER must contain the workflow run number and attempt.');
+}
 
 const BUNDLE_ID = development ? 'com.bbq.carryover.dev' : 'com.bbq.carryover';
 
@@ -63,6 +67,7 @@ module.exports = {
     },
     ios: {
       bundleIdentifier: BUNDLE_ID,
+      ...(buildNumber === undefined ? {} : { buildNumber }),
       supportsTablet: false,
       // Keep the app's entitlement aligned with its variant even when the
       // widget extension is gated off. Native code can then fail closed by

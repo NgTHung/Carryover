@@ -3,6 +3,15 @@ import { resolve } from 'node:path';
 
 const projectRoot = resolve(__dirname, '..');
 
+test('CI build numbers reach the native configuration', () => {
+  const result = execFileSync(process.execPath, ['-e', 'console.log(require("./app.config.js").expo.ios.buildNumber)'], {
+    cwd: projectRoot,
+    env: { ...process.env, CARRYOVER_BUILD_NUMBER: '42.2' },
+    encoding: 'utf8',
+  });
+  expect(result.trim()).toBe('42.2');
+});
+
 function config(variant: string | undefined, widget = '0'): unknown {
   const env: NodeJS.ProcessEnv = { ...process.env, CARRYOVER_WIDGET: widget };
   delete env.CARRYOVER_VARIANT;
