@@ -88,13 +88,21 @@ Fast Refresh is enabled by default. TypeScript, JavaScript, styles, and bundled 
 
 The development IPA is a Debug build and needs Metro to serve the application. It is not a release artifact. Normal pushes and manual runs with `development` disabled continue to produce the Release `carryover-ipa` artifact.
 
-## Cost
+## Build performance
 
-macOS runner minutes bill at ten times the Linux rate, so a private repository on the free tier gets roughly 200 macOS minutes per month. A build takes about four minutes, so budget that per code push. Make the repository public for unlimited free minutes, or push deliberately rather than continuously.
+The September 13 baseline [release build](https://github.com/NgTHung/Carryover/actions/runs/34741605812) took 13m21s overall, including 9m18s in Xcode. Its [development build](https://github.com/NgTHung/Carryover/actions/runs/34741606046) took 15m00s overall and 11m07s in Xcode. These are measurements before compiler caching, not expected times for every runner.
 
-Most of that four minutes is `xcodebuild` compiling the React Native pods from scratch. `expo prebuild --clean` regenerates `ios/`, so nothing from the previous run is reusable and there is no derived-data cache to hit.
+Prebuild installs CocoaPods once. It applies the widget source patch before generating the native project and strips the push entitlement afterward. Keep that ordering when changing the build scripts.
 
-The typecheck job runs on Linux and is effectively free. Let it catch what it can before a macOS runner starts.
+CI installs Ccache and sets USE_CCACHE=1 before prebuild so React Native configures its compiler wrappers during pod installation. The compiler cache lives under the runner's temporary directory, outside ios/, and survives clean project generation. It is limited to 1 GB. Xcode outputs and Pods are regenerated each run. Ccache reuses C, Objective-C, and C++ compilation results; Swift compilation, linking, and JavaScript bundling still run.
+
+Cache keys separate runner OS and architecture, Xcode and Ccache versions, Debug and Release, widget selection, the dependency lockfile, app configuration, config plugins, and the widget source patch. Each successful job saves a new key with the run ID and attempt. Later jobs restore the newest compatible cache. This lets the cache grow as source changes without reusing another variant's configuration. GitHub can evict caches, so a cache miss must remain a valid build path. See [GitHub's cache action](https://github.com/actions/cache) for restore and save behavior.
+
+The job summary includes Xcode's build timing summary and Ccache statistics reset immediately before compilation. The ios-build-report artifact retains the full build log and cache statistics for 14 days, including compiler failures. Logging preserves Xcode's exit code so a failed compile cannot become a successful job. [Apple documents the timing summary](https://developer.apple.com/documentation/Xcode/improving-the-speed-of-incremental-builds).
+
+To measure the improvement, build a candidate branch with development and widget disabled, then rerun it after the first successful job saves its cache. Compare the Xcode step, cache hits, cache restore and save time, and total workflow duration. Also build the development variant to verify Fast Refresh support remains linked. Branch builds only upload artifacts. Record both run URLs and timings in BUILD-006 before marking its CI verification complete.
+
+The Linux typecheck and test job still runs first so a failed check does not start a macOS runner.
 
 ## Testing workflow
 

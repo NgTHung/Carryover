@@ -55,6 +55,11 @@ jobs:
       BUILD_CONFIGURATION: ${{ inputs.development && 'Debug' || 'Release' }}
       CARRYOVER_VARIANT: ${{ inputs.development && 'development' || 'release' }}
       CARRYOVER_BUILD_NUMBER: ${{ github.run_number }}.${{ github.run_attempt }}
+      CARRYOVER_WIDGET: ${{ inputs.development && '0' || inputs.widget && '1' || '0' }}
+      USE_CCACHE: '1'
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_MAXSIZE: 1G
+      CCACHE_COMPILERCHECK: content
     steps:
       - uses: actions/checkout@v4
 
@@ -69,38 +74,56 @@ jobs:
       - name: Select the newest Xcode
         run: |
           ls -d /Applications/Xcode*.app
-          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          sudo xcode-select -s "$(printf '%s\n' /Applications/Xcode*.app | sort -V | tail -1)"
           xcodebuild -version
           swift --version
 
       - name: Install dependencies
         run: npm ci
 
+      - name: Prepare compiler cache
+        id: compiler
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+        run: |
+          brew install ccache
+          ccache --version
+          TOOLCHAIN="$( { xcodebuild -version; ccache --version; } | shasum -a 256 | cut -d ' ' -f 1)"
+          echo "toolchain=$TOOLCHAIN" >> "$GITHUB_OUTPUT"
+          echo "CCACHE_DIR=$RUNNER_TEMP/carryover-ccache" >> "$GITHUB_ENV"
+          echo "BUILD_REPORT_DIR=$RUNNER_TEMP/ios-build-report" >> "$GITHUB_ENV"
+
+      # A unique save key lets each build add compiler results to the latest
+      # compatible cache instead of freezing the first successful build.
+      - name: Restore compiler cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.compiler.outputs.toolchain }}-${{ env.BUILD_CONFIGURATION }}-widget${{ env.CARRYOVER_WIDGET }}-${{ hashFiles('package-lock.json', 'app.config.js', 'plugins/**', 'scripts/patch-expo-widgets.mjs') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ccache-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.compiler.outputs.toolchain }}-${{ env.BUILD_CONFIGURATION }}-widget${{ env.CARRYOVER_WIDGET }}-${{ hashFiles('package-lock.json', 'app.config.js', 'plugins/**', 'scripts/patch-expo-widgets.mjs') }}-
+
       # The widget is deferred to build:WIDGET-002. Every push and development
       # build excludes it; dispatch a release build with the widget input to opt in.
       - name: Generate the native project
-        env:
-          CARRYOVER_WIDGET: ${{ inputs.development && '0' || inputs.widget && '1' || '0' }}
         run: npm run prebuild
 
-      - name: Install pods
-        run: cd ios && pod install
-
       - name: Build unsigned
-        run: |
-          cd ios
-          SCHEME="$(basename ./*.xcworkspace .xcworkspace)"
-          echo "Building scheme: $SCHEME"
-          xcodebuild \
-            -workspace "$SCHEME.xcworkspace" \
-            -scheme "$SCHEME" \
-            -configuration "$BUILD_CONFIGURATION" \
-            -sdk iphoneos \
-            -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            build
+        id: build
+        run: bash scripts/build-ios.sh
+
+      - name: Report build performance
+        if: always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure')
+        run: bash scripts/report-ios-build.sh
+
+      - name: Upload build diagnostics
+        if: always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure')
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-report-${{ env.CARRYOVER_VARIANT }}-widget${{ env.CARRYOVER_WIDGET }}
+          path: ${{ env.BUILD_REPORT_DIR }}
+          retention-days: 14
+          if-no-files-found: error
 
       - name: Package .ipa
         run: |
@@ -115,7 +138,7 @@ jobs:
       # stray entitlement is a build fact rather than a signing guess.
       - name: Report bundle contents
         run: |
-          exec > >(tee -a $GITHUB_STEP_SUMMARY)
+          exec > >(tee -a "$GITHUB_STEP_SUMMARY")
           echo "### Bundle"
           echo '```'
           find Payload -maxdepth 3 \( -name '*.app' -o -name '*.appex' \) \
