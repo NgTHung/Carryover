@@ -68,9 +68,11 @@ Connect your iPhone and the development machine to the same Tailscale network. O
 npm run start:device:tailscale
 ```
 
-This command reads the machine's Tailscale IPv4 address and sets `REACT_NATIVE_PACKAGER_HOSTNAME` before starting the development server in LAN mode. Expo puts that address in the launch link, manifest, bundle URL, and debugger connection. It does not change your app's identity or require another IPA. You can pass `-- --port 8082` if 8081 is already in use.
+This command reads the machine's short MagicDNS name and sets `REACT_NATIVE_PACKAGER_HOSTNAME` before starting the development server in LAN mode. Expo puts that name in the launch link, manifest, bundle URL, and debugger connection. Enable MagicDNS in your tailnet and use Tailscale DNS on your phone. The command does not change your app's identity or require another IPA. You can pass `-- --port 8082` if 8081 is already in use.
 
-On this machine the address is `100.102.144.120`. With Tailscale connected on your iPhone, open `http://100.102.144.120:8081/status` in Safari. It should show `packager-status:running`. Then open Carryover Dev and enter `http://100.102.144.120:8081` manually, or scan the terminal QR code. Automatic LAN discovery may not cross Tailscale, so use the address directly.
+On this machine the MagicDNS name is `bbq`. With Tailscale connected on your iPhone, open `http://bbq:8081/status` in Safari. It should show `packager-status:running`. Then open Carryover Dev and enter `http://bbq:8081` manually, or scan the terminal QR code. Automatic LAN discovery may not cross Tailscale, so use the name directly.
+
+Use the short name, not the numeric Tailscale IP or the full `.ts.net` hostname for this HTTP connection. The installed app allows local networking but does not allow arbitrary HTTP loads. Apple's [local networking ATS documentation](https://developer.apple.com/documentation/bundleresources/information-property-list/nsapptransportsecurity/nsallowslocalnetworking) explains the exception for unqualified names and newer restrictions on IP addresses. Safari reaching an IP does not prove that the app's ATS policy permits it. You verified that `http://bbq:8081` loads Carryover Dev on the iPhone without rebuilding.
 
 Your tailnet access rules and the machine's firewall must allow your phone to reach TCP port 8081. You do not need router port forwarding, an exit node, or Tailscale Funnel. Metro must remain running while you use the development app. Tailscale's [device connection guide](https://tailscale.com/docs/how-to/connect-to-devices) explains private device addresses and access rules.
 

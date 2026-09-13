@@ -1,11 +1,14 @@
-// Advertise the private Tailscale address in manifests and development launch URLs.
+// A short MagicDNS name works with the app's existing iOS local-network ATS exception.
 import { execFileSync, spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
-import { isIPv4 } from 'node:net';
 
 const require = createRequire(import.meta.url);
-const host = execFileSync('tailscale', ['ip', '-4'], { encoding: 'utf8' }).trim();
-if (!isIPv4(host)) throw new Error('Connect this machine to Tailscale before starting Metro.');
+const status = JSON.parse(execFileSync('tailscale', ['status', '--json'], { encoding: 'utf8' }));
+const host = status.Self?.DNSName?.split('.')[0];
+if (status.BackendState !== 'Running' || !status.CurrentTailnet?.MagicDNSEnabled ||
+    typeof host !== 'string' || !/^[a-z0-9][a-z0-9-]*$/i.test(host)) {
+  throw new Error('Connect to Tailscale and enable MagicDNS before starting Metro.');
+}
 
 const args = process.argv.slice(2);
 if (args.some((arg) => ['--localhost', '--tunnel', '--host'].some((flag) => arg === flag || arg.startsWith(`${flag}=`)))) {

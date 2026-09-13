@@ -32,7 +32,7 @@ Publish one source containing separate development and release apps in the AltSt
 - [ ] Successful default-branch builds update one source containing both app variants with IPA metadata, unique build numbers, and direct downloads, without replacing the other variant. Branch and widget experiment builds remain artifacts only.
 - [x] Source generation and publication checks pass locally, and documentation explains source import, update signing, and preservation of app identity and data.
 - [ ] The published source imports in your signer and a subsequent build installs as an update while preserving the ledger.
-- [ ] A documented Tailscale command serves the development manifest with a reachable Tailscale address for remote Fast Refresh.
+- [x] A documented Tailscale command serves the development manifest with a reachable Tailscale address for remote Fast Refresh.
 
 ## Verification
 
@@ -48,6 +48,8 @@ The standalone React Native DevTools app could not start because this Linux mach
 
 Signer source implementation on 2026-09-13 passed all 244 app tests, 10 Python distribution tests, strict typechecking, all 21 Expo diagnostics, the production web export, and actionlint 1.7.12. Temporary development and release prebuilds both wrote version 0.1.0 and build 42.2 to the native Info.plist. Distribution tests cover binary metadata, identity mismatches, widget exclusion, failed uploads, old-run downgrade prevention, corrupt existing metadata, and publication retries that reuse the successful build's assets. No dependencies or signing credentials were added.
 
-The workflow publishes separate AltStore-format sources from successful default-branch builds through public GitHub Releases. Sources and IPA URLs are documented in docs/build/ios-unsigned-ipa.md. These changes are committed locally; initial CI publication and source import on the iPhone remain unverified until the commits are pushed and both channels build. Keep the publication and device criteria open until those checks pass.
+Initial CI publication passed on 2026-09-13 for release run https://github.com/NgTHung/Carryover/actions/runs/34741605812 and development run https://github.com/NgTHung/Carryover/actions/runs/34741606046. Anonymous downloads verified the IPA byte sizes, bundle identifiers, versions, build numbers, minimum iOS versions, and icons. Release build 30.1 and development build 31.1 were then listed together at https://github.com/NgTHung/Carryover/releases/download/ios-source/source.json. The earlier per-app releases remain to preserve those download URLs.
+
+The combined-source implementation passed all 244 app tests, 11 distribution tests, strict typechecking, and workflow linting. The publisher preserves the other variant and serializes catalog writes. The initial numeric Tailscale address served the manifest and iOS bundle, but the installed app rejected HTTP under App Transport Security even though Safari reached /status. The IPA declares NSAllowsLocalNetworking=true and NSAllowsArbitraryLoads=false. Using the short MagicDNS name bbq keeps all Metro URLs within that existing local-network exception. You confirmed that Carryover Dev loads from http://bbq:8081 on your iPhone. npm run start:device:tailscale now discovers that name automatically. Fast Refresh after an edit and ledger isolation still require device verification.
 
 Signed iPhone checks remain required. Verify both apps install together, Metro opens the development app, TypeScript and JavaScript edits refresh without rebuilding, and development transactions do not change the release ledger. Pushing requires explicit user consent.
