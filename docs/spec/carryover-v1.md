@@ -134,7 +134,7 @@ Capture is camera, shutter, and an optional pre-focused amount. It closes immedi
 
 Draft inbox lists unfinished captures with thumbnails. It is the screen that keeps capture alive.
 
-Fill-in takes amount, a searchable leaf category with inline creation, quality, account, and an optional split. It is the most used screen in the app, so design it before coding it.
+Fill-in takes amount, a searchable leaf category with inline creation, quality, account, and an optional split. Implement the required interactions with shared controls during functional work, then refine presentation across the completed app in the UI overhaul.
 
 Transactions is a filterable list. Month summary shows spend by group, the quality split, and the regretted total. People shows a balance per contact and a settle action. Settings holds accounts and reconcile, commitments, the category editor, and backup.
 
@@ -142,23 +142,25 @@ The small widget shows today's allowance and the unlogged badge, and swaps to ru
 
 ## Build order
 
-Each stage depends on the one above it. Weeks assume roughly 10 to 15 hours each.
+Finish v1 functionality before the UI overhaul. ROADMAP.md and .tasks/ define the task dependencies and verification gates. Daily use informs improvements but does not delay the next stage for a fixed period.
 
-Stage 0, half a day. Repo, Expo app, and CI producing an unsigned IPA on the first commit, plus the widget install spike.
+Stage 0, milestone 0.1.0. Repo, Expo app, unsigned IPA pipeline, and the widget install spike.
 
-Stage 1, weeks 1 to 4. Schema and migrations, shared Zod validation, accounts, the two-level category editor with the starter seed, transaction CRUD, and the list screen with Zustand for shared period and filter state.
+Stage 1, milestone 0.2.0. Schema and migrations, validation, accounts, categories, transaction CRUD, list filters, and the development build.
 
-Stage 2, weeks 4 to 6. The budget engine as a tested pure function, snapshot publication to shared storage and Zustand, home screen, commitments, reconcile, and month summary. Start using the app daily here. Real data will change the categories before anything is built on top of them.
+Stage 2, milestone 0.3.0. Budget engine, snapshot publication, Home, commitments, reconcile, and reports. Complete the phone controls for manual expense and income, reserve payments, horizon changes, transfers, and account details. Start daily use here.
 
-Stage 3, weeks 6 to 8. Camera, draft creation, photo downscaling, draft inbox, fill-in screen, and the daily local notification.
+Stage 3, milestone 0.4.0. Durable photo storage, camera capture, drafts, completion, inbox, and the daily local notification.
 
-Stage 4, weeks 8 to 11. Contacts, split entry, derived balances, settlements, and the People screen.
+Stage 4, milestone 0.5.0. Resolve split boundary cases, then implement contacts, split entry, derived balances, settlements, and People.
 
-Stage 5, weeks 11 to 12. JSON export and restore. Test a restore on a wiped install before trusting it.
+Stage 5, milestone 0.6.0. Versioned JSON export, atomic restore, phone controls, and optional separate photo export. Verify a restore on a wiped test install.
 
-Stage 6, weeks 12 to 13. The paid membership, then the widget.
+Stage 6, milestone 0.7.0. Paid membership, signing and stale-render resolution, snapshot rendering, and widget refresh checks.
 
-Weeks 13 to 16 are buffer for iOS bugs, migrations, and what daily use tells you to change.
+Stage 7, milestone 0.8.0. Verify all v1 flows on the iPhone, reconcile earlier release checklists, and resolve functional defects.
+
+Stage 8, milestone 0.9.0. Overhaul the visual design and navigation across the completed app and widget, then repeat functional and accessibility checks on the iPhone.
 
 ## Starter categories
 

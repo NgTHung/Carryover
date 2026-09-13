@@ -84,7 +84,7 @@ Numbers get compared and scanned, so use tabular figures wherever more than one 
 
 ## Screens
 
-Nine surfaces. The fill-in screen is the most used one in the app and the brief says to design it before it is coded.
+Nine surfaces. Complete their functional interactions with shared controls first. UI-026 then reviews the working flows before the presentation overhaul.
 
 ### Home
 
@@ -181,7 +181,7 @@ Category sprawl follows inline creation. Pruning has to be as easy as creating, 
 
 ## Visual material that already exists
 
-There is no design system yet. What exists is a palette used by the spike screen and the widget, and by the spec document. Treat it as a starting point, not a constraint.
+Shared app tokens and controls exist in src/ui, with design guidance in docs/DESIGN.md. Reuse them during functional work. UI-026 can revise the visual direction and UI-027 applies it to the shared controls.
 
 Dark ground `#0D1614`, raised surface `#14211E`, ink `#E4EAE7`, muted `#97AAA5`, faint `#6E827D`, rule `#253430`, accent `#46C4A4`, alert and overspend `#E08A58`.
 
@@ -191,7 +191,7 @@ The widget commits to one dark look and does not follow the system theme. Widget
 
 ## Open for design
 
-None of these are decided. They are the work.
+The overhaul revisits these choices against the completed app.
 
 Navigation structure across the nine screens. Typography for the app, as opposed to the spec document. Iconography. Whether the app follows the system light and dark setting or commits to dark like the widget. The compact and full money formats. The empty, error, and zero-divisor treatments listed above. Motion, if any.
 
@@ -205,9 +205,9 @@ There is no Mac in the toolchain, so anything iOS specific is verified only afte
 
 ## Status
 
-Stage 0 of seven. The build pipeline works and the widget install question is mostly settled. There is no product code yet, so nothing in this document has been implemented and nothing is locked by an existing interface.
+The ledger data layer, budget engine, Home, transaction editing, categories, reconcile, and reports are implemented. Missing controls and the capture, split, backup, and widget stages are tracked as functional tasks. Existing completion evidence lives in .tasks/.
 
-The build order is ledger, then budget engine and home screen, then capture, then splits, then backup, then the widget. Daily real use starts at the end of the budget engine stage, and the plan expects real data to change the category list before anything is built on top of it.
+Complete functionality through milestone 0.8.0 before starting the UI overhaul in milestone 0.9.0. Daily use informs the overhaul without imposing a waiting period on feature development. ROADMAP.md lists the executable stages.
 
 ## Writing style for interface copy
 

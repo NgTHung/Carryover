@@ -11,6 +11,8 @@ The design system artifact and the prompts in `design/BRIEF.md` that produced it
 are a frozen reference, kept for the visual language they settled. This document
 supersedes them wherever the two disagree.
 
+Build sequencing was revised on 2026-09-13. Complete and verify v1 functionality before the UI overhaul in milestone 0.9.0. Use existing shared controls during feature work. UI-026 will revisit this visual direction against the completed flows. SPLIT-002 resolves split input boundary promises before implementation; money validation takes precedence over claims that every input can be saved.
+
 ---
 
 ## 1. Principles
