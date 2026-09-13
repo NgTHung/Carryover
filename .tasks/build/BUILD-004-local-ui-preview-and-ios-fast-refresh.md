@@ -18,7 +18,7 @@ Prioritize an unsigned iOS development build that connects to the local Expo ser
 
 Keep the browser preview limited to startup and shared layout work until product screens exist. Its current stage 0 screen shows that native diagnostics are unavailable. Future screens should share components with iOS and receive typed fixtures. The browser never opens the ledger because expo-sqlite web support is alpha and browser persistence cannot prove native SQLite behavior.
 
-Publish separate development and release sources in the AltStore JSON format so your compatible on-device signer can discover and download new builds. Use public GitHub Release assets, preserve app identities, and derive source metadata from the packaged IPA. This distribution work belongs to BUILD-004 at your request.
+Publish one source containing separate development and release apps in the AltStore JSON format so your compatible on-device signer can discover and download new builds. Use public GitHub Release assets, preserve app identities, and derive source metadata from the packaged IPA. Support remote Fast Refresh through the development machine's Tailscale address. This distribution work belongs to BUILD-004 at your request.
 
 ## Acceptance Criteria
 
@@ -29,9 +29,10 @@ Publish separate development and release sources in the AltStore JSON format so 
 - [x] An on-demand GitHub Actions job packages an unsigned iOS development IPA with Expo development-client support and keeps the widget disabled.
 - [ ] TypeScript and JavaScript changes refresh from the local Expo server without rebuilding the native app; native dependency and app configuration changes are documented as rebuild boundaries.
 - [x] The existing release IPA build remains unchanged and all local tests, typechecking, Expo diagnostics, and a production web export pass.
-- [ ] Successful default-branch builds publish separate development and release source URLs with IPA metadata, unique build numbers, and direct downloads. Branch and widget experiment builds remain artifacts only.
+- [ ] Successful default-branch builds update one source containing both app variants with IPA metadata, unique build numbers, and direct downloads, without replacing the other variant. Branch and widget experiment builds remain artifacts only.
 - [x] Source generation and publication checks pass locally, and documentation explains source import, update signing, and preservation of app identity and data.
 - [ ] The published source imports in your signer and a subsequent build installs as an update while preserving the ledger.
+- [ ] A documented Tailscale command serves the development manifest with a reachable Tailscale address for remote Fast Refresh.
 
 ## Verification
 
