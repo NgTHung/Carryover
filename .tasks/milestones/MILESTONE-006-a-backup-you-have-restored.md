@@ -5,7 +5,7 @@ status: To Do
 priority: "Medium"
 type: "Milestone"
 milestone: "0.6.0"
-last_updated: 2026-09-02
+last_updated: 2026-09-13
 ---
 
 ## Summary
@@ -19,4 +19,5 @@ A backup nobody has restored is not a backup, so the restore is exercised on a w
 - [ ] Export writes every table to JSON with amounts as integers.
 - [ ] Restore rebuilds a wiped install and every budget figure matches the source device.
 - [ ] A restore has actually been run on a wiped install, not just written.
-- [ ] The stage is split into Feature tasks before implementation starts.
+- [ ] Bulk photo export is available separately from routine JSON backup.
+- [x] The stage is split into Feature tasks before implementation starts.

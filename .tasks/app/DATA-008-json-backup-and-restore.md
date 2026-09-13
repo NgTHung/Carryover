@@ -14,7 +14,7 @@ last_updated: 2026-09-13
 
 ## Summary
 
-Stage 5, held at epic size. Sync across devices is deliberately out of scope for v1. Backup covers the risk that matters now.
+Stage 5 completes backup before the UI overhaul. DATA-011 through DATA-014 cover the versioned export, atomic restore, phone controls, and separate photo export. Sync across devices stays outside v1.
 
 Amounts stay integers through the JSON. A serializer that emits a float for an amount breaks invariant 1 in the one place tests rarely look, so the round trip needs an equality assertion on every amount rather than a spot check.
 
@@ -32,4 +32,4 @@ Use a versioned Zod schema for the backup, reusing domain and money validation f
 - [ ] Bulk photo export is available and separate from the JSON export.
 - [ ] A restore has been run on a wiped install before this milestone closes.
 - [ ] Local Jest integration tests exercise restore against real SQLite with a versioned fixture and verify the newly published snapshot. Before release, the fixture is restored on a wiped iPhone and the resulting home snapshot is checked.
-- [ ] The stage is split into Feature tasks before implementation starts.
+- [x] The stage is split into Feature tasks before implementation starts.
