@@ -43,6 +43,9 @@ if (development) {
 if (widgetEnabled) {
   plugins.push(widgetPlugin);
 }
+if (!development) {
+  plugins.push('./plugins/with-release-pods');
+}
 
 module.exports = {
   expo: {

@@ -22,8 +22,7 @@ class IosBuildTests(unittest.TestCase):
                         'printf "%s\\n" "$@" > "$BUILD_ARGS"\n'
                         'echo "compiler diagnostic" >&2\n'
                         + ('echo "Build Timing Summary"\necho "CompileC 2.0 seconds"\n' if timing else '')
-                        +
-                        f'exit {exit_code}\n'
+                        + f'exit {exit_code}\n'
                     ),
                     'ccache': (
                         'echo "$*" >> "$CACHE_ARGS"\n'

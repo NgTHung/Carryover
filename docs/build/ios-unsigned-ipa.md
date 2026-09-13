@@ -104,6 +104,14 @@ To measure the improvement, build a candidate branch with development and widget
 
 The Linux typecheck and test job still runs first so a failed check does not start a macOS runner.
 
+## Native dependencies by variant
+
+Release prebuilds use the local with-release-pods config plugin to exclude expo-dev-client, expo-dev-launcher, and expo-dev-menu through Expo Autolinking. The generated module provider and CocoaPods receive the same exclusions. Development keeps the default module set for Metro and Fast Refresh. Shared interfaces remain linked because other Expo modules can depend on them. The plugin rejects an unfamiliar Podfile template so an SDK upgrade cannot silently stop applying the exclusion.
+
+Disabling the widget extension does not remove expo-widgets or @expo/ui. The app's snapshot writer loads CarryoverWidget, which imports both packages and writes through native shared storage. The snapshot publisher waits for that write before publishing its ready state. Removing those dependencies would break budget publication even with no extension installed. Keep the widget bundle and native source patch in every variant until the storage design changes under separate product work.
+
+React Native core and several Expo modules already use precompiled binaries. Screens, Reanimated, SVG, and Worklets built from source in the measured baseline. Ccache targets this repeated work. Do not enable EAS-only third-party binary downloads in this workflow; Expo [documents their different behavior outside EAS](https://docs.expo.dev/guides/prebuilt-expo-modules/).
+
 ## Testing workflow
 
 Run `npm test`, `npm run typecheck`, and `python3 -m unittest discover -s tests -p '*_test.py'` locally before pushing. The Python checks exercise source generation and publication order with temporary IPAs and a fake GitHub CLI; they do not upload releases. The existing SQLite tests already run on Linux. BUILD-002 migrated them to Jest and added React Native Testing Library; Linux CI runs the same fast checks before the macOS build.
