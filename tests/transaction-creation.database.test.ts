@@ -111,15 +111,28 @@ test('period preparation captures pre-period money and current known income exac
       reservedTotal: 300,
       horizonDate: '2026-09-30',
     });
-    assert.equal(count(database, 'month_config'), 1);
     assert.equal((database.prepare("SELECT COUNT(*) AS count FROM month_config WHERE period = '2026-06'").get() as { count: number }).count, 0);
+    assert.equal(count(database, 'month_config'), 1);
 
     const repeated = await Promise.all([
       preparation.prepareCurrentPeriod(),
       preparation.prepareCurrentPeriod(),
     ]);
     assert.deepEqual(repeated, [config, config]);
-    assert.equal(count(database, 'month_config'), 1);
+
+    const rollover = createPeriodPreparationData(proxy, {
+      now: () => new Date(2026, 11, 15, 12),
+    });
+    const december = await rollover.prepareCurrentPeriod();
+    assert.deepEqual(december, {
+      period: '2026-12',
+      openingBalance: 200,
+      incomeTotal: 0,
+      reservedTotal: 300,
+      horizonDate: '2026-12-31',
+    });
+    assert.deepEqual(await preparation.prepareCurrentPeriod(), config);
+    assert.equal(count(database, 'month_config'), 2);
   } finally {
     database.close();
   }
