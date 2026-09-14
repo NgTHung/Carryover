@@ -7,6 +7,7 @@ import {
   userEvent,
   waitFor,
 } from '@testing-library/react-native';
+import type { TestInstance } from 'test-renderer';
 
 import type { ActiveAccount } from '../src/data/accounts';
 import type { CategoryGroupWithLeaves } from '../src/data/category-types';
@@ -102,6 +103,25 @@ function renderCreator(
       {...overrides}
     />
   );
+}
+
+type EventFiber = {
+  memoizedProps: { onPress?: () => void } | null;
+  return: EventFiber | null;
+};
+
+// Capture the old native handler because normal test events flush the saved render.
+function stalePressHandler(instance: TestInstance): () => void {
+  let fiber: EventFiber | null = (
+    instance as unknown as { unstable_fiber: EventFiber }
+  ).unstable_fiber;
+  while (fiber !== null) {
+    if (typeof fiber.memoizedProps?.onPress === 'function') {
+      return fiber.memoizedProps.onPress;
+    }
+    fiber = fiber.return;
+  }
+  throw new Error('Expected press handler');
 }
 
 afterEach(cleanup);
@@ -279,6 +299,35 @@ test('two immediate submit events create once and commit once', async () => {
     await createPromise;
   });
   await waitFor(() => expect(onCommitted).toHaveBeenCalledTimes(1));
+});
+
+test('keeps submission locked when a stale save event follows commit', async () => {
+  const createCompleteTransaction = jest.fn(async () => savedTransaction());
+  const data = createData(createCompleteTransaction);
+  let staleSubmit: () => void = () => undefined;
+  const onCommitted = jest.fn(() => staleSubmit());
+  const user = userEvent.setup();
+  await renderCreator('expense', data, { onCommitted });
+
+  await user.type(screen.getByLabelText('Amount'), '10000');
+  await user.press(screen.getByRole('button', { name: 'Groceries' }));
+  staleSubmit = stalePressHandler(
+    screen.getByRole('button', { name: 'Save transaction' })
+  );
+  await fireEvent.press(screen.getByRole('button', { name: 'Save transaction' }));
+
+  await waitFor(() => expect(screen.getByText('Transaction saved.')).toBeTruthy());
+  expect(createCompleteTransaction).toHaveBeenCalledTimes(1);
+  expect(onCommitted).toHaveBeenCalledTimes(1);
+});
+
+test('updates the creation heading when direction changes', async () => {
+  const user = userEvent.setup();
+  await renderCreator('income');
+
+  expect(screen.getByRole('header', { name: 'Add income' })).toBeTruthy();
+  await user.press(screen.getByRole('button', { name: 'expense' }));
+  expect(screen.getByRole('header', { name: 'Add expense' })).toBeTruthy();
 });
 
 test('reports an explicit error when no default bank is available', async () => {

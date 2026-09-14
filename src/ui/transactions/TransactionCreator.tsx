@@ -67,13 +67,17 @@ export function TransactionCreator({
   );
   const [errors, setErrors] = useState<TransactionFormErrors>({});
   const [mutation, setMutation] = useState<CreatorMutationState>({ status: 'idle' });
-  const inFlightRef = useRef(false);
+  const submissionLockedRef = useRef(false);
   const committedRef = useRef(false);
 
-  const setPending = (pending: boolean) => {
-    if (inFlightRef.current === pending) return;
-    inFlightRef.current = pending;
-    onWritePending(pending);
+  const beginWrite = () => {
+    submissionLockedRef.current = true;
+    onWritePending(true);
+  };
+
+  const allowRetry = () => {
+    submissionLockedRef.current = false;
+    onWritePending(false);
   };
 
   if (initialization.status === 'error' || form === undefined) {
@@ -95,7 +99,7 @@ export function TransactionCreator({
   const saved = mutation.status === 'saved';
 
   const submit = async () => {
-    if (saving || saved || inFlightRef.current) return;
+    if (saving || saved || submissionLockedRef.current) return;
 
     const validation = validateTransactionForm(form, 'create', openedAt, now());
     if (!validation.valid) {
@@ -103,7 +107,7 @@ export function TransactionCreator({
       return;
     }
 
-    setPending(true);
+    beginWrite();
     setMutation({ status: 'saving' });
     setErrors({});
 
@@ -113,13 +117,14 @@ export function TransactionCreator({
       transaction = await data.createCompleteTransaction(payload);
     } catch (error: unknown) {
       setMutation({ status: 'failed', message: errorMessage(error) });
-      setPending(false);
+      allowRetry();
       return;
     }
 
     setMutation({ status: 'saved', transaction });
     setErrors({});
-    setPending(false);
+    // Release route removal after commit, but keep submission locked until unmount.
+    onWritePending(false);
     if (!committedRef.current) {
       committedRef.current = true;
       onCommitted(transaction);
@@ -127,7 +132,7 @@ export function TransactionCreator({
   };
 
   const cancel = () => {
-    if (inFlightRef.current || saved) return;
+    if (submissionLockedRef.current || saved) return;
     onCancel();
   };
 
@@ -140,7 +145,7 @@ export function TransactionCreator({
       <View className="gap-1">
         <Text className="text-eyebrow font-semibold tracking-widest text-need-light dark:text-need-dark">LEDGER</Text>
         <Text accessibilityRole="header" className="text-title font-bold text-ink-light dark:text-ink-dark">
-          Add {direction}
+          Add {form.direction}
         </Text>
         <Text className="text-body text-muted-light dark:text-muted-dark">
           Complete transaction
