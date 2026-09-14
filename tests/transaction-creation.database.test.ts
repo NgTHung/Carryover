@@ -88,6 +88,13 @@ test('period preparation captures pre-period money and current known income exac
       amount: 700,
       occurredAt: today,
     });
+    await genericTransactions.createTransaction({
+      accountId: bank,
+      direction: 'income',
+      status: 'draft',
+      amount: '  ',
+      occurredAt: new Date(2026, 5, 10, 10),
+    });
     await commitmentData.createCommitment({
       name: 'Rent',
       amount: 300,

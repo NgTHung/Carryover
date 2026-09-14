@@ -17,8 +17,7 @@ type ProxyDatabaseOptions = {
   afterQuery?: ProxyQueryHook;
 };
 
-export function openMigratedDatabase(): DatabaseSync {
-  const database = new DatabaseSync(':memory:');
+export function applyMigrations(database: DatabaseSync): void {
   database.exec('PRAGMA foreign_keys = ON;');
   database.exec(
     readFileSync(resolve(process.cwd(), 'drizzle/0000_initial-ledger.sql'), 'utf8')
@@ -41,6 +40,11 @@ export function openMigratedDatabase(): DatabaseSync {
   database.exec(
     readFileSync(resolve(process.cwd(), 'drizzle/0006_icy_ronan.sql'), 'utf8')
   );
+}
+
+export function openMigratedDatabase(databasePath = ':memory:'): DatabaseSync {
+  const database = new DatabaseSync(databasePath);
+  applyMigrations(database);
   return database;
 }
 
