@@ -5,6 +5,7 @@ import type { CreateTransactionInput, Transaction } from '../src/data/transactio
 import NativeNewTransactionRoute from '../src/app/transactions/new';
 import WebNewTransactionRoute from '../src/app/transactions/new.web';
 import type { TransactionCreateData } from '../src/ui/transactions/transaction-create-contract';
+import { useTransactionFilters } from '../src/ui/transactions/transaction-filters';
 
 const transactionId = '11111111-1111-4111-8111-111111111111';
 const mockUseLocalSearchParams = jest.fn();
@@ -189,6 +190,12 @@ test('native creation route retries a choice loading failure', async () => {
 test('cold-start cancellation replaces with transactions and does not mutate', async () => {
   mockUseLocalSearchParams.mockReturnValue({ direction: 'income' });
   const data = creationData();
+  useTransactionFilters.setState({
+    selectedPeriod: '2026-02',
+    categoryId: '33333333-3333-4333-8333-333333333333',
+    accountId: '22222222-2222-4222-8222-222222222222',
+    quality: 'want',
+  });
   const view = await render(<NativeNewTransactionRoute data={data} />);
   await waitFor(() => expect(view.getByText('Add income')).toBeTruthy());
 
@@ -197,6 +204,12 @@ test('cold-start cancellation replaces with transactions and does not mutate', a
   expect(mockCanGoBack).toHaveBeenCalled();
   expect(mockReplace).toHaveBeenCalledWith('/transactions');
   expect(mockCreateTransaction).not.toHaveBeenCalled();
+  expect(useTransactionFilters.getState()).toMatchObject({
+    selectedPeriod: '2026-02',
+    categoryId: '33333333-3333-4333-8333-333333333333',
+    accountId: '22222222-2222-4222-8222-222222222222',
+    quality: 'want',
+  });
 });
 
 test('cancellation with history goes back without replacing', async () => {
