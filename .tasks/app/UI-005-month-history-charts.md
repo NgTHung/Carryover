@@ -9,7 +9,7 @@ depends_on: ["UI-004"]
 risk: "Medium"
 impact: "The pace line is the first month-over-month comparison the app can make without becoming a trend chart, and the calendar is the first screen that shows a day you spent nothing."
 tags: ["ui", "reports", "charts"]
-last_updated: 2026-09-12
+last_updated: 2026-09-13
 ---
 
 ## Summary
@@ -30,7 +30,9 @@ Split this work into four child tasks so the pure report model, the SQLite read 
 
 The selected period uses today as its cutoff when it is current, the period end when it is complete, and no actual points when it is in the future. A previous period is a reference only when it has a stored month_config and ended before today. A shorter reference period carries its final cumulative total through later day numbers so the median remains a cumulative staircase. Even reference samples use bigint midpoint division with a floor; no money value becomes a float. One reference is labelled with its period name, two with `2-period median`, and three or more with `usual`.
 
-The calendar threshold comes from the stored period configuration, not current settings. Route the frozen baseline of opening balance plus income minus reserves through the single budget engine, using the stored horizon distance from the period start. Spend-ramp comparisons use integer multiplication. A null or nonpositive threshold puts positive spending in the highest step; zero stays untinted.
+The calendar threshold comes from the stored period configuration, not current settings. Route the stored baseline of opening balance plus income minus reserves through the single budget engine, using the stored horizon distance from the period start. Spend-ramp comparisons use integer multiplication. A null or nonpositive threshold puts positive spending in the highest step; zero stays untinted.
+
+Policy revision, 2026-09-13: DATA-015 will let the current period's stored income total follow actual income, so that period's calendar threshold can change. Past configuration money totals stay frozen, while actual historical transaction corrections remain visible. The calendar does not replay previously published daily snapshots. DATA-015 owns regression coverage for this change; the verification below records the original implementation.
 
 Known-amount drafts count as spending. Unknown drafts stay explicit and never become zero. Both charts count your own split shares only. Income is a calendar corner mark. Transfers, adjustments, and settlements are absent from chart totals and expanded day details. The summary order is group, quality and regretted sentence, cumulative pace, then calendar. No streak, best-day, reward, arrow, or congratulatory copy is permitted.
 

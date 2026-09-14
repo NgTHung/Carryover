@@ -10,7 +10,7 @@ BUILD-003 is deferred. No stage depends on automated iOS end-to-end tests. Fast 
 | --- | --- | --- | --- |
 | 0 | 0.1.0 | Reconcile pipeline and widget spike evidence with the release checklist | MILESTONE-001 |
 | 1 | 0.2.0 | Finish development-app device checks and verify ledger controls | BUILD-004, MILESTONE-002 |
-| 2 | 0.3.0 | Manual expense and income creation, commitments and payments, horizon editing, transfers, account details | UI-020 to UI-024 |
+| 2 | 0.3.0 | Period opening and actual income maintenance, manual transactions, commitments and payments, horizon editing, transfers, account details | DATA-015, UI-020 to UI-024 |
 | 3 | 0.4.0 | Durable photos, capture, draft completion, inbox, daily nudge | CAPTURE-002 to CAPTURE-006 under CAPTURE-001 |
 | 4 | 0.5.0 | Boundary contract, contacts, share arithmetic, atomic writes, derived balances, settlements, People | SPLIT-002 to SPLIT-008 under SPLIT-001 |
 | 5 | 0.6.0 | Versioned JSON export, validated atomic restore, phone controls, separate photo export | DATA-011 to DATA-014 under DATA-008 |
@@ -20,7 +20,9 @@ BUILD-003 is deferred. No stage depends on automated iOS end-to-end tests. Fast 
 
 ## Next work
 
-Start with app:UI-020 so you can create expense and income transactions without a photo. The existing transaction screen edits saved transactions but has no creation flow. UI-021 then connects reserve payments to that flow. UI-022, UI-023, and UI-024 can proceed once their existing data dependencies are satisfied.
+Start with app:DATA-015 to open periods and maintain actual current-period income while preserving historical money totals. Then app:UI-020 adds manual expense and income creation, with future dates rejected. The existing transaction screen edits saved transactions but has no creation flow. UI-021 connects reserve payments to that flow. UI-022 and UI-024 also depend on the period policy; UI-023 can proceed once its existing data dependencies are satisfied.
+
+The accepted decisions live in docs/spec/period-income-policy.md. The reviewed implementation stages live in docs/plans/UI-020.md. Income requires no fixed amount or arrival date, and receiving it never moves the horizon automatically.
 
 BUILD-004 still needs signed iPhone installation, Fast Refresh, and ledger isolation checks. Its recorded CI build is already complete. These checks can accompany functional development.
 

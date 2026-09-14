@@ -33,7 +33,7 @@ One calendar month starting on the first, used for reporting and for snapshottin
 _Avoid_: Month, cycle, budget period
 
 **Month config**:
-The stored snapshot of income, reserves, opening balance, and horizon for one period. Read from storage, never recomputed from current settings.
+The stored snapshot of income, reserves, opening balance, and horizon for one period. The current period's income total tracks actual recorded income; past money totals stay frozen. Read from storage, never recomputed from current settings. See docs/spec/period-income-policy.md.
 _Avoid_: Settings, budget config
 
 ## Transactions

@@ -9,10 +9,12 @@ depends_on: ["DATA-001", "DATA-003"]
 risk: "High"
 impact: "The transactions table is the ledger. Its shape decides whether a draft can ever be mistaken for a complete transaction, which is what turns an unknown into a silent zero."
 tags: ["data", "transactions"]
-last_updated: 2026-09-08
+last_updated: 2026-09-13
 ---
 
 ## Summary
+
+Follow-up ownership, 2026-09-13: DATA-015 adds atomic current-period income maintenance to this boundary, and UI-020 adds future-local-date rejection for manual expense and income writes. The completed criteria below describe the existing CRUD implementation. See docs/spec/period-income-policy.md.
 
 A draft and a complete transaction share one table and one type, separated by `status`. Model them as a discriminated union, not a bag of optional fields, so code that reads an amount cannot compile against a draft that has none.
 

@@ -20,7 +20,11 @@ The budget model is a carryover balance. Safe to spend is discretionary money di
 
 Fixed commitments are reserved up front and logged manually when paid. Auto-created transactions are deferred.
 
-Income is tracked as events because support arrives irregularly. There is no declared monthly income figure.
+Income is tracked as events because support arrives irregularly. There is no declared monthly income figure, expected amount, or payday. Recording income changes your carryover balance through the ledger and leaves your horizon unchanged.
+
+Opening balance and reserved total are captured when a period opens. The current period's stored income total follows actual recorded income, including corrections and deletions. Past stored money totals stay frozen even when you correct historical transactions. DATA-015 implements first launch, period opening, and rollover before UI-020. See [Income and period policy](period-income-policy.md) for the accepted contract and its implementation boundary.
+
+Manual expense and income dates must be today or earlier in the local calendar. Create, edit, and draft completion reject future dates. Future horizon dates remain valid; scheduled transactions are outside v1.
 
 The period boundary is the first of the month, stored as configuration rather than hardcoded. History is freely editable, which is safe only because each period stores its own config snapshot.
 
@@ -124,7 +128,7 @@ Every one has a test. A feature that violates one is a bug even when the tests p
 8. The widget reads a snapshot. It never queries the database.
 9. A draft with no amount is an unknown. It is never treated as zero.
 
-Invariant 7 is the one that breaks quietly. Editing history is only safe because each period froze its own config.
+Invariant 7 is the one that breaks quietly. Historical transaction corrections change actual ledger reports and today's carryover balance, while past configuration money totals stay frozen. Current-period income updates are explicit stored writes, never report-time recomputation from settings.
 
 ## Screens
 
@@ -148,7 +152,7 @@ Stage 0, milestone 0.1.0. Repo, Expo app, unsigned IPA pipeline, and the widget 
 
 Stage 1, milestone 0.2.0. Schema and migrations, validation, accounts, categories, transaction CRUD, list filters, and the development build.
 
-Stage 2, milestone 0.3.0. Budget engine, snapshot publication, Home, commitments, reconcile, and reports. Complete the phone controls for manual expense and income, reserve payments, horizon changes, transfers, and account details. Start daily use here.
+Stage 2, milestone 0.3.0. Budget engine, snapshot publication, Home, commitments, reconcile, and reports. Complete DATA-015 period initialization and actual income maintenance before UI-020. Complete the phone controls for manual expense and income, reserve payments, horizon changes, transfers, and account details. Start daily use here.
 
 Stage 3, milestone 0.4.0. Durable photo storage, camera capture, drafts, completion, inbox, and the daily local notification.
 

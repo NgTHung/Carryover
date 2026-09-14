@@ -5,17 +5,17 @@ status: "To Do"
 priority: "Medium"
 type: "Feature"
 milestone: "0.3.0"
-depends_on: ["app:DATA-005", "app:UI-003"]
+depends_on: ["app:DATA-005", "app:UI-003", "app:DATA-015"]
 last_updated: "2026-09-13"
 ---
 
 ## Summary
 
-You need to move the horizon when you know money is arriving. Expose the existing month config operation without computing figures in the form.
+You choose how long your discretionary money should last, even when you do not know when income will arrive. Expose the existing month config operation without computing figures in the form. DATA-015 prepares the period first; receiving income never moves this date automatically.
 
 ## Acceptance Criteria
 
 - [ ] Home shows the stored horizon and opens a date editor that saves through the month config API.
-- [ ] The editor enforces existing date and period rules, preserves input on failure, and leaves storage unchanged on cancellation.
+- [ ] The editor enforces existing date and period rules, preserves input on failure, and leaves storage unchanged on cancellation. Future horizon dates, including dates beyond period end, remain valid; the transaction future-date restriction does not apply here.
 - [ ] Saving refreshes the published snapshot; unrelated historical snapshots remain unchanged.
 - [ ] Database and component tests cover valid changes, rejected dates, period boundaries, and per day read from the resulting snapshot.

@@ -9,14 +9,14 @@ depends_on: ["BUDGET-001", "DATA-005", "UI-001"]
 risk: "High"
 impact: "The only place the need, want, regret axis pays off. It also proves the stored month config is being read rather than recomputed, while sharing split interpretation with the budget snapshot."
 tags: ["ui", "reports"]
-last_updated: 2026-09-12
+last_updated: 2026-09-13
 ---
 
 ## Summary
 
 Spend by group for a period, the need, want, and regret split, and the regretted total called out on its own. Reporting happens at the group because that is what two levels are for.
 
-Past periods read their stored `month_config`. That is the visible payoff of DATA-005, and a past month whose figures move after an edit is the bug this screen would reveal first.
+Past periods read their stored `month_config`. Historical transaction corrections can change actual report totals; they must not rewrite stored configuration money totals. DATA-015 adds current-period income maintenance and verifies that distinction under docs/spec/period-income-policy.md.
 
 `docs/DESIGN.md` section 8 specifies both charts. Spend by group is ranked horizontal bars rather than a pie, because the comparison that matters is between quantities that sit close together. Quality is one stacked bar with 2px gaps and direct labels, which the palette section marks as mandatory rather than polish.
 

@@ -28,6 +28,8 @@ Define reusable Zod schemas at the data boundary and infer their TypeScript type
 
 Use a discriminated union on status for draft and complete transactions. Every complete transaction has an amount. A complete expense also has a leaf category; income has no category. A draft with no amount retains null through storage, reads, and backup.
 
+UI-020 adds a clock-aware manual expense and income write rule: occurred dates must be today or earlier in the local calendar for creation, editing, and draft completion. Horizon dates keep their separate rules. Restore uses versioned validation and must not silently rewrite history with manual-entry defaults.
+
 Share money schemas across feature inputs and ORM adapters. Positive amounts use the positive safe-integer range. Opening balances and stored totals permit zero where the schema allows it. Keep currency constants and bounds in the pure money module, using CURRENCY_EXPONENT. Keep widget formatting independent of Zod and the database.
 
 Validate amount text before numeric conversion. Blank capture input means an unknown; it must never become zero through coercion. Reject fractional notation and values outside the safe-integer range without rounding or truncating them. Convert accepted whole-dong text only after checking its range. A versioned JSON import must also reject invalid amount tokens before numeric parsing can round them into apparently valid integers. Zod validates the decoded payload, but cannot recover precision already lost by a parser.
@@ -37,6 +39,8 @@ SQLite CHECK constraints enforce integer storage, sign, and the same safe-intege
 Public reads hide soft-deleted rows by default. Backup and historical category references opt in explicitly to deleted rows. Keep this policy in the read API so each screen does not have to remember a predicate.
 
 ## Publishing a snapshot
+
+DATA-015 prepares the current period before startup or foreground publication and before mutations that cross a local period boundary. Current-period income maintenance commits atomically with transaction changes. Reports read the stored result; past money totals remain frozen. See [Income and period policy](spec/period-income-policy.md). This is accepted work awaiting implementation, not behavior already supplied by DATA-005.
 
 After a successful database commit, one application service reads the required ledger data and stored month config, calls computeBudget, and writes the resulting snapshot to shared storage. It then publishes that exact artifact to the app's Zustand snapshot store. Store actions and selectors do no budget arithmetic.
 
@@ -50,6 +54,8 @@ The widget reads shared storage in its own runtime. It has no access to the app'
 | --- | --- |
 | DATA-001 | Introduce shared Zod money schemas, align SQL bounds, and enforce default soft-delete reads |
 | DATA-002 through DATA-007 | Validate feature inputs at the data boundary; DATA-004 owns the transaction union |
+| DATA-015 | Open periods, maintain actual current income atomically, and preserve historical money totals before publication |
+| UI-020 | Add manual expense and income routes, reject future local dates through the write boundary, and reuse DATA-015 |
 | UI-001 | Introduce Zustand for the shared selected period and filters |
 | BUDGET-002 | Publish one snapshot to shared storage and the app's Zustand store |
 | UI-003 and UI-004 | Subscribe to published snapshot or selected-period state without computing budget figures in stores |

@@ -9,10 +9,12 @@ depends_on: ["BUDGET-001", "build:WIDGET-001"]
 risk: "Medium"
 impact: "The only data path between the app and the widget. A stale snapshot is worse than no widget, because a wrong number on the home screen still looks authoritative."
 tags: ["budget", "widget", "ios"]
-last_updated: 2026-09-10
+last_updated: 2026-09-13
 ---
 
 ## Summary
+
+Follow-up ownership, 2026-09-13: DATA-015 prepares the current period before publication and commits income changes with their stored current-period total. This publisher retains its explicit error for missing prepared inputs and retries from committed data. The completed criteria below remain evidence for the original publisher. See docs/spec/period-income-policy.md.
 
 After each committed mutation, one application service computes the snapshot and writes it to the shared App Group container. It then publishes that same snapshot to a Zustand store for the home screen. The widget reads the shared artifact. Keeping publication in one service prevents the two surfaces from using separate calculations; write failures remain visible. Follow `docs/state-and-validation.md`.
 

@@ -18,5 +18,5 @@ Reuse transaction editing and category creation so you can complete a draft with
 
 - [ ] A draft shows its photo and completes with only a positive amount and a leaf; quality, account, date, and note remain optional.
 - [ ] Leaf selection supports search and inline group or leaf creation through the existing two-level category API, preserving the draft input.
-- [ ] Completion uses the existing Zod and transaction boundary, keeps the same transaction id and photo key, and refreshes unknown counts and the snapshot.
+- [ ] Completion uses the shared Zod and transaction boundary, including UI-020 future-local-date rejection and DATA-015 current income maintenance when direction changes. It keeps the same transaction id and photo key and refreshes unknown counts and the snapshot.
 - [ ] Component and database tests cover minimal completion, skipped quality, failed writes, inline category creation, and retry without duplicate transactions.

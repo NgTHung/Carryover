@@ -9,12 +9,14 @@ depends_on: ["BUDGET-002"]
 risk: "High"
 impact: "Nullable budget figures can fail native publication, diagnostics can replace current data, and an app left mounted can show yesterday’s snapshot."
 tags: ["budget", "widget", "ios"]
-last_updated: 2026-09-10
+last_updated: 2026-09-13
 ---
 
 ## Summary
 
 Preserve nullable budget values through shared storage, keep diagnostics from writing an alternate artifact, and refresh the snapshot whenever the native app returns to the foreground.
+
+Follow-up ownership, 2026-09-13: DATA-015 extends startup and foreground refresh with period preparation, including returning after several periods away. These completed freshness checks do not yet prove period creation or rollover. See docs/spec/period-income-policy.md.
 
 ## Acceptance Criteria
 
