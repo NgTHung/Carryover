@@ -1,5 +1,10 @@
 import { strict as assert } from 'node:assert';
+import { DatabaseSync } from 'node:sqlite';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 
+import { createAccountData } from '../src/data/accounts';
 import { createCategoryData } from '../src/data/categories';
 import { createCommitmentData } from '../src/data/commitments';
 import { createLedgerChangeNotifier } from '../src/data/ledger-change-notifier';
@@ -426,5 +431,93 @@ test('a failure after mutation rolls back the transaction and current income tog
     assert.deepEqual(changes, []);
   } finally {
     database.close();
+  }
+});
+
+test('manual expense and income survive a file close and reopen with frozen period data', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'carryover-transaction-'));
+  const databasePath = join(directory, 'carryover.db');
+  try {
+    const firstDatabase = openMigratedDatabase(databasePath);
+    try {
+      const proxy = createProxyDatabase(firstDatabase);
+      const monthConfigs = createMonthConfigData(proxy);
+      const historical = await monthConfigs.openPeriod({
+        period: '2026-08',
+        openingBalance: 10_000,
+        incomeTotal: 2_000,
+        reservedTotal: 300,
+        horizonDate: '2026-08-20',
+      });
+      const bank = bankId(firstDatabase);
+      const groceries = leafId(firstDatabase);
+      const manual = createManualData(firstDatabase);
+      const expense = await manual.createTransaction({
+        accountId: bank,
+        direction: 'expense',
+        status: 'complete',
+        amount: 250,
+        categoryId: groceries,
+        quality: 'need',
+        occurredAt: today,
+        note: 'Lunch',
+      });
+      const income = await manual.createTransaction({
+        accountId: bank,
+        direction: 'income',
+        status: 'complete',
+        amount: 800,
+        quality: 'want',
+        occurredAt: now,
+        sourceLabel: 'Salary',
+        note: 'Payday',
+      });
+
+      assert.equal(expense.amount, 250);
+      assert.equal(income.amount, 800);
+      assert.equal((await monthConfigs.readMonthConfig('2026-09'))?.horizonDate, '2026-09-30');
+      assert.deepEqual(await monthConfigs.readMonthConfig(historical.period), historical);
+    } finally {
+      firstDatabase.close();
+    }
+
+    const reopened = new DatabaseSync(databasePath);
+    reopened.exec('PRAGMA foreign_keys = ON;');
+    try {
+      const proxy = createProxyDatabase(reopened);
+      const transactions = createTransactionData(proxy, createCategoryData(proxy));
+      const accounts = createAccountData(proxy);
+      const monthConfigs = createMonthConfigData(proxy);
+      const rows = await Promise.all([
+        transactions.readTransaction(idFor(reopened, "SELECT id FROM transactions WHERE note = 'Lunch'")),
+        transactions.readTransaction(idFor(reopened, "SELECT id FROM transactions WHERE note = 'Payday'")),
+      ]);
+      assert.equal(rows[0]?.note, 'Lunch');
+      assert.equal(rows[0]?.direction, 'expense');
+      assert.equal(rows[0]?.amount, 250);
+      assert.equal(rows[0]?.categoryId, idFor(reopened, "SELECT id FROM categories WHERE name = 'Groceries'"));
+      assert.equal(rows[1]?.note, 'Payday');
+      assert.equal(rows[1]?.direction, 'income');
+      assert.equal(rows[1]?.amount, 800);
+      assert.equal(rows[1]?.sourceLabel, 'Salary');
+      assert.equal(
+        (await accounts.readAccountBalances()).find(({ accountId }) => accountId === bankId(reopened))?.balance,
+        550
+      );
+      assert.equal((await monthConfigs.readMonthConfig('2026-09'))?.incomeTotal, 800);
+      assert.equal((await monthConfigs.readMonthConfig('2026-09'))?.reservedTotal, 0);
+      assert.equal((await monthConfigs.readMonthConfig('2026-09'))?.horizonDate, '2026-09-30');
+      assert.deepEqual(await monthConfigs.readMonthConfig('2026-08'), {
+        period: '2026-08',
+        openingBalance: 10_000,
+        incomeTotal: 2_000,
+        reservedTotal: 300,
+        horizonDate: '2026-08-20',
+      });
+    } finally {
+      reopened.close();
+    }
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
   }
 });
