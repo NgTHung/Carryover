@@ -8,13 +8,13 @@
  */
 import { and, eq, sql } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
-import { z } from 'zod';
 
-import { calculateUnpaidReserve } from './commitment-reserves';
-import { resolveCommitmentDueDate } from './commitment-period';
-import { categoryIdSchema } from './category-validation';
 import {
-  commitmentDueDaySchema,
+  readCommitmentPeriodInputs,
+  type CommitmentOverview,
+  type CommitmentOverviewItem,
+} from './commitment-overview';
+import {
   commitmentIdSchema,
   commitmentSchema,
   createCommitmentInputSchema,
@@ -26,18 +26,15 @@ import {
   ledgerChangeNotifier,
   type LedgerChangeNotifier,
 } from './ledger-change-notifier';
-import { positiveVndAmountSchema } from './money-validation';
 import { activeRowFilter, type SoftDeleteOptions } from './soft-delete';
 import {
   categories,
   commitments,
   ledgerTables,
   nowMillisecondsSql,
-  transactions,
   uuidV4Sql,
 } from './schema';
-import { periodBounds, periodSchema } from './period';
-import { transactionIdSchema } from './transaction-validation';
+import { periodSchema, type Period } from './period';
 
 type LedgerDatabase<TResultKind extends 'sync' | 'async'> = BaseSQLiteDatabase<
   TResultKind,
@@ -47,30 +44,11 @@ type LedgerDatabase<TResultKind extends 'sync' | 'async'> = BaseSQLiteDatabase<
 
 export type CommitmentRow = typeof commitments.$inferSelect;
 
-const storedDateSchema = z
-  .number()
-  .int()
-  .transform((value) => new Date(value))
-  .pipe(z.date());
-
-const unpaidReserveReadRowSchema = z.union([
-  z.tuple([
-    z.literal('commitment'),
-    commitmentIdSchema,
-    positiveVndAmountSchema,
-    commitmentDueDaySchema,
-    categoryIdSchema,
-    z.null(),
-  ]),
-  z.tuple([
-    z.literal('payment'),
-    transactionIdSchema,
-    z.null(),
-    z.null(),
-    categoryIdSchema,
-    storedDateSchema,
-  ]),
-]);
+export type {
+  CommitmentOverview,
+  CommitmentOverviewItem,
+  CommitmentOverviewLeaf,
+} from './commitment-overview';
 
 function commitmentNotFound(commitmentId: string): Error {
   return new Error(`Active commitment ${commitmentId} was not found`);
@@ -226,57 +204,65 @@ export function createCommitmentData<TResultKind extends 'sync' | 'async'>(
       return rows.map(toCommitment);
     },
 
-    async readReservedUnpaid(period: unknown): Promise<number> {
-      const parsedPeriod = periodSchema.parse(period);
-      const bounds = periodBounds(parsedPeriod);
-      const rawRows = await db.values(sql`
-        SELECT
-          'commitment',
-          ${commitments.id},
-          ${commitments.amount},
-          ${commitments.dueDay},
-          ${commitments.categoryId},
-          NULL
-        FROM ${commitments}
-        WHERE ${commitments.active} = 1
-          AND ${commitments.deletedAt} IS NULL
-        UNION ALL
-        SELECT
-          'payment',
-          ${transactions.id},
-          NULL,
-          NULL,
-          ${transactions.categoryId},
-          ${transactions.occurredAt}
-        FROM ${transactions}
-        WHERE ${transactions.status} = 'complete'
-          AND ${transactions.direction} = 'expense'
-          AND ${transactions.categoryId} IS NOT NULL
-          AND ${transactions.occurredAt} >= ${bounds.start.getTime()}
-          AND ${transactions.occurredAt} < ${bounds.end.getTime()}
-          AND ${transactions.deletedAt} IS NULL
-      `);
-      const reserveCommitments = [];
-      const reservePayments = [];
-      for (const rawRow of rawRows) {
-        const row = unpaidReserveReadRowSchema.parse(rawRow);
-        if (row[0] === 'commitment') {
-          reserveCommitments.push({
-            id: row[1],
-            amount: row[2],
-            categoryId: row[4],
-            dueDate: resolveCommitmentDueDate(parsedPeriod, row[3]),
-          });
-        } else {
-          reservePayments.push({
-            id: row[1],
-            categoryId: row[4],
-            occurredAt: row[5],
-          });
+    async readCommitmentOverview(period: unknown): Promise<CommitmentOverview> {
+      const parsedPeriod = periodSchema.parse(period) as Period;
+      const inputs = await readCommitmentPeriodInputs(db, parsedPeriod);
+      const matchesByCommitment = new Map(
+        inputs.matches.map((match) => [match.commitment.id, match])
+      );
+      const nextUnpaidByCategory = new Set<string>();
+      const nextUnpaidCommitments = new Set<string>();
+      for (const match of inputs.matches) {
+        if (
+          match.status === 'unpaid' &&
+          !nextUnpaidByCategory.has(match.commitment.categoryId)
+        ) {
+          nextUnpaidByCategory.add(match.commitment.categoryId);
+          nextUnpaidCommitments.add(match.commitment.id);
         }
       }
 
-      return calculateUnpaidReserve(reserveCommitments, reservePayments);
+      return {
+        period: parsedPeriod,
+        unpaidTotal: inputs.unpaidTotal,
+        items: inputs.commitments.map((item): CommitmentOverviewItem => {
+          if (!item.commitment.active) {
+            return { ...item, state: { status: 'inactive' } };
+          }
+          const match = matchesByCommitment.get(item.commitment.id);
+          if (match === undefined) {
+            throw new Error(
+              `Active commitment ${item.commitment.id} has no reserve match`
+            );
+          }
+          return match.status === 'paid'
+            ? {
+                ...item,
+                state: {
+                  status: 'paid',
+                  transactionId: match.payment.id,
+                },
+              }
+            : {
+                ...item,
+                state: {
+                  status: 'unpaid',
+                  nextToAcceptPayment: nextUnpaidCommitments.has(
+                    item.commitment.id
+                  ),
+                },
+              };
+        }),
+      };
+    },
+
+    async readReservedUnpaid(period: unknown): Promise<number> {
+      const parsedPeriod = periodSchema.parse(period) as Period;
+      const { unpaidTotal } = await readCommitmentPeriodInputs(db, parsedPeriod);
+      if (unpaidTotal.status === 'overflow') {
+        throw new RangeError('reserved unpaid exceeds the safe VND amount');
+      }
+      return unpaidTotal.amount;
     },
 
     async editCommitment(input: unknown): Promise<Commitment> {

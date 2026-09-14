@@ -417,6 +417,110 @@ test('reserved unpaid rejects a result beyond the safe VND amount', async () => 
       commitments.readReservedUnpaid('2026-09'),
       /safe VND amount/i
     );
+    const overview = await commitments.readCommitmentOverview('2026-09');
+    assert.deepEqual(overview.unpaidTotal, { status: 'overflow' });
+    assert.equal(overview.items.length, 2);
+  } finally {
+    database.close();
+  }
+});
+
+test('commitment overview returns deterministic statuses and historical category names', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const proxy = createProxyDatabase(database);
+    const commitmentData = createCommitmentData(proxy);
+    const transactionData = createTransactionData(proxy, createCategoryData(proxy));
+    const later = await commitmentData.createCommitment({
+      name: 'Later rent',
+      amount: 800_000,
+      dueDay: 20,
+      categoryId: reserveLeafId,
+    });
+    const earlier = await commitmentData.createCommitment({
+      name: 'Earlier rent',
+      amount: 700_000,
+      dueDay: 5,
+      categoryId: reserveLeafId,
+    });
+    const inactive = await commitmentData.createCommitment({
+      name: 'Inactive rent',
+      amount: 100_000,
+      dueDay: 1,
+      categoryId: secondReserveLeafId,
+      active: false,
+    });
+    const payment = await transactionData.createTransaction({
+      accountId: bankId(database),
+      direction: 'expense',
+      status: 'complete',
+      amount: 1,
+      categoryId: reserveLeafId,
+      occurredAt: new Date(2026, 8, 10),
+    });
+
+    const overview = await commitmentData.readCommitmentOverview('2026-09');
+
+    assert.equal(overview.period, '2026-09');
+    assert.deepEqual(overview.unpaidTotal, {
+      status: 'available',
+      amount: 800_000,
+    });
+    assert.deepEqual(
+      overview.items.map(({ commitment }) => commitment.id),
+      [inactive.id, earlier.id, later.id]
+    );
+    assert.deepEqual(overview.items[0]?.state, { status: 'inactive' });
+    assert.deepEqual(overview.items[1]?.state, {
+      status: 'paid',
+      transactionId: payment.id,
+    });
+    assert.deepEqual(overview.items[2]?.state, {
+      status: 'unpaid',
+      nextToAcceptPayment: true,
+    });
+    assert.equal(overview.items[2]?.dueDate, '2026-09-20');
+    assert.equal(overview.items[2]?.leaf.id, reserveLeafId);
+    assert.equal(overview.items[2]?.leaf.active, true);
+    assert.equal(typeof overview.items[2]?.leaf.name, 'string');
+    assert.equal(typeof overview.items[2]?.leaf.groupName, 'string');
+
+    database
+      .prepare('UPDATE categories SET deleted_at = ? WHERE id = ?')
+      .run(Date.now(), reserveLeafId);
+    const unavailable = await commitmentData.readCommitmentOverview('2026-09');
+    const unavailableLater = unavailable.items.find(
+      ({ commitment }) => commitment.id === later.id
+    );
+    assert.equal(unavailableLater?.leaf.active, false);
+    assert.equal(typeof unavailableLater?.leaf.name, 'string');
+    assert.equal(typeof unavailableLater?.leaf.groupName, 'string');
+
+    await commitmentData.softDeleteCommitment(later.id);
+    assert.equal(
+      (await commitmentData.readCommitmentOverview('2026-09')).items.some(
+        ({ commitment }) => commitment.id === later.id
+      ),
+      false
+    );
+  } finally {
+    database.close();
+  }
+});
+
+test('commitment overview rejects malformed periods before querying', async () => {
+  const database = openMigratedDatabase();
+  try {
+    let queried = false;
+    const proxy = createProxyDatabase(database, {
+      afterQuery() {
+        queried = true;
+      },
+    });
+    await assert.rejects(
+      createCommitmentData(proxy).readCommitmentOverview('2026-13')
+    );
+    assert.equal(queried, false);
   } finally {
     database.close();
   }
