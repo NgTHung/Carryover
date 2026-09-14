@@ -1,14 +1,14 @@
 ---
 id: "DATA-015"
 title: "Open periods and maintain actual income snapshots"
-status: "To Do"
+status: In Progress
 priority: "High"
 type: "Feature"
 milestone: "0.3.0"
 depends_on: ["app:DATA-002", "app:DATA-004", "app:DATA-005", "app:DATA-009", "app:BUDGET-003"]
 risk: "High"
 impact: "First launch and income mutations must produce correct current figures without rewriting historical money totals."
-last_updated: "2026-09-13"
+last_updated: 2026-09-14
 ---
 
 ## Summary
