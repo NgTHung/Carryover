@@ -1,12 +1,12 @@
 ---
 id: "UI-020"
 title: "Create expense and income transactions"
-status: "To Do"
+status: In Progress
 priority: "High"
 type: "Feature"
 milestone: "0.3.0"
 depends_on: ["app:DATA-004", "app:UI-001", "app:DATA-015"]
-last_updated: "2026-09-13"
+last_updated: 2026-09-14
 ---
 
 ## Summary
