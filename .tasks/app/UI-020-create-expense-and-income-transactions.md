@@ -28,8 +28,8 @@ Follow docs/spec/period-income-policy.md. DATA-015 supplies period opening and a
 
 ## Verification
 
-- Candidate revision: `80b3b68`.
-- `npm test -- --runInBand`: 59 suites and 300 tests passed.
+- Candidate revision: `43b557b`.
+- `npm test -- --runInBand`: 59 suites and 302 tests passed.
 - `npm run typecheck`: passed.
 - `npm run web:export`: passed, including the browser creation fallback.
 - `npx expo export --platform ios`: passed, producing the iOS JavaScript bundle.
