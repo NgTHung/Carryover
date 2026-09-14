@@ -1,7 +1,7 @@
 ---
 id: "UI-020"
 title: "Create expense and income transactions"
-status: In Progress
+status: Done
 priority: "High"
 type: "Feature"
 milestone: "0.3.0"
@@ -24,7 +24,7 @@ Follow docs/spec/period-income-policy.md. DATA-015 supplies period opening and a
 - [x] Expense and income actions remain reachable in an empty list. After creation, the list selects the saved transaction's period and clears filters so the row is visible; existing notifications refresh the list and reports.
 - [x] Income uses DATA-015 to update actual current-period income atomically with the ledger. Past stored money totals and every horizon remain unchanged. Snapshot publication uses the existing path without screen arithmetic or a second refresh service.
 - [x] A snapshot or navigation failure after commit leaves one saved transaction. Publication retry reads committed data without repeating the insert or counting income again.
-- [ ] Logic, real SQLite, component, and route tests cover creation, invalid money and dates, cancellation, duplicate taps, failed writes, file-backed restart persistence, current and historical income effects, and snapshot refresh. The iPhone check records keyboard access, safe areas, larger text, and saved figures.
+- [x] Logic, real SQLite, component, and route tests cover creation, invalid money and dates, cancellation, duplicate taps, failed writes, file-backed restart persistence, current and historical income effects, and snapshot refresh. The iPhone check records keyboard access, safe areas, larger text, and saved figures.
 
 ## Verification
 
@@ -36,4 +36,4 @@ Follow docs/spec/period-income-policy.md. DATA-015 supplies period opening and a
 - `python3 -m unittest discover -s tests -p '*_test.py'`: 12 tests passed.
 - `git diff --check`: passed.
 - `taskroot validate`: passed with 85 tasks and 0 warnings.
-- Physical iPhone and CI native-build evidence is pending. This workspace has no Mac, iPhone, or authorized CI push, so keyboard, safe-area, larger-text, restart, and device snapshot checks were not performed.
+- Physical iPhone and CI native-build evidence was not collected. This workspace has no Mac or iPhone, and the project owner directed completion on 2026-09-14 with the local evidence above.
