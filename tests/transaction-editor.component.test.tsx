@@ -1,4 +1,4 @@
-import { cleanup, render, screen, userEvent, waitFor } from '@testing-library/react-native';
+import { act, cleanup, fireEvent, render, screen, userEvent, waitFor } from '@testing-library/react-native';
 
 import type { ActiveAccount } from '../src/data/accounts';
 import type { CategoryGroupWithLeaves } from '../src/data/category-types';
@@ -130,7 +130,7 @@ test('rejects fractional money before calling the data boundary', async () => {
   await user.type(screen.getByLabelText('Amount'), '12.5');
   await user.press(screen.getByRole('button', { name: 'Save transaction' }));
 
-  expect(screen.getByText('Enter a positive whole-dong amount, or leave a draft amount blank.')).toBeTruthy();
+  expect(screen.getByText('Enter a positive whole-dong amount.')).toBeTruthy();
   expect(data.editTransaction).not.toHaveBeenCalled();
 });
 
@@ -146,4 +146,100 @@ test('soft-deletes only after inline confirmation', async () => {
 
   await waitFor(() => expect(data.softDeleteTransaction).toHaveBeenCalledWith(transactionId));
   expect(done).toHaveBeenCalledTimes(1);
+});
+
+test('shows future-date feedback at the Date field before writing', async () => {
+  const data = editorData();
+  const user = userEvent.setup();
+  await render(
+    <TransactionEditor
+      transaction={complete()}
+      groups={groups}
+      accounts={accounts}
+      data={data}
+      onDone={jest.fn()}
+      now={() => new Date(2026, 0, 12, 10)}
+    />
+  );
+
+  await user.clear(screen.getByLabelText('Date'));
+  await user.type(screen.getByLabelText('Date'), '2026-01-13');
+  await user.press(screen.getByRole('button', { name: 'Save transaction' }));
+
+  expect(screen.getByText('Manual transaction date cannot be in the future')).toBeTruthy();
+  expect(data.editTransaction).not.toHaveBeenCalled();
+});
+
+test('direction changes clear forbidden visible fields', async () => {
+  const data = editorData();
+  const user = userEvent.setup();
+  await render(
+    <TransactionEditor
+      transaction={complete()}
+      groups={groups}
+      accounts={accounts}
+      data={data}
+      onDone={jest.fn()}
+    />
+  );
+
+  await user.press(screen.getByRole('button', { name: 'income' }));
+  expect(screen.queryByText('Leaf')).toBeNull();
+  expect(screen.getByLabelText('Source').props.value).toBe('');
+  await user.type(screen.getByLabelText('Source'), 'Imported');
+  await user.press(screen.getByRole('button', { name: 'expense' }));
+  expect(screen.queryByLabelText('Source')).toBeNull();
+});
+
+test('failed edits retain every visible value', async () => {
+  const data = editorData();
+  data.editTransaction = jest.fn(async () => {
+    throw new Error('Ledger unavailable');
+  });
+  const user = userEvent.setup();
+  await render(
+    <TransactionEditor
+      transaction={complete()}
+      groups={groups}
+      accounts={accounts}
+      data={data}
+      onDone={jest.fn()}
+    />
+  );
+
+  await user.clear(screen.getByLabelText('Amount'));
+  await user.type(screen.getByLabelText('Amount'), '130000');
+  await user.type(screen.getByLabelText('Note'), 'Keep this');
+  await user.press(screen.getByRole('button', { name: 'Save transaction' }));
+  await waitFor(() => expect(screen.getByText('Ledger unavailable')).toBeTruthy());
+  expect(screen.getByLabelText('Amount').props.value).toBe('130000');
+  expect(screen.getByLabelText('Note').props.value).toBe('Keep this');
+});
+
+test('two immediate save events issue one edit', async () => {
+  let resolveEdit: () => void = () => undefined;
+  const editPromise = new Promise<Extract<Transaction, { status: 'complete' }>>((resolve) => {
+    resolveEdit = () => resolve(complete());
+  });
+  const data = editorData();
+  data.editTransaction = jest.fn(() => editPromise);
+  const view = await render(
+    <TransactionEditor
+      transaction={complete()}
+      groups={groups}
+      accounts={accounts}
+      data={data}
+      onDone={jest.fn()}
+    />
+  );
+  const save = view.getByRole('button', { name: 'Save transaction' });
+
+  await fireEvent.press(save);
+  await fireEvent.press(save);
+  expect(data.editTransaction).toHaveBeenCalledTimes(1);
+  await act(async () => {
+    resolveEdit();
+    await editPromise;
+  });
+  await waitFor(() => expect(data.editTransaction).toHaveBeenCalledTimes(1));
 });
