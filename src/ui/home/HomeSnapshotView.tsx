@@ -73,6 +73,11 @@ export function HomeSnapshotView({
                 Accounts
               </Button>
             </Link>
+            <Link href={'/settings/commitments' as never} asChild>
+              <Button variant="secondary" fullWidth className="flex-1">
+                Commitments
+              </Button>
+            </Link>
           </View>
 
           <Button

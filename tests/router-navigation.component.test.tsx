@@ -18,6 +18,7 @@ const mockListCategories = jest.fn();
 const mockReadAccounts = jest.fn();
 const mockReadAccountBalances = jest.fn();
 const mockReadMonthSummary = jest.fn();
+const mockReadCommitmentOverview = jest.fn();
 
 jest.mock('drizzle-orm/expo-sqlite/migrator', () => ({
   useMigrations: (...args: unknown[]) => mockUseMigrations(...args),
@@ -50,6 +51,12 @@ jest.mock('../src/data/database', () => ({
     reorderCategories: jest.fn(),
     softDeleteCategory: jest.fn(),
     deleteSuggestedCategories: jest.fn(),
+  },
+  commitmentData: {
+    readCommitmentOverview: (...args: unknown[]) => mockReadCommitmentOverview(...args),
+    createCommitment: jest.fn(),
+    editCommitment: jest.fn(),
+    softDeleteCommitment: jest.fn(),
   },
   manualTransactionData: {
     createTransaction: jest.fn(),
@@ -103,6 +110,11 @@ beforeEach(() => {
     },
   ]);
   mockReadMonthSummary.mockResolvedValue(FIXTURE_MONTH_SUMMARY);
+  mockReadCommitmentOverview.mockResolvedValue({
+    period: '2026-09',
+    unpaidTotal: { status: 'available', amount: 0 },
+    items: [],
+  });
 });
 
 test('opens a transaction URL and provides a reliable route home', async () => {
@@ -200,6 +212,31 @@ test('keeps the category route behind the migration gate', async () => {
 
   expect(view.getByText('Applying the ledger schema…')).toBeTruthy();
   expect(mockListCategories).not.toHaveBeenCalled();
+});
+
+test('opens commitments through the settings route', async () => {
+  const view = await render(
+    <ExpoRoot
+      context={getMockContext('./src/app')}
+      location="/settings/commitments?period=2026-09"
+    />
+  );
+
+  await waitFor(() => expect(view.getByText('No commitments yet.')).toBeTruthy());
+  expect(mockReadCommitmentOverview).toHaveBeenCalledWith('2026-09');
+});
+
+test('keeps commitments behind the migration gate', async () => {
+  mockUseMigrations.mockReturnValue({ success: false, error: undefined });
+  const view = await render(
+    <ExpoRoot
+      context={getMockContext('./src/app')}
+      location="/settings/commitments?period=2026-09"
+    />
+  );
+
+  expect(view.getByText('Applying the ledger schema…')).toBeTruthy();
+  expect(mockReadCommitmentOverview).not.toHaveBeenCalled();
 });
 
 test('opens accounts and reconcile through the settings route', async () => {

@@ -129,17 +129,19 @@ test('keeps the capture affordance present in the thumb-reach area', async () =>
   expect(capture.props.accessibilityHint).toBe('Capture is not available yet.');
 });
 
-test('keeps existing transaction and account routes reachable from home', async () => {
+test('keeps ledger and settings routes reachable from home', async () => {
   await render(<HomeSnapshotView state={{ status: 'ready', snapshot }} />);
   const user = userEvent.setup();
 
   await user.press(screen.getByRole('button', { name: 'Transactions' }));
   await user.press(screen.getByRole('button', { name: 'Summary' }));
   await user.press(screen.getByRole('button', { name: 'Accounts' }));
+  await user.press(screen.getByRole('button', { name: 'Commitments' }));
 
   expect(mockNavigate).toHaveBeenNthCalledWith(1, '/transactions');
   expect(mockNavigate).toHaveBeenNthCalledWith(2, '/summary');
   expect(mockNavigate).toHaveBeenNthCalledWith(3, '/settings/accounts');
+  expect(mockNavigate).toHaveBeenNthCalledWith(4, '/settings/commitments');
 });
 
 test('native route subscribes to the published snapshot store', async () => {
