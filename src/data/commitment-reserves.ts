@@ -20,6 +20,21 @@ export type UnpaidReservePayment = {
   occurredAt: Date;
 };
 
+export type CommitmentReserveMatch =
+  | {
+      status: 'paid';
+      commitment: UnpaidReserveCommitment;
+      payment: UnpaidReservePayment;
+    }
+  | {
+      status: 'unpaid';
+      commitment: UnpaidReserveCommitment;
+    };
+
+export type UnpaidReserveTotal =
+  | { status: 'available'; amount: number }
+  | { status: 'overflow' };
+
 function compareCommitments(
   left: UnpaidReserveCommitment,
   right: UnpaidReserveCommitment
@@ -37,18 +52,10 @@ function comparePayments(
   );
 }
 
-function addUnpaidAmount(total: bigint, amount: number): bigint {
-  const next = total + BigInt(amount);
-  if (next > BigInt(MAX_VND_AMOUNT)) {
-    throw new RangeError('reserved unpaid exceeds the safe VND amount');
-  }
-  return next;
-}
-
-export function calculateUnpaidReserve(
+export function matchCommitmentReserves(
   commitments: readonly UnpaidReserveCommitment[],
   payments: readonly UnpaidReservePayment[]
-): number {
+): CommitmentReserveMatch[] {
   const paymentsByCategory = new Map<string, UnpaidReservePayment[]>();
   for (const payment of payments) {
     const categoryPayments = paymentsByCategory.get(payment.categoryId) ?? [];
@@ -60,16 +67,48 @@ export function calculateUnpaidReserve(
   }
 
   const paymentIndexes = new Map<string, number>();
-  let total = 0n;
+  const matches: CommitmentReserveMatch[] = [];
   const orderedCommitments = [...commitments].sort(compareCommitments);
   for (const commitment of orderedCommitments) {
     const categoryPayments = paymentsByCategory.get(commitment.categoryId);
     const paymentIndex = paymentIndexes.get(commitment.categoryId) ?? 0;
     if (categoryPayments !== undefined && paymentIndex < categoryPayments.length) {
       paymentIndexes.set(commitment.categoryId, paymentIndex + 1);
+      matches.push({
+        status: 'paid',
+        commitment,
+        payment: categoryPayments[paymentIndex],
+      });
       continue;
     }
-    total = addUnpaidAmount(total, commitment.amount);
+    matches.push({ status: 'unpaid', commitment });
   }
-  return Number(total);
+  return matches;
+}
+
+export function summarizeUnpaidReserve(
+  matches: readonly CommitmentReserveMatch[]
+): UnpaidReserveTotal {
+  let total = 0n;
+  for (const match of matches) {
+    if (match.status === 'paid') continue;
+    total += BigInt(match.commitment.amount);
+    if (total > BigInt(MAX_VND_AMOUNT)) {
+      return { status: 'overflow' };
+    }
+  }
+  return { status: 'available', amount: Number(total) };
+}
+
+export function calculateUnpaidReserve(
+  commitments: readonly UnpaidReserveCommitment[],
+  payments: readonly UnpaidReservePayment[]
+): number {
+  const total = summarizeUnpaidReserve(
+    matchCommitmentReserves(commitments, payments)
+  );
+  if (total.status === 'overflow') {
+    throw new RangeError('reserved unpaid exceeds the safe VND amount');
+  }
+  return total.amount;
 }

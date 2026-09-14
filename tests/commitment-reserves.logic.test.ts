@@ -3,6 +3,8 @@ import { strict as assert } from 'node:assert';
 import { MAX_VND_AMOUNT } from '../src/money/currency';
 import {
   calculateUnpaidReserve,
+  matchCommitmentReserves,
+  summarizeUnpaidReserve,
   type UnpaidReserveCommitment,
   type UnpaidReservePayment,
 } from '../src/data/commitment-reserves';
@@ -41,6 +43,17 @@ test('pairs one payment per category by due date and occurrence order', () => {
     calculateUnpaidReserve(commitments.slice(0, 2), payments.slice(0, 1)),
     2_000
   );
+  assert.deepEqual(
+    matchCommitmentReserves(commitments, payments).map((match) => ({
+      commitmentId: match.commitment.id,
+      paymentId: match.status === 'paid' ? match.payment.id : null,
+    })),
+    [
+      { commitmentId: 'other', paymentId: 'food-payment' },
+      { commitmentId: 'earlier', paymentId: 'early-payment' },
+      { commitmentId: 'later', paymentId: 'late-payment' },
+    ]
+  );
 });
 
 test('clears the lexically earlier commitment when due dates tie regardless of input order', () => {
@@ -77,4 +90,44 @@ test('does not compare payment amount and rejects an unsafe unpaid total', () =>
       ),
     /safe VND amount/i
   );
+  assert.deepEqual(
+    summarizeUnpaidReserve(
+      matchCommitmentReserves(
+        [
+          commitment('first', MAX_VND_AMOUNT, 'rent', '2026-09-01'),
+          commitment('second', 1, 'rent', '2026-09-02'),
+        ],
+        []
+      )
+    ),
+    { status: 'overflow' }
+  );
+});
+
+test('uses transaction ID to break payment timestamp ties without mutating inputs', () => {
+  const commitments = [
+    commitment('b', 2_000, 'rent', '2026-09-01'),
+    commitment('a', 1_000, 'rent', '2026-09-01'),
+  ];
+  const payments = [
+    payment('z', 'rent', '2026-09-01T00:00:00.000Z'),
+    payment('a', 'rent', '2026-09-01T00:00:00.000Z'),
+  ];
+  const commitmentOrder = commitments.map(({ id }) => id);
+  const paymentOrder = payments.map(({ id }) => id);
+
+  const matches = matchCommitmentReserves(commitments, payments);
+
+  assert.deepEqual(
+    matches.map((match) => [
+      match.commitment.id,
+      match.status === 'paid' ? match.payment.id : null,
+    ]),
+    [
+      ['a', 'a'],
+      ['b', 'z'],
+    ]
+  );
+  assert.deepEqual(commitments.map(({ id }) => id), commitmentOrder);
+  assert.deepEqual(payments.map(({ id }) => id), paymentOrder);
 });
