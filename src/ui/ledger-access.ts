@@ -32,6 +32,7 @@ import type {
   LedgerChangeListener,
 } from '../data/ledger-change-notifier';
 import type { TransactionListData } from '../data/transaction-list';
+import type { TransactionCreateData } from './transactions/transaction-create-contract';
 import type { TransactionEditorData } from './transactions/transaction-editor-contract';
 
 export function useLedgerMigrations() {
@@ -101,8 +102,18 @@ const transactionEditorData: TransactionEditorData = {
   softDeleteTransaction: (id) => manualTransactionData.softDeleteTransaction(id),
 };
 
+const transactionCreateData: TransactionCreateData = {
+  listActiveCategoryGroups: () => categoryData.listActiveCategoryGroups(),
+  listActiveAccounts: () => accountData.listActiveAccounts(),
+  createCompleteTransaction: (input) => manualTransactionData.createTransaction(input),
+};
+
 export function getTransactionEditorData(): TransactionEditorData {
   return transactionEditorData;
+}
+
+export function getTransactionCreateData(): TransactionCreateData {
+  return transactionCreateData;
 }
 
 export type { LedgerChange };
