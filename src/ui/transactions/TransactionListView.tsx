@@ -33,6 +33,14 @@ function Header({
         <Text className="text-eyebrow font-semibold tracking-widest text-need-light dark:text-need-dark">LEDGER</Text>
         <Text accessibilityRole="header" className="text-title font-bold text-ink-light dark:text-ink-dark">Transactions</Text>
       </View>
+      <View className="flex-row gap-2">
+        <Link href="/transactions/new?direction=expense" asChild>
+          <Button className="flex-1">Add expense</Button>
+        </Link>
+        <Link href="/transactions/new?direction=income" asChild>
+          <Button className="flex-1" variant="secondary">Add income</Button>
+        </Link>
+      </View>
       <TransactionListFilters rows={rows} filters={filters} />
       {hasFilters ? <Button variant="secondary" fullWidth onPress={onReset}>Reset filters</Button> : null}
     </View>

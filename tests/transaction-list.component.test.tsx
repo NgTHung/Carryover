@@ -236,6 +236,51 @@ test('shows a calm empty state', async () => {
   await waitFor(() => expect(screen.getByText('No transactions in this period.')).toBeTruthy());
 });
 
+test('shows expense and income entry actions with rows', async () => {
+  const user = userEvent.setup();
+  await render(<TransactionsScreen data={repository()} subscribe={() => () => undefined} />);
+  await waitFor(() => expect(screen.getByText('₫125.000')).toBeTruthy());
+  expect(screen.getByRole('button', { name: 'Add expense' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Add income' })).toBeTruthy();
+
+  await user.press(screen.getByRole('button', { name: 'Add expense' }));
+  await user.press(screen.getByRole('button', { name: 'Add income' }));
+  expect(mockNavigate).toHaveBeenNthCalledWith(1, '/transactions/new?direction=expense');
+  expect(mockNavigate).toHaveBeenNthCalledWith(2, '/transactions/new?direction=income');
+});
+
+test('keeps entry actions reachable in an empty list', async () => {
+  await render(<TransactionsScreen data={repository([])} subscribe={() => () => undefined} />);
+  await waitFor(() => expect(screen.getByText('No transactions in this period.')).toBeTruthy());
+  expect(screen.getByRole('button', { name: 'Add expense' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Add income' })).toBeTruthy();
+});
+
+test('keeps entry actions reachable in a filtered-empty list', async () => {
+  useTransactionFilters.setState({ categoryId });
+  await render(<TransactionsScreen data={repository([])} subscribe={() => () => undefined} />);
+  await waitFor(() => expect(screen.getByText('No transactions match these filters.')).toBeTruthy());
+  expect(screen.getByRole('button', { name: 'Add expense' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Add income' })).toBeTruthy();
+});
+
+test('reloads the saved row period after a backdated reveal', async () => {
+  const data = repository();
+  await render(<TransactionsScreen data={data} subscribe={() => () => undefined} />);
+  await waitFor(() => expect(data.readTransactionList).toHaveBeenCalled());
+
+  await act(async () => {
+    useTransactionFilters.getState().revealTransaction(new Date(2025, 11, 31, 23, 59));
+  });
+
+  await waitFor(() => expect(data.readTransactionList).toHaveBeenLastCalledWith({
+    period: '2025-12',
+    categoryId: null,
+    accountId: null,
+    quality: null,
+  }));
+});
+
 test('shows a read error and retries it', async () => {
   const readTransactionList = jest.fn()
     .mockRejectedValueOnce(new Error('Ledger unavailable'))
