@@ -60,6 +60,38 @@ test('transaction filter store keeps only choices and resets them', () => {
   assert.equal('transactions' in store.getState(), false);
 });
 
+test('revealTransaction selects the saved local period and clears filters atomically', () => {
+  const store = createTransactionFilterStore('2026-02');
+  store.setState({
+    categoryId: '11111111-1111-4111-8111-111111111111',
+    accountId: '22222222-2222-4222-8222-222222222222',
+    quality: 'regret',
+  });
+  let updates = 0;
+  const unsubscribe = store.subscribe(() => {
+    updates += 1;
+  });
+
+  store.getState().revealTransaction(new Date(2025, 11, 31, 23, 59));
+
+  unsubscribe();
+  assert.deepEqual(
+    {
+      selectedPeriod: store.getState().selectedPeriod,
+      categoryId: store.getState().categoryId,
+      accountId: store.getState().accountId,
+      quality: store.getState().quality,
+    },
+    {
+      selectedPeriod: '2025-12',
+      categoryId: null,
+      accountId: null,
+      quality: null,
+    }
+  );
+  assert.equal(updates, 1);
+});
+
 test('notifier reports listener errors without throwing from notify', () => {
   const errors: Array<{ error: unknown; table: string }> = [];
   const notifier = createLedgerChangeNotifier({

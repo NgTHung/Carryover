@@ -6,6 +6,7 @@
  */
 import { create } from 'zustand';
 
+import { dateOnlyFromLocalDate } from '../../data/date-only';
 import { currentPeriod, periodSchema, type Period } from '../../data/period';
 import type { TransactionQuality } from '../../data/transaction-validation';
 
@@ -23,6 +24,7 @@ export type TransactionFilterActions = {
   setCategoryId(categoryId: string | null): void;
   setAccountId(accountId: string | null): void;
   setQuality(quality: TransactionQualityFilter): void;
+  revealTransaction(occurredAt: Date): void;
   reset(): void;
 };
 
@@ -37,6 +39,10 @@ function initialState(period: Period): TransactionFilterState {
   };
 }
 
+function periodForTransaction(occurredAt: Date): Period {
+  return periodSchema.parse(dateOnlyFromLocalDate(occurredAt).slice(0, 7));
+}
+
 export function createTransactionFilterStore(
   initialPeriod: Period = currentPeriod()
 ) {
@@ -46,6 +52,12 @@ export function createTransactionFilterStore(
     setCategoryId: (categoryId) => set({ categoryId }),
     setAccountId: (accountId) => set({ accountId }),
     setQuality: (quality) => set({ quality }),
+    revealTransaction: (occurredAt) => set({
+      selectedPeriod: periodForTransaction(occurredAt),
+      categoryId: null,
+      accountId: null,
+      quality: null,
+    }),
     reset: () => set(initialState(currentPeriod())),
   }));
 }

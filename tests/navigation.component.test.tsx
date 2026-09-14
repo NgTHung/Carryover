@@ -1,7 +1,10 @@
 import type { ReactNode } from 'react';
-import { cleanup, render, waitFor } from '@testing-library/react-native';
+import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react-native';
 
-import type { Transaction } from '../src/data/transaction-validation';
+import type { CreateTransactionInput, Transaction } from '../src/data/transaction-validation';
+import NativeNewTransactionRoute from '../src/app/transactions/new';
+import WebNewTransactionRoute from '../src/app/transactions/new.web';
+import type { TransactionCreateData } from '../src/ui/transactions/transaction-create-contract';
 
 const transactionId = '11111111-1111-4111-8111-111111111111';
 const mockUseLocalSearchParams = jest.fn();
@@ -16,11 +19,23 @@ const mockReadAccounts = jest.fn(async () => [
   },
 ]);
 const mockReplace = jest.fn();
+const mockCreateTransaction = jest.fn<Promise<Transaction>, [CreateTransactionInput]>();
+const mockUsePreventRemove = jest.fn();
+const mockBack = jest.fn();
+const mockCanGoBack = jest.fn(() => false);
 
 jest.mock('expo-router', () => ({
   Link: ({ children }: { children: ReactNode }) => children,
-  router: { replace: (...args: unknown[]) => mockReplace(...args) },
+  router: {
+    replace: (...args: unknown[]) => mockReplace(...args),
+    back: () => mockBack(),
+    canGoBack: () => mockCanGoBack(),
+  },
   useLocalSearchParams: (...args: unknown[]) => mockUseLocalSearchParams(...args),
+}));
+
+jest.mock('expo-router/react-navigation', () => ({
+  usePreventRemove: (...args: unknown[]) => mockUsePreventRemove(...args),
 }));
 
 jest.mock('../src/data/database', () => ({
@@ -32,6 +47,7 @@ jest.mock('../src/data/database', () => ({
   },
   categoryData: { listActiveCategoryGroups: () => mockListCategories() },
   accountData: { listActiveAccounts: () => mockReadAccounts() },
+  manualTransactionData: { createTransaction: jest.fn() },
 }));
 
 jest.mock('expo-status-bar', () => ({
@@ -64,7 +80,17 @@ const transaction: Transaction = {
 afterEach(() => {
   cleanup();
   jest.clearAllMocks();
+  mockCanGoBack.mockReturnValue(false);
+  mockCreateTransaction.mockReset();
 });
+
+function creationData(): TransactionCreateData {
+  return {
+    listActiveAccounts: () => mockReadAccounts(),
+    listActiveCategoryGroups: () => mockListCategories(),
+    createCompleteTransaction: (input) => mockCreateTransaction(input),
+  };
+}
 
 test('native transaction route validates before reading and opens the editor', async () => {
   mockUseLocalSearchParams.mockReturnValue({ transactionId });
@@ -110,7 +136,7 @@ test('web transaction route keeps the ledger boundary explicit', async () => {
   const view = await render(<WebTransactionRoute />);
 
   expect(view.getByText('Transaction unavailable')).toBeTruthy();
-  expect(view.getByText('The browser preview does not open the ledger.')).toBeTruthy();
+  expect(view.getByText(/browser preview does not open the ledger/)).toBeTruthy();
   expect(mockReadTransaction).not.toHaveBeenCalled();
 });
 
@@ -119,4 +145,145 @@ test('unknown routes provide a link back to home', async () => {
 
   expect(view.getByText('Page not found')).toBeTruthy();
   expect(view.getByText('Back to home')).toBeTruthy();
+});
+
+test.each([
+  ['expense', 'Add expense'],
+  ['income', 'Add income'],
+  [undefined, 'Add expense'],
+] as const)('native creation route accepts %s direction', async (direction, title) => {
+  mockUseLocalSearchParams.mockReturnValue({ direction });
+  const view = await render(<NativeNewTransactionRoute data={creationData()} />);
+
+  await waitFor(() => expect(view.getByText(title)).toBeTruthy());
+  expect(mockReadAccounts).toHaveBeenCalledTimes(1);
+  expect(mockListCategories).toHaveBeenCalledTimes(1);
+});
+
+test('native creation route rejects invalid and repeated directions before reading choices', async () => {
+  mockUseLocalSearchParams.mockReturnValue({ direction: ['expense', 'income'] });
+  const data: TransactionCreateData = {
+    listActiveAccounts: jest.fn(async () => []),
+    listActiveCategoryGroups: jest.fn(async () => []),
+    createCompleteTransaction: jest.fn(),
+  };
+
+  const view = await render(<NativeNewTransactionRoute data={data} />);
+
+  expect(view.getByText('Invalid transaction link')).toBeTruthy();
+  expect(data.listActiveAccounts).not.toHaveBeenCalled();
+  expect(data.listActiveCategoryGroups).not.toHaveBeenCalled();
+});
+
+test('native creation route retries a choice loading failure', async () => {
+  mockUseLocalSearchParams.mockReturnValue({ direction: 'income' });
+  mockReadAccounts.mockRejectedValueOnce(new Error('Accounts unavailable'));
+  const view = await render(<NativeNewTransactionRoute data={creationData()} />);
+
+  await waitFor(() => expect(view.getByText('Accounts unavailable')).toBeTruthy());
+  await fireEvent.press(view.getByRole('button', { name: 'Try again' }));
+  await waitFor(() => expect(view.getByText('Add income')).toBeTruthy());
+  expect(mockReadAccounts).toHaveBeenCalledTimes(2);
+});
+
+test('cold-start cancellation replaces with transactions and does not mutate', async () => {
+  mockUseLocalSearchParams.mockReturnValue({ direction: 'income' });
+  const data = creationData();
+  const view = await render(<NativeNewTransactionRoute data={data} />);
+  await waitFor(() => expect(view.getByText('Add income')).toBeTruthy());
+
+  await fireEvent.press(view.getByRole('button', { name: 'Cancel' }));
+
+  expect(mockCanGoBack).toHaveBeenCalled();
+  expect(mockReplace).toHaveBeenCalledWith('/transactions');
+  expect(mockCreateTransaction).not.toHaveBeenCalled();
+});
+
+test('cancellation with history goes back without replacing', async () => {
+  mockUseLocalSearchParams.mockReturnValue({ direction: 'income' });
+  mockCanGoBack.mockReturnValue(true);
+  const view = await render(<NativeNewTransactionRoute data={creationData()} />);
+  await waitFor(() => expect(view.getByText('Add income')).toBeTruthy());
+
+  await fireEvent.press(view.getByRole('button', { name: 'Cancel' }));
+
+  expect(mockBack).toHaveBeenCalledTimes(1);
+  expect(mockReplace).not.toHaveBeenCalled();
+});
+
+test('the removal guard and cancel lock stay active while saving', async () => {
+  mockUseLocalSearchParams.mockReturnValue({ direction: 'income' });
+  let resolveCreate: (value: Transaction) => void = () => undefined;
+  const createPromise = new Promise<Transaction>((resolve) => {
+    resolveCreate = resolve;
+  });
+  mockCreateTransaction.mockImplementation(() => createPromise);
+  const view = await render(<NativeNewTransactionRoute data={creationData()} />);
+  await waitFor(() => expect(view.getByText('Add income')).toBeTruthy());
+
+  await fireEvent.changeText(view.getByLabelText('Amount'), '10000');
+  await fireEvent.press(view.getByRole('button', { name: 'Save transaction' }));
+  const pendingCall = mockUsePreventRemove.mock.calls[mockUsePreventRemove.mock.calls.length - 1];
+  expect(pendingCall?.[0]).toBe(true);
+  if (typeof pendingCall?.[1] !== 'function') throw new Error('Expected removal guard callback');
+  pendingCall[1]({ data: { action: { type: 'GO_BACK' } } });
+  expect(view.getByRole('button', { name: 'Cancel' }).props.accessibilityState.disabled).toBe(true);
+  expect(mockBack).not.toHaveBeenCalled();
+  expect(mockReplace).not.toHaveBeenCalled();
+
+  await act(async () => {
+    resolveCreate(transaction);
+    await createPromise;
+  });
+  await waitFor(() => {
+    const latest = mockUsePreventRemove.mock.calls[mockUsePreventRemove.mock.calls.length - 1];
+    expect(latest?.[0]).toBe(false);
+  });
+});
+
+test('successful creation redirects after the removal guard is disabled', async () => {
+  mockUseLocalSearchParams.mockReturnValue({ direction: 'income' });
+  mockCreateTransaction.mockResolvedValue(transaction);
+  const view = await render(<NativeNewTransactionRoute data={creationData()} />);
+  await waitFor(() => expect(view.getByText('Add income')).toBeTruthy());
+
+  await fireEvent.changeText(view.getByLabelText('Amount'), '10000');
+  await fireEvent.press(view.getByRole('button', { name: 'Save transaction' }));
+
+  await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/transactions'));
+  const latest = mockUsePreventRemove.mock.calls[mockUsePreventRemove.mock.calls.length - 1];
+  expect(latest?.[0]).toBe(false);
+  expect(mockCreateTransaction).toHaveBeenCalledTimes(1);
+});
+
+test('navigation failure keeps the saved state and retries navigation only', async () => {
+  mockUseLocalSearchParams.mockReturnValue({ direction: 'income' });
+  mockCreateTransaction.mockResolvedValue(transaction);
+  mockReplace.mockImplementationOnce(() => {
+    throw new Error('Navigation unavailable');
+  });
+  const view = await render(<NativeNewTransactionRoute data={creationData()} />);
+  await waitFor(() => expect(view.getByText('Add income')).toBeTruthy());
+
+  await fireEvent.changeText(view.getByLabelText('Amount'), '10000');
+  await fireEvent.press(view.getByRole('button', { name: 'Save transaction' }));
+  await waitFor(() => expect(view.getByText('Navigation unavailable')).toBeTruthy());
+  expect(view.getByText('Transaction saved.')).toBeTruthy();
+  expect(mockCreateTransaction).toHaveBeenCalledTimes(1);
+
+  await fireEvent.press(view.getByRole('button', { name: 'Back to transactions' }));
+  await waitFor(() => expect(mockReplace).toHaveBeenCalledTimes(2));
+  expect(mockCreateTransaction).toHaveBeenCalledTimes(1);
+});
+
+test('web creation route never enters the ledger boundary', async () => {
+  mockUseLocalSearchParams.mockReturnValue({ direction: 'income' });
+
+  const view = await render(<WebNewTransactionRoute />);
+
+  expect(view.getByText('Add income')).toBeTruthy();
+  expect(view.getByText(/browser preview does not open the ledger/)).toBeTruthy();
+  expect(mockReadAccounts).not.toHaveBeenCalled();
+  expect(mockListCategories).not.toHaveBeenCalled();
+  expect(mockCreateTransaction).not.toHaveBeenCalled();
 });

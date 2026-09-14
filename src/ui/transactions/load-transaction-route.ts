@@ -14,6 +14,12 @@ export type ParsedTransactionRoute =
   | { status: 'valid'; transactionId: string }
   | { status: 'invalid'; message: string };
 
+export type TransactionCreationDirection = 'expense' | 'income';
+
+export type ParsedTransactionCreationRoute =
+  | { status: 'valid'; direction: TransactionCreationDirection }
+  | { status: 'invalid'; message: string };
+
 export type LoadedTransactionRoute =
   | { status: 'invalid'; message: string }
   | { status: 'unavailable'; transactionId: string }
@@ -26,6 +32,21 @@ export function parseTransactionRoute(
   return parsed.success
     ? { status: 'valid', transactionId: parsed.data }
     : { status: 'invalid', message: 'This transaction link is invalid.' };
+}
+
+export function parseTransactionCreationRoute(
+  value: unknown
+): ParsedTransactionCreationRoute {
+  if (value === undefined) {
+    return { status: 'valid', direction: 'expense' };
+  }
+  if (value === 'expense' || value === 'income') {
+    return { status: 'valid', direction: value };
+  }
+  return {
+    status: 'invalid',
+    message: 'This transaction creation link is invalid.',
+  };
 }
 
 export async function loadTransactionRoute(

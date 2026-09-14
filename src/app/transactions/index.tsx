@@ -21,6 +21,7 @@ export default function TransactionsScreen({
   const setCategoryId = useTransactionFilters((state) => state.setCategoryId);
   const setAccountId = useTransactionFilters((state) => state.setAccountId);
   const setQuality = useTransactionFilters((state) => state.setQuality);
+  const revealTransaction = useTransactionFilters((state) => state.revealTransaction);
   const [state, setState] = useState<TransactionListLoadState>({ status: 'loading' });
   const [optionRows, setOptionRows] = useState<Awaited<ReturnType<TransactionListData<'sync'>['readTransactionList']>>>([]);
   const requestRef = useRef(0);
@@ -90,6 +91,7 @@ export default function TransactionsScreen({
     setCategoryId,
     setAccountId,
     setQuality,
+    revealTransaction,
     reset,
   };
 

@@ -1,7 +1,33 @@
-import { loadTransactionRoute, parseTransactionRoute } from '../src/ui/transactions/load-transaction-route';
+import {
+  loadTransactionRoute,
+  parseTransactionCreationRoute,
+  parseTransactionRoute,
+} from '../src/ui/transactions/load-transaction-route';
 import type { Transaction } from '../src/data/transaction-validation';
 
 const transactionId = '11111111-1111-4111-8111-111111111111';
+
+test('accepts expense, income, and a bare creation route only', () => {
+  expect(parseTransactionCreationRoute(undefined)).toEqual({ status: 'valid', direction: 'expense' });
+  expect(parseTransactionCreationRoute('expense')).toEqual({ status: 'valid', direction: 'expense' });
+  expect(parseTransactionCreationRoute('income')).toEqual({ status: 'valid', direction: 'income' });
+  expect(parseTransactionCreationRoute('transfer')).toEqual({
+    status: 'invalid',
+    message: 'This transaction creation link is invalid.',
+  });
+  expect(parseTransactionCreationRoute(['expense'])).toEqual({
+    status: 'invalid',
+    message: 'This transaction creation link is invalid.',
+  });
+  expect(parseTransactionCreationRoute(['expense', 'income'])).toEqual({
+    status: 'invalid',
+    message: 'This transaction creation link is invalid.',
+  });
+  expect(parseTransactionCreationRoute(null)).toEqual({
+    status: 'invalid',
+    message: 'This transaction creation link is invalid.',
+  });
+});
 
 test('validates a UUID route parameter without accepting arrays', () => {
   expect(parseTransactionRoute(transactionId)).toEqual({

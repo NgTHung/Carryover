@@ -51,6 +51,9 @@ jest.mock('../src/data/database', () => ({
     softDeleteCategory: jest.fn(),
     deleteSuggestedCategories: jest.fn(),
   },
+  manualTransactionData: {
+    createTransaction: jest.fn(),
+  },
 }));
 
 jest.mock('../src/ui/QualityChip', () => ({
@@ -133,6 +136,21 @@ test('keeps a direct transaction URL behind the migration gate', async () => {
 
   expect(view.getByText('Applying the ledger schema…')).toBeTruthy();
   expect(mockReadTransaction).not.toHaveBeenCalled();
+});
+
+test('keeps a direct creation URL behind the migration gate', async () => {
+  mockUseMigrations.mockReturnValue({ success: false, error: undefined });
+
+  const view = await render(
+    <ExpoRoot
+      context={getMockContext('./src/app')}
+      location="/transactions/new?direction=income"
+    />
+  );
+
+  expect(view.getByText('Applying the ledger schema…')).toBeTruthy();
+  expect(mockReadAccounts).not.toHaveBeenCalled();
+  expect(mockListCategories).not.toHaveBeenCalled();
 });
 
 test('opens the month summary route through the real router', async () => {
