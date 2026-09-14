@@ -16,6 +16,7 @@ import { writeSharedSnapshot } from '../budget/snapshot-writer';
 import {
   accountData,
   categoryData,
+  commitmentData,
   ledgerChangeNotifier,
   ledgerDb,
   ledgerMigrations,
@@ -26,6 +27,7 @@ import {
   transactionListData,
 } from '../data/database';
 import type { CategoryEditorData } from './categories/category-editor-contract';
+import type { CommitmentManagerData } from './commitments/commitment-manager-contract';
 import type { AccountReconcileData } from './accounts/account-reconcile-contract';
 import type {
   LedgerChange,
@@ -45,6 +47,19 @@ export function getCategoryEditorData(): CategoryEditorData {
 
 export function getAccountReconcileData(): AccountReconcileData {
   return accountData;
+}
+
+const commitmentManagerData: CommitmentManagerData = {
+  readCommitmentOverview: (period) =>
+    commitmentData.readCommitmentOverview(period),
+  listActiveCategoryGroups: () => categoryData.listActiveCategoryGroups(),
+  createCommitment: (input) => commitmentData.createCommitment(input),
+  editCommitment: (input) => commitmentData.editCommitment(input),
+  softDeleteCommitment: (id) => commitmentData.softDeleteCommitment(id),
+};
+
+export function getCommitmentManagerData(): CommitmentManagerData {
+  return commitmentManagerData;
 }
 
 export function readTransaction(id: string) {
