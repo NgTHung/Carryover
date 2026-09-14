@@ -13,7 +13,7 @@ last_updated: 2026-09-14
 
 You need to record money without a photo. Add creation routes using the existing transaction boundary and shared editor controls.
 
-Follow docs/spec/period-income-policy.md and docs/plans/UI-020.md. DATA-015 supplies period opening and atomic current-period income maintenance before this task starts. Income requires no fixed amount or arrival date and never moves the horizon automatically. Use one creation route with a validated direction parameter; keep screen loading and navigation in src/app and shared form controls in src/ui.
+Follow docs/spec/period-income-policy.md. DATA-015 supplies period opening and atomic current-period income maintenance before this task starts. Income requires no fixed amount or arrival date and never moves the horizon automatically. Use one creation route with a validated direction parameter; keep screen loading and navigation in src/app and shared form controls in src/ui.
 
 ## Acceptance Criteria
 
