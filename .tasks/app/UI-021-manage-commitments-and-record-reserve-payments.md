@@ -1,12 +1,12 @@
 ---
 id: "UI-021"
 title: "Manage commitments and record reserve payments"
-status: "To Do"
+status: In Progress
 priority: "Medium"
 type: "Feature"
 milestone: "0.3.0"
 depends_on: ["app:DATA-006", "app:UI-020"]
-last_updated: "2026-09-13"
+last_updated: 2026-09-14
 ---
 
 ## Summary
