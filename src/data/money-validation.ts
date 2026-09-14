@@ -68,6 +68,13 @@ export const positiveVndAmountSchema = wholeVndAmountSchema
 export const nonNegativeVndAmountSchema = wholeVndAmountSchema
   .nonnegative()
   .refine(matchesCurrencyExponent, 'amount does not match the VND currency exponent');
+export const signedVndAmountSchema = z
+  .number()
+  .finite()
+  .int()
+  .min(-MAX_VND_AMOUNT)
+  .max(MAX_VND_AMOUNT)
+  .refine(matchesCurrencyExponent, 'amount does not match the VND currency exponent');
 
 export const positiveVndInputSchema = z.union([
   positiveVndAmountSchema,

@@ -121,6 +121,16 @@ test('opening a period defaults horizon to period end and accepts zero totals', 
     }
   );
 
+  assert.equal(
+    openPeriodInputSchema.parse({
+      period: '2026-02',
+      openingBalance: -100,
+      incomeTotal: 0,
+      reservedTotal: 0,
+    }).openingBalance,
+    -100
+  );
+
   assert.deepEqual(
     openPeriodInputSchema.parse({
       period: '2024-02',
@@ -142,7 +152,7 @@ test('opening and editing horizon inputs are strict and reject invalid money or 
   };
 
   for (const invalid of [
-    { ...input, openingBalance: -1 },
+    { ...input, openingBalance: -(Number.MAX_SAFE_INTEGER + 1) },
     { ...input, incomeTotal: 1.5 },
     { ...input, reservedTotal: '500' },
     { ...input, horizonDate: '2026-08-31' },

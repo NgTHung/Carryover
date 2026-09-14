@@ -15,7 +15,7 @@ import {
 import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
 
 import { CURRENCY_EXPONENT, MAX_VND_AMOUNT } from '../money/currency';
-import { nonNegativeVndAmount, vndAmount } from './amount-columns';
+import { nonNegativeVndAmount, signedVndAmount, vndAmount } from './amount-columns';
 
 export const uuidV4Sql = sql`(
   lower(
@@ -75,6 +75,13 @@ function nonNegativeVndCheck(tableName: string, column: AnySQLiteColumn) {
   return check(
     `${tableName}_${column.name}_non_negative_vnd`,
     sql`typeof(${column}) = 'integer' AND ${column} >= 0 AND ${column} <= ${maxVndSql}`
+  );
+}
+
+function signedVndCheck(tableName: string, column: AnySQLiteColumn) {
+  return check(
+    `${tableName}_${column.name}_signed_vnd`,
+    sql`typeof(${column}) = 'integer' AND ${column} >= -${maxVndSql} AND ${column} <= ${maxVndSql}`
   );
 }
 
@@ -234,13 +241,13 @@ export const monthConfig = sqliteTable(
   {
     ...commonColumns(),
     period: text('period').notNull().unique(),
-    openingBalance: nonNegativeVndAmount('opening_balance').notNull(),
+    openingBalance: signedVndAmount('opening_balance').notNull(),
     incomeTotal: nonNegativeVndAmount('income_total').notNull(),
     reservedTotal: nonNegativeVndAmount('reserved_total').notNull(),
     horizonDate: text('horizon_date').notNull(),
   },
   (table) => [
-    nonNegativeVndCheck('month_config', table.openingBalance),
+    signedVndCheck('month_config', table.openingBalance),
     nonNegativeVndCheck('month_config', table.incomeTotal),
     nonNegativeVndCheck('month_config', table.reservedTotal),
   ]

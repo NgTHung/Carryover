@@ -6,8 +6,8 @@
  * with DATA-003, and every category-bearing write goes through that boundary.
  */
 import { and, eq, sql } from 'drizzle-orm';
-import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 
+import type { LedgerDatabase } from './atomic';
 import { createCategoryData, type CategoryData } from './categories';
 import {
   ledgerChangeNotifier,
@@ -33,11 +33,7 @@ import {
   uuidV4Sql,
 } from './schema';
 
-type LedgerDatabase<TResultKind extends 'sync' | 'async'> = BaseSQLiteDatabase<
-  TResultKind,
-  unknown,
-  typeof ledgerTables
->;
+export type { LedgerDatabase } from './atomic';
 
 export type TransactionRow = typeof transactions.$inferSelect;
 

@@ -261,7 +261,12 @@ test('malformed period, date, and money inputs leave existing rows unchanged', a
     const invalidInputs: unknown[] = [
       { period: '2026-9', openingBalance: 1, incomeTotal: 2, reservedTotal: 3 },
       { period: '2026-02-30', openingBalance: 1, incomeTotal: 2, reservedTotal: 3 },
-      { period: '2026-09', openingBalance: -1, incomeTotal: 2, reservedTotal: 3 },
+      {
+        period: '2026-09',
+        openingBalance: -(Number.MAX_SAFE_INTEGER + 1),
+        incomeTotal: 2,
+        reservedTotal: 3,
+      },
       { period: '2026-09', openingBalance: 1.5, incomeTotal: 2, reservedTotal: 3 },
       {
         period: '2026-09',

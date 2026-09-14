@@ -19,6 +19,7 @@ import {
   ledgerChangeNotifier,
   ledgerDb,
   ledgerMigrations,
+  manualTransactionData,
   readCommittedMonthSummary,
   readCommittedBudgetInput,
   transactionData,
@@ -95,9 +96,9 @@ const transactionEditorData: TransactionEditorData = {
   readTransaction: (id) => transactionData.readTransaction(id),
   listActiveCategoryGroups: () => categoryData.listActiveCategoryGroups(),
   listActiveAccounts: () => accountData.listActiveAccounts(),
-  editTransaction: (input) => transactionData.editTransaction(input),
-  completeDraft: (input) => transactionData.completeDraft(input),
-  softDeleteTransaction: (id) => transactionData.softDeleteTransaction(id),
+  editTransaction: (input) => manualTransactionData.editTransaction(input),
+  completeDraft: (input) => manualTransactionData.completeDraft(input),
+  softDeleteTransaction: (id) => manualTransactionData.softDeleteTransaction(id),
 };
 
 export function getTransactionEditorData(): TransactionEditorData {

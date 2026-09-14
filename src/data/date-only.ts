@@ -49,3 +49,29 @@ export function dateOnlyFromLocalDate(date: Date): DateOnly {
   const day = date.getDate().toString().padStart(2, '0');
   return dateOnlySchema.parse(`${year}-${month}-${day}`);
 }
+
+export function localDateFromDateOnly(dateOnly: DateOnly, anchor: Date): Date {
+  const parsed = dateOnlySchema.parse(dateOnly);
+  if (Number.isNaN(anchor.getTime())) {
+    throw new RangeError('cannot anchor a date-only value to an invalid date');
+  }
+
+  const [yearText, monthText, dayText] = parsed.split('-');
+  const result = new Date(anchor.getTime());
+  result.setFullYear(Number(yearText), Number(monthText) - 1, Number(dayText));
+  if (
+    result.getFullYear() !== Number(yearText) ||
+    result.getMonth() !== Number(monthText) - 1 ||
+    result.getDate() !== Number(dayText)
+  ) {
+    throw new RangeError(`date-only value ${parsed} could not be represented locally`);
+  }
+  return result;
+}
+
+export function compareDateOnly(left: DateOnly, right: DateOnly): -1 | 0 | 1 {
+  const parsedLeft = dateOnlySchema.parse(left);
+  const parsedRight = dateOnlySchema.parse(right);
+  if (parsedLeft === parsedRight) return 0;
+  return parsedLeft < parsedRight ? -1 : 1;
+}

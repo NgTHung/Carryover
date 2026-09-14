@@ -8,7 +8,10 @@
 import { z } from 'zod';
 
 import { dateOnlySchema } from './date-only';
-import { nonNegativeVndAmountSchema } from './money-validation';
+import {
+  nonNegativeVndAmountSchema,
+  signedVndAmountSchema,
+} from './money-validation';
 import {
   periodEndDate,
   periodSchema,
@@ -36,7 +39,7 @@ function addHorizonBeforePeriodIssue(
 
 const monthConfigFields = {
   period: periodSchema,
-  openingBalance: nonNegativeVndAmountSchema,
+  openingBalance: signedVndAmountSchema,
   incomeTotal: nonNegativeVndAmountSchema,
   reservedTotal: nonNegativeVndAmountSchema,
   horizonDate: dateOnlySchema,
@@ -54,7 +57,7 @@ export type MonthConfig = z.infer<typeof monthConfigSchema>;
 export const openPeriodInputSchema = z
   .object({
     period: periodSchema,
-    openingBalance: nonNegativeVndAmountSchema,
+    openingBalance: signedVndAmountSchema,
     incomeTotal: nonNegativeVndAmountSchema,
     reservedTotal: nonNegativeVndAmountSchema,
     horizonDate: dateOnlySchema.optional(),
