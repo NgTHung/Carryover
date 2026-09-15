@@ -22,8 +22,8 @@ Expose the existing commitment data API so you can reserve known commitments and
 
 ## Verification
 
-- Local candidate: `6e97bd47508dd6cdbbf0b3468392ba48289f5faf`.
-- `npm test -- --runInBand` passed 65 suites and 342 tests.
+- Local candidate: `78a7a766d4d442a21ff38703baf2c06d8e85f8cd`.
+- `npm test -- --runInBand` passed 65 suites and 344 tests.
 - `npm run typecheck`, `npm run web:export`, and `npx expo export --platform ios` passed.
 - `python3 -m unittest discover -s tests -p '*_test.py'` passed 12 tests.
 - `git diff --check` and `taskroot validate` passed.
