@@ -24,6 +24,7 @@ export type HomeSnapshotViewProps = {
   state: SnapshotState;
   onRetry?: () => void;
   onChangeHorizon?: () => void;
+  onCapture?: () => void;
   previewNotice?: string;
 };
 
@@ -31,6 +32,7 @@ export function HomeSnapshotView({
   state,
   onRetry,
   onChangeHorizon,
+  onCapture,
   previewNotice,
 }: HomeSnapshotViewProps) {
   return (
@@ -87,9 +89,14 @@ export function HomeSnapshotView({
           </View>
 
           <Button
-            disabled
+            disabled={onCapture === undefined}
+            onPress={onCapture}
             accessibilityLabel="Capture"
-            accessibilityHint="Capture is not available yet."
+            accessibilityHint={
+              onCapture === undefined
+                ? 'Capture is not available yet.'
+                : 'Open the camera to capture a purchase photo.'
+            }
             className="min-h-16 min-w-28 self-end rounded-chip px-6"
           >
             Capture

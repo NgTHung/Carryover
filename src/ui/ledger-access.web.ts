@@ -17,6 +17,7 @@ export const getTransferDetailData = unavailable;
 export const getCommitmentManagerData = unavailable;
 export const getHorizonEditorData = unavailable;
 export const readTransaction = unavailable;
+export const getCaptureLedgerData = unavailable;
 export const getTransactionListData = unavailable;
 export const getMonthSummaryData = unavailable;
 export const subscribeLedgerChanges = unavailable;

@@ -7,13 +7,13 @@ import type { RemoteCallback } from 'drizzle-orm/sqlite-proxy';
 
 import { ledgerTables } from '../../src/data/schema';
 
-type ProxyQueryHook = (
+export type ProxyQueryHook = (
   query: Parameters<RemoteCallback>[0],
   params: Parameters<RemoteCallback>[1],
   method: Parameters<RemoteCallback>[2]
 ) => void | Promise<void>;
 
-type ProxyDatabaseOptions = {
+export type ProxyDatabaseOptions = {
   afterQuery?: ProxyQueryHook;
 };
 

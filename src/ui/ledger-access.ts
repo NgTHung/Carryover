@@ -15,6 +15,7 @@ import {
 import { writeSharedSnapshot } from '../budget/snapshot-writer';
 import {
   accountData,
+  capturedDraftData,
   categoryData,
   commitmentData,
   ledgerChangeNotifier,
@@ -29,6 +30,8 @@ import {
   transactionListData,
 } from '../data/database';
 import type { CategoryEditorData } from './categories/category-editor-contract';
+import type { CreateCapturedDraftInput } from '../data/captured-draft-validation';
+import type { Transaction } from '../data/transaction-validation';
 import type { CommitmentManagerData } from './commitments/commitment-manager-contract';
 import type { AccountEditorData } from './accounts/account-editor-contract';
 import type {
@@ -96,6 +99,26 @@ export function getHorizonEditorData(): HorizonEditorData {
 
 export function readTransaction(id: string) {
   return transactionData.readTransaction(id);
+}
+
+export type CaptureLedgerData = {
+  createCapturedDraft: (
+    input: CreateCapturedDraftInput
+  ) => ReturnType<typeof capturedDraftData.createCapturedDraft>;
+  readTransaction: (id: string) => Promise<Transaction | undefined>;
+};
+
+const captureLedgerData: CaptureLedgerData = {
+  createCapturedDraft: (input) => capturedDraftData.createCapturedDraft(input),
+  async readTransaction(id) {
+    return transactionData.readTransaction(id, {
+      includeDeleted: true,
+    });
+  },
+};
+
+export function getCaptureLedgerData(): CaptureLedgerData {
+  return captureLedgerData;
 }
 
 export function getTransactionListData(): TransactionListData<'sync'> {

@@ -1,7 +1,7 @@
 ---
 id: "CAPTURE-003"
 title: "Capture a photo as a saved draft"
-status: "To Do"
+status: In Progress
 priority: "Medium"
 type: "Feature"
 parent: "app:CAPTURE-001"
@@ -9,7 +9,7 @@ milestone: "0.4.0"
 depends_on: ["app:CAPTURE-002"]
 risk: "High"
 impact: "Capture crosses the camera, app-local files, SQLite, and snapshot publication. A false success or duplicate retry makes the balance and unknown count untrustworthy."
-last_updated: "2026-09-15"
+last_updated: 2026-09-15
 ---
 
 ## Summary

@@ -1,3 +1,4 @@
+import { randomUUID } from 'expo-crypto';
 import { router, type Href } from 'expo-router';
 
 import { currentPeriod } from '../data/period';
@@ -21,6 +22,9 @@ export default function HomeRoute({
       onRetry={retryBudgetSnapshot}
       onChangeHorizon={() =>
         router.push(`/horizon?period=${currentPeriod(now())}` as Href)
+      }
+      onCapture={() =>
+        router.push(`/capture/${randomUUID().toLowerCase()}` as Href)
       }
     />
   );
