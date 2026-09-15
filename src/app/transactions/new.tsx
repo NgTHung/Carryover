@@ -13,6 +13,7 @@ import type { Transaction } from '../../data/transaction-validation';
 import { Button } from '../../ui';
 import {
   getTransactionCreateData,
+  subscribeLedgerChanges,
 } from '../../ui/ledger-access';
 import { TransactionCreator } from '../../ui/transactions/TransactionCreator';
 import type { TransactionCreatorIntent } from '../../ui/transactions/TransactionCreator';
@@ -66,8 +67,10 @@ function CreationMessage({
 
 export default function NewTransactionRoute({
   data = getTransactionCreateData(),
+  subscribe = subscribeLedgerChanges,
 }: {
   data?: TransactionCreateData;
+  subscribe?: typeof subscribeLedgerChanges;
 }) {
   const params = useLocalSearchParams<{
     direction?: string | string[];
@@ -97,6 +100,7 @@ export default function NewTransactionRoute({
   const [savedTransaction, setSavedTransaction] = useState<Transaction>();
   const [navigationIntent, setNavigationIntent] = useState<Transaction>();
   const [navigationError, setNavigationError] = useState<string>();
+  const accountRefreshRequestRef = useRef(0);
 
   const preventRemove = useCallback(() => {
     if (!writePendingRef.current) return;
@@ -155,6 +159,26 @@ export default function NewTransactionRoute({
       cancelled = true;
     };
   }, [data, parsed, retryToken, routeKey]);
+
+  useEffect(
+    () => {
+      let active = true;
+      return subscribe((change) => {
+        if (change.table !== 'accounts') return;
+        const request = accountRefreshRequestRef.current + 1;
+        accountRefreshRequestRef.current = request;
+        void data.listActiveAccounts()
+          .then((accounts) => {
+            if (!active || request !== accountRefreshRequestRef.current) return;
+            setState((current) =>
+              current.status === 'ready' ? { ...current, accounts } : current
+            );
+          })
+          .catch(() => undefined);
+      });
+    },
+    [data, subscribe]
+  );
 
   useEffect(() => {
     if (writePending || navigationIntent === undefined) return;

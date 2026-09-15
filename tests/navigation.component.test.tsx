@@ -3,9 +3,11 @@ import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react
 
 import type { CreateTransactionInput, Transaction } from '../src/data/transaction-validation';
 import type { CommitmentOverview } from '../src/data/commitment-overview';
+import type { LedgerChangeListener } from '../src/data/ledger-change-notifier';
 import NativeNewTransactionRoute from '../src/app/transactions/new';
 import WebNewTransactionRoute from '../src/app/transactions/new.web';
 import type { TransactionCreateData } from '../src/ui/transactions/transaction-create-contract';
+import type { TransactionEditorData } from '../src/ui/transactions/transaction-editor-contract';
 import { useTransactionFilters } from '../src/ui/transactions/transaction-filters';
 
 const transactionId = '11111111-1111-4111-8111-111111111111';
@@ -45,6 +47,7 @@ jest.mock('expo-router/react-navigation', () => ({
 }));
 
 jest.mock('../src/data/database', () => ({
+  ledgerChangeNotifier: { subscribe: jest.fn(() => () => undefined) },
   transactionData: {
     readTransaction: (...args: unknown[]) => mockReadTransaction(...args),
     editTransaction: jest.fn(),
@@ -140,6 +143,19 @@ function creationData(): TransactionCreateData {
   };
 }
 
+function editorData(
+  listActiveAccounts: TransactionEditorData['listActiveAccounts']
+): TransactionEditorData {
+  return {
+    readTransaction: async () => transaction,
+    listActiveCategoryGroups: async () => [],
+    listActiveAccounts,
+    editTransaction: jest.fn(),
+    completeDraft: jest.fn(),
+    softDeleteTransaction: jest.fn(),
+  };
+}
+
 test('native transaction route validates before reading and opens the editor', async () => {
   mockUseLocalSearchParams.mockReturnValue({ transactionId });
   mockReadTransaction.mockResolvedValue(transaction);
@@ -206,6 +222,82 @@ test.each([
   await waitFor(() => expect(view.getByText(title)).toBeTruthy());
   expect(mockReadAccounts).toHaveBeenCalledTimes(1);
   expect(mockListCategories).toHaveBeenCalledTimes(1);
+});
+
+test('account notifications refresh a new transaction choice without replacing its draft', async () => {
+  mockUseLocalSearchParams.mockReturnValue({ direction: 'expense' });
+  const refreshedAccounts = [
+    {
+      accountId: '22222222-2222-4222-8222-222222222222',
+      name: 'Main bank',
+      kind: 'bank' as const,
+      isDefault: true,
+    },
+  ];
+  mockReadAccounts
+    .mockResolvedValueOnce([
+      {
+        accountId: '22222222-2222-4222-8222-222222222222',
+        name: 'Bank',
+        kind: 'bank' as const,
+        isDefault: true,
+      },
+    ])
+    .mockResolvedValueOnce(refreshedAccounts);
+  let listener: LedgerChangeListener | undefined;
+  const subscribe = (next: LedgerChangeListener) => {
+    listener = next;
+    return () => undefined;
+  };
+  const view = await render(
+    <NativeNewTransactionRoute data={creationData()} subscribe={subscribe} />
+  );
+  await waitFor(() => expect(view.getByText('Add expense')).toBeTruthy());
+  await fireEvent.changeText(view.getByLabelText('Amount'), '123');
+  await waitFor(() => expect(listener).toBeDefined());
+  listener?.({ table: 'accounts', mutation: 'edited' });
+
+  await waitFor(() => expect(view.getByRole('button', { name: 'Main bank' })).toBeTruthy());
+  expect(view.getByLabelText('Amount').props.value).toBe('123');
+  expect(view.getByRole('button', { name: 'Main bank' }).props.accessibilityState.selected).toBe(true);
+  expect(mockReadAccounts).toHaveBeenCalledTimes(2);
+});
+
+test('account notifications refresh an unfinished transaction editor without changing its account ID', async () => {
+  mockUseLocalSearchParams.mockReturnValue({ transactionId });
+  mockReadTransaction.mockResolvedValue(transaction);
+  const initialAccounts = [
+    {
+      accountId: '22222222-2222-4222-8222-222222222222',
+      name: 'Bank',
+      kind: 'bank' as const,
+      isDefault: true,
+    },
+  ];
+  const refreshedAccounts = [{ ...initialAccounts[0], name: 'Main bank' }];
+  const listActiveAccounts = jest
+    .fn()
+    .mockResolvedValueOnce(initialAccounts)
+    .mockResolvedValueOnce(refreshedAccounts);
+  let listener: LedgerChangeListener | undefined;
+  const subscribe = (next: LedgerChangeListener) => {
+    listener = next;
+    return () => undefined;
+  };
+  const view = await render(
+    <NativeTransactionRoute
+      data={editorData(listActiveAccounts)}
+      subscribe={subscribe}
+    />
+  );
+  await waitFor(() => expect(view.getByText('Edit transaction')).toBeTruthy());
+  await fireEvent.changeText(view.getByLabelText('Amount'), '123');
+  listener?.({ table: 'accounts', mutation: 'edited' });
+
+  await waitFor(() => expect(view.getByRole('button', { name: 'Main bank' })).toBeTruthy());
+  expect(view.getByLabelText('Amount').props.value).toBe('123');
+  expect(view.getByRole('button', { name: 'Main bank' }).props.accessibilityState.selected).toBe(true);
+  expect(listActiveAccounts).toHaveBeenCalledTimes(2);
 });
 
 test('native creation route rejects invalid and repeated directions before reading choices', async () => {

@@ -1,7 +1,10 @@
 import { router, useLocalSearchParams, type Href } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-import { getTransactionEditorData } from '../../ui/ledger-access';
+import {
+  getTransactionEditorData,
+  subscribeLedgerChanges,
+} from '../../ui/ledger-access';
 import { loadTransactionRoute, parseTransactionRoute } from '../../ui/transactions/load-transaction-route';
 import { TransactionEditor } from '../../ui/transactions/TransactionEditor';
 import { TransactionAdjustmentDetail } from '../../ui/transactions/TransactionAdjustmentDetail';
@@ -18,7 +21,13 @@ type RouteState = TransactionRouteState | {
   accounts: Awaited<ReturnType<TransactionEditorData['listActiveAccounts']>>;
 };
 
-export default function TransactionRouteScreen({ data = getTransactionEditorData() }: { data?: TransactionEditorData }) {
+export default function TransactionRouteScreen({
+  data = getTransactionEditorData(),
+  subscribe = subscribeLedgerChanges,
+}: {
+  data?: TransactionEditorData;
+  subscribe?: typeof subscribeLedgerChanges;
+}) {
   const { transactionId } = useLocalSearchParams<{
     transactionId?: string | string[];
   }>();
@@ -26,6 +35,7 @@ export default function TransactionRouteScreen({ data = getTransactionEditorData
     const parsed = parseTransactionRoute(transactionId);
     return parsed.status === 'invalid' ? parsed : { status: 'loading' };
   });
+  const accountRefreshRequestRef = useRef(0);
 
   useEffect(() => {
     const parsed = parseTransactionRoute(transactionId);
@@ -70,6 +80,26 @@ export default function TransactionRouteScreen({ data = getTransactionEditorData
       cancelled = true;
     };
   }, [data, transactionId]);
+
+  useEffect(
+    () => {
+      let active = true;
+      return subscribe((change) => {
+        if (change.table !== 'accounts') return;
+        const request = accountRefreshRequestRef.current + 1;
+        accountRefreshRequestRef.current = request;
+        void data.listActiveAccounts()
+          .then((accounts) => {
+            if (!active || request !== accountRefreshRequestRef.current) return;
+            setState((current) =>
+              current.status === 'ready' ? { ...current, accounts } : current
+            );
+          })
+          .catch(() => undefined);
+      });
+    },
+    [data, subscribe]
+  );
 
   if (state.status === 'ready') {
     if (state.transaction.direction === 'adjustment') {
