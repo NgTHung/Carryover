@@ -35,7 +35,7 @@ const widgetPlugin = [
   },
 ];
 
-const plugins = ['expo-router', 'expo-sqlite'];
+const plugins = ['expo-router', 'expo-sqlite', 'expo-asset'];
 if (development) {
   // The default exp+carryover scheme also belongs to the release app.
   plugins.push(['expo-dev-client', { addGeneratedScheme: false }]);
