@@ -38,7 +38,7 @@ The publisher remains a reader of prepared, committed inputs. If period preparat
 
 ## Transaction dates and failures
 
-Manual expense and income dates must be today or earlier in the local calendar. Enforce the rule at the application write boundary and reuse it for create, edit, and draft completion feedback. Validate against the clock at submission. Scheduled transactions are outside this work. Future horizon dates remain valid under their existing rules.
+Manual expense, income, and transfer dates must be today or earlier in the local calendar. Transfers follow this rule because this flow records money that has already moved between your accounts. Enforce the rule at the application write boundary and reuse it for create, edit, draft completion, and transfer feedback. Validate against the clock at submission. Scheduled transactions are outside this work. Future horizon dates remain valid under their existing rules.
 
 A rejected database write retains the form input and changes neither the ledger nor its current income total. A committed transaction remains saved if snapshot publication or navigation fails. Publication retry rereads committed data and never repeats the insert.
 

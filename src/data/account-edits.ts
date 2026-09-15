@@ -8,9 +8,9 @@ import { and, eq } from 'drizzle-orm';
 
 import {
   createDefaultAtomicRunner,
-  type AtomicTransactionRunner,
   type LedgerDatabase,
 } from './atomic';
+import type { AccountDataOptions } from './account-data-options';
 import {
   editAccountDetailsSchema,
   updateAccountOpeningBalanceSchema,
@@ -27,11 +27,6 @@ import {
 } from './period-preparation';
 import { accounts } from './schema';
 import { activeRowFilter } from './soft-delete';
-
-export type AccountEditOptions<TResultKind extends 'sync' | 'async'> = {
-  runAtomic?: AtomicTransactionRunner<TResultKind>;
-  now?: () => Date;
-};
 
 type AccountEdit = {
   accountId: string;
@@ -143,7 +138,7 @@ function notifyAccountEdit(
 export function createAccountEdits<TResultKind extends 'sync' | 'async'>(
   db: LedgerDatabase<TResultKind>,
   changeNotifier: LedgerChangeNotifier = ledgerChangeNotifier,
-  options: AccountEditOptions<TResultKind> = {}
+  options: AccountDataOptions<TResultKind> = {}
 ) {
   const runAtomic = options.runAtomic ?? createDefaultAtomicRunner(db);
   const now = options.now ?? (() => new Date());

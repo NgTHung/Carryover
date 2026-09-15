@@ -1,12 +1,12 @@
 ---
 id: "UI-023"
 title: "Record transfers between bank and cash"
-status: "To Do"
+status: In Progress
 priority: "Medium"
 type: "Feature"
 milestone: "0.3.0"
 depends_on: ["app:DATA-002", "app:UI-001"]
-last_updated: "2026-09-15"
+last_updated: 2026-09-15
 ---
 
 ## Summary

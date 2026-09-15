@@ -4,17 +4,14 @@
  * Account balances are read-time projections of ledger rows. Deleted accounts
  * remain in the projection so their past transfers still affect active accounts.
  */
-import { and, eq, inArray } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 
-import { createAccountEdits, type AccountEditOptions } from './account-edits';
+import { createAccountEdits } from './account-edits';
+import type { AccountDataOptions } from './account-data-options';
 import {
   readAccountBalances,
   type AccountBalance,
 } from './account-projection';
-import {
-  recordTransferSchema,
-} from './account-validation';
 import {
   reconcileAccount,
   type ReconcileResult,
@@ -24,7 +21,8 @@ import {
   type LedgerChangeNotifier,
 } from './ledger-change-notifier';
 import { activeRowFilter } from './soft-delete';
-import { accounts, ledgerTables, transfers } from './schema';
+import { accounts, ledgerTables } from './schema';
+import { createTransferData } from './transfers';
 
 export type { ReconcileResult } from './account-reconcile';
 
@@ -38,48 +36,18 @@ export type { AccountBalance } from './account-projection';
 
 export type ActiveAccount = Omit<AccountBalance, 'openingBalance' | 'balance'>;
 
-function accountNotFound(accountId: string): Error {
-  return new Error(`Active account ${accountId} was not found`);
-}
-
-async function requireActiveAccounts<TResultKind extends 'sync' | 'async'>(
-  db: LedgerDatabase<TResultKind>,
-  accountIds: readonly [string, string]
-): Promise<void> {
-  const rows = await db
-    .select({ id: accounts.id })
-    .from(accounts)
-    .where(
-      and(
-        activeRowFilter(accounts.deletedAt),
-        inArray(accounts.id, accountIds)
-      )
-    )
-    .all();
-  const found = new Set(rows.map((row) => row.id));
-  for (const accountId of accountIds) {
-    if (!found.has(accountId)) {
-      throw accountNotFound(accountId);
-    }
-  }
-}
-
 export function createAccountData<TResultKind extends 'sync' | 'async'>(
   db: LedgerDatabase<TResultKind>,
   changeNotifier: LedgerChangeNotifier = ledgerChangeNotifier,
-  options: AccountEditOptions<TResultKind> = {}
+  options: AccountDataOptions<TResultKind> = {}
 ) {
   const accountEdits = createAccountEdits(db, changeNotifier, options);
+  const transferData = createTransferData(db, changeNotifier, options);
 
   return {
     ...accountEdits,
 
-    async recordTransfer(input: unknown): Promise<void> {
-      const parsed = recordTransferSchema.parse(input);
-      await requireActiveAccounts(db, [parsed.fromAccountId, parsed.toAccountId]);
-      await db.insert(transfers).values(parsed).run();
-      changeNotifier.notify({ table: 'transfers', mutation: 'created' });
-    },
+    ...transferData,
 
     async listActiveAccounts(): Promise<ActiveAccount[]> {
       return db

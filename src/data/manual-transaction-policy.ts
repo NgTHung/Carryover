@@ -1,9 +1,10 @@
 /**
- * Rules shared by manual transaction writes.
+ * Rules shared by manual transaction and transfer writes.
  *
  * Manual dates are compared as local calendar values. A later clock time on
  * today is valid, while a date from tomorrow is rejected even when its UTC
- * representation is still the previous day.
+ * representation is still the previous day. Transfers use the same rule
+ * because they record money that has already moved.
  */
 import { compareDateOnly, dateOnlyFromLocalDate } from './date-only';
 
