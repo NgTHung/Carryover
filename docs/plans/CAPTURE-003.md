@@ -8,7 +8,7 @@ Task: [Capture a photo as a saved draft](../../.tasks/app/CAPTURE-003-capture-a-
 
 From Home, you can open the back camera, take one purchase photo, enter a positive whole-dong amount or skip it, and return to Home only after the retained photo and draft row are durable. A skipped amount stays `null` and causes the next snapshot to report one more unknown. Retrying an uncertain write cannot create a second draft.
 
-CAPTURE-003 is To Do and is not ready. CAPTURE-002 is In Progress and blocks it. Finish CAPTURE-002, check its acceptance criteria, run its required verification, mark it Done, and confirm `taskroot context app:CAPTURE-003 --format json` reports `ready: true` before starting this task. This plan leaves CAPTURE-003 To Do and every criterion unchecked.
+The local implementation and automated evidence through Stage 5 are complete. CAPTURE-003 remains In Progress because Stage 6 requires a CI-built iPhone candidate. Native permission, keyboard, lifecycle, restart, and timing results remain pending. No device success is claimed by the local checks.
 
 Use `CONTEXT.md`, `docs/spec/carryover-v1.md`, `docs/state-and-validation.md`, `docs/app-stack-and-testing.md`, `docs/DESIGN.md`, and the CAPTURE-002 plan as contracts. Correct money and an honest saved state take priority over the two-second target.
 

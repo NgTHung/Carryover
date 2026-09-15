@@ -18,7 +18,7 @@ Wire Home to camera capture with an optional amount. Reuse the current UI contro
 
 ## Execution Plan
 
-Follow [the CAPTURE-003 execution plan](../../docs/plans/CAPTURE-003.md) for the route-owned draft id, camera permissions, focused amount input, durable photo and SQLite sequence, idempotent retry, snapshot publication, staged commits, and iPhone verification. Planning leaves this task To Do and its acceptance criteria unchecked. Do not start it until CAPTURE-002 is Done.
+Follow [the CAPTURE-003 execution plan](../../docs/plans/CAPTURE-003.md) for the route-owned draft id, camera permissions, focused amount input, durable photo and SQLite sequence, idempotent retry, snapshot publication, staged commits, and iPhone verification. The local implementation and automated evidence are complete through Stage 5. The task remains In Progress until the native verification matrix is recorded in [the capture-draft runbook](../../docs/build/capture-draft.md); its acceptance criteria stay unchecked until then.
 
 ## Acceptance Criteria
 
