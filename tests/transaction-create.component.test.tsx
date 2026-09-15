@@ -75,12 +75,15 @@ function savedTransaction(
 }
 
 function createData(
-  createCompleteTransaction: TransactionCreateData['createCompleteTransaction'] = jest.fn(async () => savedTransaction())
+  createCompleteTransaction: TransactionCreateData['createCompleteTransaction'] = jest.fn(async () => savedTransaction()),
+  createReservePayment: TransactionCreateData['createReservePayment'] = jest.fn(async () => savedTransaction())
 ): TransactionCreateData {
   return {
     listActiveAccounts: jest.fn(async () => accounts),
     listActiveCategoryGroups: jest.fn(async () => groups),
+    readCommitmentOverview: jest.fn(),
     createCompleteTransaction,
+    createReservePayment,
   };
 }
 
@@ -91,7 +94,7 @@ function renderCreator(
 ) {
   return render(
     <TransactionCreator
-      direction={direction}
+      intent={{ kind: 'manual', initialDirection: direction }}
       accounts={accounts}
       groups={groups}
       openedAt={openedAt}
@@ -162,6 +165,69 @@ test('defaults to the bank, leaves optional fields blank, and creates an expense
   expect(onCommitted).toHaveBeenCalledTimes(1);
   expect(onWritePending.mock.calls.map(([pending]) => pending)).toEqual([true, false]);
   expect(screen.getByText('Transaction saved.')).toBeTruthy();
+});
+
+test('records a reserve payment with fixed expense context and selected period', async () => {
+  const createReservePayment = jest.fn(async () => savedTransaction());
+  const data = createData(jest.fn(), createReservePayment);
+  const user = userEvent.setup();
+  await renderCreator('expense', data, {
+    intent: {
+      kind: 'reserve-payment',
+      commitmentId: groupId,
+      commitmentName: 'Apartment rent',
+      reservedAmount: 700_000,
+      period: '2026-09',
+      categoryId,
+      leafName: 'Rent',
+    },
+  });
+
+  expect(screen.getByRole('header', { name: 'Record payment' })).toBeTruthy();
+  expect(screen.getByText('Apartment rent, ₫700.000 reserved for 2026-09')).toBeTruthy();
+  expect(screen.getByText('Rent')).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'income' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Groceries' })).toBeNull();
+
+  await user.type(screen.getByLabelText('Amount'), '725000');
+  await user.press(screen.getByRole('button', { name: 'Save transaction' }));
+
+  await waitFor(() => expect(createReservePayment).toHaveBeenCalledWith({
+    commitmentId: groupId,
+    period: '2026-09',
+    transaction: expect.objectContaining({
+      direction: 'expense',
+      categoryId,
+      amount: 725_000,
+      occurredAt: openedAt,
+    }),
+  }));
+  expect(data.createCompleteTransaction).not.toHaveBeenCalled();
+});
+
+test('keeps a reserve payment in its selected period before writing', async () => {
+  const createReservePayment = jest.fn(async () => savedTransaction());
+  const data = createData(jest.fn(), createReservePayment);
+  const user = userEvent.setup();
+  await renderCreator('expense', data, {
+    intent: {
+      kind: 'reserve-payment',
+      commitmentId: groupId,
+      commitmentName: 'Apartment rent',
+      reservedAmount: 700_000,
+      period: '2026-08',
+      categoryId,
+      leafName: 'Rent',
+    },
+  });
+
+  await user.type(screen.getByLabelText('Amount'), '725000');
+  await user.press(screen.getByRole('button', { name: 'Save transaction' }));
+
+  expect(
+    screen.getByText('Payment date must belong to the selected commitment period.')
+  ).toBeTruthy();
+  expect(createReservePayment).not.toHaveBeenCalled();
 });
 
 test('creates a minimal income without a category', async () => {

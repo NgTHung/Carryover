@@ -11,17 +11,26 @@ import { ScrollView, Text, View } from 'react-native';
 import type { ActiveAccount } from '../../data/accounts';
 import type { CategoryGroupWithLeaves } from '../../data/category-types';
 import type { Transaction } from '../../data/transaction-validation';
+import { formatVnd } from '../../money/currency';
 import { Button } from '../index';
 import { TransactionFormFields } from './TransactionFormFields';
 import type { TransactionCreateData } from './transaction-create-contract';
 import {
   buildCompleteCreatePayload,
   initializeCreationForm,
-  validateTransactionForm,
-  type EditableTransactionDirection,
+  validateCreationTransactionForm,
+  type TransactionFormCreationIntent,
   type TransactionFormErrors,
   type TransactionFormValues,
 } from './transaction-form';
+import type {
+  ReservePaymentPresentation,
+  TransactionCreationIntent,
+} from './load-transaction-route';
+
+export type TransactionCreatorIntent =
+  | Extract<TransactionCreationIntent, { kind: 'manual' }>
+  | ReservePaymentPresentation;
 
 type CreatorMutationState =
   | { status: 'idle' }
@@ -34,7 +43,7 @@ function errorMessage(error: unknown): string {
 }
 
 export function TransactionCreator({
-  direction,
+  intent,
   accounts,
   groups,
   openedAt,
@@ -44,9 +53,10 @@ export function TransactionCreator({
   onWritePending,
   navigationError,
   onRetryNavigation,
+  navigationActionLabel = 'Back to transactions',
   now = () => new Date(),
 }: {
-  direction: EditableTransactionDirection;
+  intent: TransactionCreatorIntent;
   accounts: ActiveAccount[];
   groups: CategoryGroupWithLeaves[];
   openedAt: Date;
@@ -56,11 +66,20 @@ export function TransactionCreator({
   onWritePending: (pending: boolean) => void;
   navigationError?: string;
   onRetryNavigation?: () => void;
+  navigationActionLabel?: string;
   now?: () => Date;
 }) {
+  const formIntent: TransactionFormCreationIntent =
+    intent.kind === 'manual'
+      ? intent
+      : {
+          kind: 'reserve-payment',
+          categoryId: intent.categoryId,
+          period: intent.period,
+        };
   const initialization = useMemo(
-    () => initializeCreationForm(direction, accounts, openedAt),
-    [accounts, direction, openedAt]
+    () => initializeCreationForm(formIntent, accounts, openedAt),
+    [accounts, formIntent, openedAt]
   );
   const [form, setForm] = useState<TransactionFormValues | undefined>(
     initialization.status === 'ready' ? initialization.values : undefined
@@ -101,7 +120,12 @@ export function TransactionCreator({
   const submit = async () => {
     if (saving || saved || submissionLockedRef.current) return;
 
-    const validation = validateTransactionForm(form, 'create', openedAt, now());
+    const validation = validateCreationTransactionForm(
+      form,
+      formIntent,
+      openedAt,
+      now()
+    );
     if (!validation.valid) {
       setErrors(validation.errors);
       return;
@@ -114,7 +138,14 @@ export function TransactionCreator({
     let transaction: Transaction;
     try {
       const payload = buildCompleteCreatePayload(form, validation);
-      transaction = await data.createCompleteTransaction(payload);
+      transaction =
+        intent.kind === 'manual'
+          ? await data.createCompleteTransaction(payload)
+          : await data.createReservePayment({
+              commitmentId: intent.commitmentId,
+              period: intent.period,
+              transaction: payload,
+            });
     } catch (error: unknown) {
       setMutation({ status: 'failed', message: errorMessage(error) });
       allowRetry();
@@ -145,10 +176,12 @@ export function TransactionCreator({
       <View className="gap-1">
         <Text className="text-eyebrow font-semibold tracking-widest text-need-light dark:text-need-dark">LEDGER</Text>
         <Text accessibilityRole="header" className="text-title font-bold text-ink-light dark:text-ink-dark">
-          Add {form.direction}
+          {intent.kind === 'manual' ? `Add ${form.direction}` : 'Record payment'}
         </Text>
         <Text className="text-body text-muted-light dark:text-muted-dark">
-          Complete transaction
+          {intent.kind === 'manual'
+            ? 'Complete transaction'
+            : `${intent.commitmentName}, ${formatVnd(intent.reservedAmount)} reserved for ${intent.period}`}
         </Text>
       </View>
 
@@ -169,7 +202,7 @@ export function TransactionCreator({
           </Text>
           {onRetryNavigation ? (
             <Button variant="secondary" onPress={onRetryNavigation}>
-              Back to transactions
+              {navigationActionLabel}
             </Button>
           ) : null}
         </View>
@@ -180,6 +213,9 @@ export function TransactionCreator({
           accounts={accounts}
           errors={errors}
           disabled={saving}
+          fixedExpenseLeaf={
+            intent.kind === 'reserve-payment' ? intent.leafName : undefined
+          }
           onChange={(next) => {
             setForm(next);
             setErrors({});

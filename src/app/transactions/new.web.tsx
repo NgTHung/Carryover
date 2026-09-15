@@ -13,10 +13,13 @@ import {
 import { TransactionRouteView } from '../../ui/transactions/TransactionRouteView';
 
 export default function NewTransactionWebRoute() {
-  const { direction } = useLocalSearchParams<{
+  const params = useLocalSearchParams<{
     direction?: string | string[];
+    mode?: string | string[];
+    commitmentId?: string | string[];
+    period?: string | string[];
   }>();
-  const parsed = parseTransactionCreationRoute(direction);
+  const parsed = parseTransactionCreationRoute(params);
   if (parsed.status === 'invalid') {
     return <TransactionRouteView state={parsed} />;
   }
@@ -25,7 +28,9 @@ export default function NewTransactionWebRoute() {
     <View className="flex-1 gap-2 bg-ground-light px-5 py-16 dark:bg-ground-dark">
       <Text className="text-eyebrow font-semibold tracking-widest text-need-light dark:text-need-dark">LEDGER</Text>
       <Text accessibilityRole="header" className="text-title font-bold text-ink-light dark:text-ink-dark">
-        Add {parsed.direction}
+        {parsed.intent.kind === 'manual'
+          ? `Add ${parsed.intent.initialDirection}`
+          : 'Record commitment payment'}
       </Text>
       <Text className="text-body text-muted-light dark:text-muted-dark">
         Manual transactions are available in the installed iPhone build. The browser preview does not open the ledger.

@@ -53,6 +53,7 @@ export function TransactionFormFields({
   accounts,
   errors,
   disabled,
+  fixedExpenseLeaf,
   onChange,
 }: {
   values: TransactionFormValues;
@@ -60,6 +61,7 @@ export function TransactionFormFields({
   accounts: ActiveAccount[];
   errors: TransactionFormErrors;
   disabled: boolean;
+  fixedExpenseLeaf?: string;
   onChange: (values: TransactionFormValues) => void;
 }) {
   const update = (changes: Partial<TransactionFormValues>) => {
@@ -77,22 +79,31 @@ export function TransactionFormFields({
         onChangeText={(amount) => update({ amount })}
       />
 
-      <View className="gap-2">
-        <Text className="text-body font-semibold text-ink-light dark:text-ink-dark">Direction</Text>
-        <View className="flex-row flex-wrap gap-2">
-          {(['expense', 'income'] as const).map((direction) => (
-            <Choice
-              key={direction}
-              label={direction}
-              selected={values.direction === direction}
-              disabled={disabled}
-              onPress={() => onChange(transitionDirection(values, direction))}
-            />
-          ))}
+      {fixedExpenseLeaf === undefined ? (
+        <View className="gap-2">
+          <Text className="text-body font-semibold text-ink-light dark:text-ink-dark">Direction</Text>
+          <View className="flex-row flex-wrap gap-2">
+            {(['expense', 'income'] as const).map((direction) => (
+              <Choice
+                key={direction}
+                label={direction}
+                selected={values.direction === direction}
+                disabled={disabled}
+                onPress={() => onChange(transitionDirection(values, direction))}
+              />
+            ))}
+          </View>
         </View>
-      </View>
+      ) : (
+        <View className="gap-1 rounded-surface border border-faint-light bg-surface-light p-4 dark:border-faint-dark dark:bg-surface-dark">
+          <Text className="text-detail text-muted-light dark:text-muted-dark">Expense leaf</Text>
+          <Text className="text-body font-semibold text-ink-light dark:text-ink-dark">
+            {fixedExpenseLeaf}
+          </Text>
+        </View>
+      )}
 
-      {values.direction === 'expense' ? (
+      {values.direction === 'expense' && fixedExpenseLeaf === undefined ? (
         <View className="gap-2">
           <Text className="text-body font-semibold text-ink-light dark:text-ink-dark">Leaf</Text>
           <View className="flex-row flex-wrap gap-2">

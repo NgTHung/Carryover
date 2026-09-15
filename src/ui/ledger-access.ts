@@ -23,6 +23,7 @@ import {
   manualTransactionData,
   readCommittedMonthSummary,
   readCommittedBudgetInput,
+  reservePaymentData,
   transactionData,
   transactionListData,
 } from '../data/database';
@@ -120,7 +121,10 @@ const transactionEditorData: TransactionEditorData = {
 const transactionCreateData: TransactionCreateData = {
   listActiveCategoryGroups: () => categoryData.listActiveCategoryGroups(),
   listActiveAccounts: () => accountData.listActiveAccounts(),
+  readCommitmentOverview: (period) =>
+    commitmentData.readCommitmentOverview(period),
   createCompleteTransaction: (input) => manualTransactionData.createTransaction(input),
+  createReservePayment: (input) => reservePaymentData.createReservePayment(input),
 };
 
 export function getTransactionEditorData(): TransactionEditorData {

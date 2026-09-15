@@ -15,9 +15,11 @@ import {
   getTransactionCreateData,
 } from '../../ui/ledger-access';
 import { TransactionCreator } from '../../ui/transactions/TransactionCreator';
+import type { TransactionCreatorIntent } from '../../ui/transactions/TransactionCreator';
 import type { TransactionCreateData } from '../../ui/transactions/transaction-create-contract';
 import {
   parseTransactionCreationRoute,
+  resolveReservePaymentIntent,
   type ParsedTransactionCreationRoute,
 } from '../../ui/transactions/load-transaction-route';
 import { TransactionRouteView } from '../../ui/transactions/TransactionRouteView';
@@ -28,10 +30,11 @@ type CreationLoadState =
   | { status: 'loading' }
   | {
       status: 'ready';
-      direction: Extract<ParsedTransactionCreationRoute, { status: 'valid' }>['direction'];
+      intent: TransactionCreatorIntent;
       accounts: Awaited<ReturnType<TransactionCreateData['listActiveAccounts']>>;
       groups: Awaited<ReturnType<TransactionCreateData['listActiveCategoryGroups']>>;
     }
+  | { status: 'unavailable'; message: string }
   | { status: 'error'; message: string };
 
 function errorMessage(error: unknown): string {
@@ -66,15 +69,23 @@ export default function NewTransactionRoute({
 }: {
   data?: TransactionCreateData;
 }) {
-  const { direction: directionParam } = useLocalSearchParams<{
+  const params = useLocalSearchParams<{
     direction?: string | string[];
+    mode?: string | string[];
+    commitmentId?: string | string[];
+    period?: string | string[];
   }>();
-  const directionKey = Array.isArray(directionParam)
-    ? directionParam.join('\u0000')
-    : directionParam;
+  const routeKey = [
+    params.direction,
+    params.mode,
+    params.commitmentId,
+    params.period,
+  ]
+    .map((value) => (Array.isArray(value) ? value.join('\u0000') : value ?? ''))
+    .join('\u0001');
   const parsed = useMemo(
-    () => parseTransactionCreationRoute(directionParam),
-    [directionKey]
+    () => parseTransactionCreationRoute(params),
+    [routeKey]
   );
   const [state, setState] = useState<CreationLoadState>(() =>
     parsed.status === 'invalid' ? parsed : { status: 'loading' }
@@ -100,15 +111,37 @@ export default function NewTransactionRoute({
 
     let cancelled = false;
     setState({ status: 'loading' });
+    const overviewPromise =
+      parsed.intent.kind === 'reserve-payment'
+        ? data.readCommitmentOverview(parsed.intent.period)
+        : Promise.resolve(undefined);
     void Promise.all([
       data.listActiveAccounts(),
       data.listActiveCategoryGroups(),
+      overviewPromise,
     ])
-      .then(([accounts, groups]) => {
+      .then(([accounts, groups, overview]) => {
         if (cancelled) return;
+        let intent: TransactionCreatorIntent;
+        if (parsed.intent.kind === 'manual') {
+          intent = parsed.intent;
+        } else {
+          if (overview === undefined) {
+            throw new Error('Commitment overview was not loaded');
+          }
+          const resolved = resolveReservePaymentIntent(
+            overview,
+            parsed.intent.commitmentId
+          );
+          if (resolved.status === 'unavailable') {
+            setState(resolved);
+            return;
+          }
+          intent = resolved.intent;
+        }
         setState({
           status: 'ready',
-          direction: parsed.direction,
+          intent,
           accounts,
           groups,
         });
@@ -121,18 +154,22 @@ export default function NewTransactionRoute({
     return () => {
       cancelled = true;
     };
-  }, [data, directionKey, parsed, retryToken]);
+  }, [data, parsed, retryToken, routeKey]);
 
   useEffect(() => {
     if (writePending || navigationIntent === undefined) return;
 
     try {
-      router.replace('/transactions' as Href);
+      const destination =
+        parsed.status === 'valid' && parsed.intent.kind === 'reserve-payment'
+          ? `/settings/commitments?period=${parsed.intent.period}`
+          : '/transactions';
+      router.replace(destination as Href);
     } catch (error: unknown) {
       setNavigationIntent(undefined);
       setNavigationError(errorMessage(error));
     }
-  }, [navigationIntent, writePending]);
+  }, [navigationIntent, parsed, writePending]);
 
   const updateWritePending = useCallback((pending: boolean) => {
     if (writePendingRef.current === pending) return;
@@ -145,15 +182,21 @@ export default function NewTransactionRoute({
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/transactions' as Href);
+      const destination =
+        parsed.status === 'valid' && parsed.intent.kind === 'reserve-payment'
+          ? `/settings/commitments?period=${parsed.intent.period}`
+          : '/transactions';
+      router.replace(destination as Href);
     }
-  }, []);
+  }, [parsed]);
 
   const queueNavigation = useCallback((transaction: Transaction) => {
-    useTransactionFilters.getState().revealTransaction(transaction.occurredAt);
+    if (parsed.status === 'valid' && parsed.intent.kind === 'manual') {
+      useTransactionFilters.getState().revealTransaction(transaction.occurredAt);
+    }
     setNavigationError(undefined);
     setNavigationIntent(transaction);
-  }, []);
+  }, [parsed]);
 
   const commit = useCallback((transaction: Transaction) => {
     setSavedTransaction(transaction);
@@ -180,10 +223,19 @@ export default function NewTransactionRoute({
       />
     );
   }
+  if (state.status === 'unavailable') {
+    return (
+      <CreationMessage
+        title="Payment unavailable"
+        detail={state.message}
+        action={<Button onPress={cancel}>Back to commitments</Button>}
+      />
+    );
+  }
 
   return (
     <TransactionCreator
-      direction={state.direction}
+      intent={state.intent}
       accounts={state.accounts}
       groups={state.groups}
       openedAt={openedAt}
@@ -193,6 +245,11 @@ export default function NewTransactionRoute({
       onWritePending={updateWritePending}
       navigationError={navigationError}
       onRetryNavigation={retryNavigation}
+      navigationActionLabel={
+        state.intent.kind === 'reserve-payment'
+          ? 'Back to commitments'
+          : 'Back to transactions'
+      }
     />
   );
 }

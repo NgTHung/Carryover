@@ -2,12 +2,15 @@ import type { ReactNode } from 'react';
 import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import type { CreateTransactionInput, Transaction } from '../src/data/transaction-validation';
+import type { CommitmentOverview } from '../src/data/commitment-overview';
 import NativeNewTransactionRoute from '../src/app/transactions/new';
 import WebNewTransactionRoute from '../src/app/transactions/new.web';
 import type { TransactionCreateData } from '../src/ui/transactions/transaction-create-contract';
 import { useTransactionFilters } from '../src/ui/transactions/transaction-filters';
 
 const transactionId = '11111111-1111-4111-8111-111111111111';
+const commitmentId = '33333333-3333-4333-8333-333333333333';
+const reserveLeafId = '44444444-4444-4444-8444-444444444444';
 const mockUseLocalSearchParams = jest.fn();
 const mockReadTransaction = jest.fn();
 const mockListCategories = jest.fn(async () => []);
@@ -21,6 +24,8 @@ const mockReadAccounts = jest.fn(async () => [
 ]);
 const mockReplace = jest.fn();
 const mockCreateTransaction = jest.fn<Promise<Transaction>, [CreateTransactionInput]>();
+const mockCreateReservePayment = jest.fn<Promise<Transaction>, [unknown]>();
+const mockReadCommitmentOverview = jest.fn<Promise<CommitmentOverview>, [unknown]>();
 const mockUsePreventRemove = jest.fn();
 const mockBack = jest.fn();
 const mockCanGoBack = jest.fn(() => false);
@@ -49,6 +54,14 @@ jest.mock('../src/data/database', () => ({
   categoryData: { listActiveCategoryGroups: () => mockListCategories() },
   accountData: { listActiveAccounts: () => mockReadAccounts() },
   manualTransactionData: { createTransaction: jest.fn() },
+  commitmentData: {
+    readCommitmentOverview: (...args: unknown[]) =>
+      mockReadCommitmentOverview(args[0]),
+  },
+  reservePaymentData: {
+    createReservePayment: (...args: unknown[]) =>
+      mockCreateReservePayment(args[0]),
+  },
 }));
 
 jest.mock('expo-status-bar', () => ({
@@ -78,18 +91,52 @@ const transaction: Transaction = {
   deletedAt: null,
 };
 
+function eligibleCommitmentOverview(): CommitmentOverview {
+  return {
+    period: '2026-09',
+    unpaidTotal: { status: 'available', amount: 700_000 },
+    items: [
+      {
+        commitment: {
+          id: commitmentId,
+          name: 'Apartment rent',
+          amount: 700_000,
+          dueDay: 5,
+          categoryId: reserveLeafId,
+          active: true,
+          createdAt: new Date(0),
+          updatedAt: new Date(0),
+          deletedAt: null,
+        },
+        dueDate: '2026-09-05',
+        leaf: {
+          id: reserveLeafId,
+          name: 'Rent',
+          groupName: 'Rent',
+          active: true,
+        },
+        state: { status: 'unpaid', nextToAcceptPayment: true },
+      },
+    ],
+  };
+}
+
 afterEach(() => {
   cleanup();
   jest.clearAllMocks();
   mockCanGoBack.mockReturnValue(false);
   mockCreateTransaction.mockReset();
+  mockCreateReservePayment.mockReset();
+  mockReadCommitmentOverview.mockReset();
 });
 
 function creationData(): TransactionCreateData {
   return {
     listActiveAccounts: () => mockReadAccounts(),
     listActiveCategoryGroups: () => mockListCategories(),
+    readCommitmentOverview: (period) => mockReadCommitmentOverview(period),
     createCompleteTransaction: (input) => mockCreateTransaction(input),
+    createReservePayment: (input) => mockCreateReservePayment(input),
   };
 }
 
@@ -166,7 +213,9 @@ test('native creation route rejects invalid and repeated directions before readi
   const data: TransactionCreateData = {
     listActiveAccounts: jest.fn(async () => []),
     listActiveCategoryGroups: jest.fn(async () => []),
+    readCommitmentOverview: jest.fn(),
     createCompleteTransaction: jest.fn(),
+    createReservePayment: jest.fn(),
   };
 
   const view = await render(<NativeNewTransactionRoute data={data} />);
@@ -174,6 +223,66 @@ test('native creation route rejects invalid and repeated directions before readi
   expect(view.getByText('Invalid transaction link')).toBeTruthy();
   expect(data.listActiveAccounts).not.toHaveBeenCalled();
   expect(data.listActiveCategoryGroups).not.toHaveBeenCalled();
+});
+
+test('native creation route loads and returns an eligible reserve payment to its period', async () => {
+  mockUseLocalSearchParams.mockReturnValue({
+    mode: 'reserve-payment',
+    commitmentId,
+    period: '2026-09',
+  });
+  mockReadCommitmentOverview.mockResolvedValue(eligibleCommitmentOverview());
+  mockCreateReservePayment.mockResolvedValue(transaction);
+  const data = creationData();
+  const view = await render(<NativeNewTransactionRoute data={data} />);
+
+  await waitFor(() => expect(view.getByText('Record payment')).toBeTruthy());
+  expect(mockReadCommitmentOverview).toHaveBeenCalledWith('2026-09');
+  expect(view.getByText('Rent')).toBeTruthy();
+  expect(view.queryByRole('button', { name: 'income' })).toBeNull();
+
+  await fireEvent.changeText(view.getByLabelText('Amount'), '725000');
+  await fireEvent.press(view.getByRole('button', { name: 'Save transaction' }));
+
+  await waitFor(() =>
+    expect(mockReplace).toHaveBeenCalledWith(
+      '/settings/commitments?period=2026-09'
+    )
+  );
+  expect(mockCreateReservePayment).toHaveBeenCalledWith(
+    expect.objectContaining({
+      commitmentId,
+      period: '2026-09',
+      transaction: expect.objectContaining({
+        direction: 'expense',
+        categoryId: reserveLeafId,
+        amount: 725_000,
+      }),
+    })
+  );
+  expect(mockCreateTransaction).not.toHaveBeenCalled();
+});
+
+test('native creation route refuses a stale reserve payment before showing the form', async () => {
+  mockUseLocalSearchParams.mockReturnValue({
+    mode: 'reserve-payment',
+    commitmentId,
+    period: '2026-09',
+  });
+  const paid = eligibleCommitmentOverview();
+  const item = paid.items[0];
+  if (item === undefined) throw new Error('Missing commitment fixture');
+  paid.items[0] = {
+    ...item,
+    state: { status: 'paid', transactionId },
+  };
+  mockReadCommitmentOverview.mockResolvedValue(paid);
+  const view = await render(<NativeNewTransactionRoute data={creationData()} />);
+
+  await waitFor(() => expect(view.getByText('Payment unavailable')).toBeTruthy());
+  expect(view.getByText(/already paid/i)).toBeTruthy();
+  expect(view.queryByLabelText('Amount')).toBeNull();
+  expect(mockCreateReservePayment).not.toHaveBeenCalled();
 });
 
 test('native creation route retries a choice loading failure', async () => {
