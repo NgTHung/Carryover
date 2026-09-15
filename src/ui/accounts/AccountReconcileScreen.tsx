@@ -1,120 +1,192 @@
-import { useCallback, useEffect, useState } from 'react';
+/**
+ * Account controls that operate on already-loaded account projections.
+ *
+ * The route owns reads and navigation. This view keeps only one local draft,
+ * so a background refresh can update balances without replacing typed input.
+ */
+import { useRef, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
+import { accountNameSchema } from '../../data/account-validation';
+import type { AccountBalance, ReconcileResult } from '../../data/accounts';
 import { nonNegativeVndInputSchema } from '../../data/money-validation';
-import type { AccountBalance } from '../../data/accounts';
-import { formatVnd } from '../../money/currency';
-import { Button, Input } from '../index';
-import type { AccountReconcileData } from './account-reconcile-contract';
-
-type LoadState =
-  | { status: 'loading' }
-  | { status: 'ready'; accounts: AccountBalance[] }
-  | { status: 'error'; message: string };
-
-type FormState =
-  | { status: 'closed' }
-  | { status: 'open'; value: string; error?: string }
-  | { status: 'submitting'; value: string };
+import { Button } from '../index';
+import { AccountCard } from './AccountCard';
+import type { AccountEditorData } from './account-editor-contract';
+import type { AccountInteraction } from './account-form-state';
 
 type Feedback =
-  | { status: 'adjusted'; accountId: string }
-  | { status: 'unchanged'; accountId: string };
+  | { accountId: string; message: string }
+  | undefined;
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function parseWholeVnd(value: string): number | undefined {
-  const parsed = nonNegativeVndInputSchema.safeParse(value);
-  return parsed.success ? parsed.data : undefined;
+function validationMessage(kind: 'name' | 'openingBalance' | 'statedBalance'): string {
+  if (kind === 'name') return 'Enter a non-blank account name.';
+  return 'Enter a whole, nonnegative VND amount.';
 }
 
-function promptFor(account: AccountBalance): string {
-  return account.kind === 'cash'
-    ? "What's actually in your wallet?"
-    : "What's actually in your bank account?";
+function savedRefreshMessage(error: unknown): string {
+  return `Saved, but account data could not refresh. ${errorMessage(error)} Try again.`;
+}
+
+function resultMessage(result: ReconcileResult): string {
+  return result.status === 'adjusted'
+    ? 'Balance adjusted. The adjustment is visible in Transactions.'
+    : 'Balance already matched. Nothing changed.';
 }
 
 export function AccountReconcileScreen({
+  accounts,
   data,
+  onReload = async () => undefined,
+  onRetryRead,
+  onWritePending,
+  refreshError,
 }: {
-  data: AccountReconcileData;
+  accounts: AccountBalance[];
+  data: AccountEditorData;
+  onReload?: () => Promise<void>;
+  onRetryRead?: () => Promise<void>;
+  onWritePending?: (pending: boolean) => void;
+  refreshError?: string;
 }) {
-  const [loadState, setLoadState] = useState<LoadState>({ status: 'loading' });
-  const [forms, setForms] = useState<Record<string, FormState>>({});
-  const [feedback, setFeedback] = useState<Feedback | undefined>();
+  const [interaction, setInteraction] = useState<AccountInteraction>({
+    status: 'closed',
+  });
+  const [feedback, setFeedback] = useState<Feedback>();
+  const mutationLockedRef = useRef(false);
 
-  const load = useCallback(async () => {
-    try {
-      const accounts = await data.readAccountBalances();
-      setLoadState({ status: 'ready', accounts });
-    } catch (error: unknown) {
-      setLoadState({ status: 'error', message: errorMessage(error) });
+  const beginDetails = (account: AccountBalance) => {
+    if (mutationLockedRef.current || interaction.status !== 'closed') return;
+    setFeedback(undefined);
+    setInteraction({
+      status: 'editing-details',
+      accountId: account.accountId,
+      name: account.name,
+      openingBalance: account.openingBalance.toString(),
+    });
+  };
+
+  const beginReconcile = (account: AccountBalance) => {
+    if (mutationLockedRef.current || interaction.status !== 'closed') return;
+    setFeedback(undefined);
+    setInteraction({
+      status: 'reconciling',
+      accountId: account.accountId,
+      statedBalance: '',
+    });
+  };
+
+  const cancel = () => {
+    if (mutationLockedRef.current) return;
+    setInteraction({ status: 'closed' });
+  };
+
+  const saveDetails = async () => {
+    if (interaction.status !== 'editing-details' || mutationLockedRef.current) return;
+    const draft = interaction;
+    const name = accountNameSchema.safeParse(draft.name);
+    if (!name.success) {
+      setInteraction({ ...draft, error: validationMessage('name') });
+      return;
     }
-  }, [data]);
+    const openingBalance = nonNegativeVndInputSchema.safeParse(draft.openingBalance);
+    if (!openingBalance.success) {
+      setInteraction({ ...draft, error: validationMessage('openingBalance') });
+      return;
+    }
 
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const updateForm = useCallback((accountId: string, form: FormState) => {
-    setForms((current) => ({ ...current, [accountId]: form }));
-  }, []);
-
-  const reconcile = useCallback(
-    async (account: AccountBalance) => {
-      const form = forms[account.accountId];
-      if (form?.status !== 'open') return;
-      const actualBalance = parseWholeVnd(form.value);
-      if (actualBalance === undefined) {
-        updateForm(account.accountId, {
-          status: 'open',
-          value: form.value,
-          error: 'Enter a whole, nonnegative VND amount.',
-        });
-        return;
-      }
-
-      updateForm(account.accountId, { status: 'submitting', value: form.value });
-      setFeedback(undefined);
+    mutationLockedRef.current = true;
+    onWritePending?.(true);
+    setFeedback(undefined);
+    setInteraction({
+      status: 'saving-details',
+      accountId: draft.accountId,
+      name: draft.name,
+      openingBalance: draft.openingBalance,
+    });
+    try {
+      await data.editAccountDetails({
+        accountId: draft.accountId,
+        name: name.data,
+        openingBalance: openingBalance.data,
+      });
+      setInteraction({ status: 'closed' });
       try {
-        const result = await data.reconcileAccount({
-          accountId: account.accountId,
-          statedBalance: actualBalance,
-          occurredAt: new Date(),
-        });
-        await load();
-        setFeedback({ status: result.status, accountId: account.accountId });
-        updateForm(account.accountId, { status: 'closed' });
+        await onReload();
+        setFeedback({ accountId: draft.accountId, message: 'Account details saved.' });
       } catch (error: unknown) {
-        updateForm(account.accountId, {
-          status: 'open',
-          value: form.value,
-          error: errorMessage(error),
-        });
+        setFeedback({ accountId: draft.accountId, message: savedRefreshMessage(error) });
       }
-    },
-    [data, forms, load, updateForm]
-  );
+    } catch (error: unknown) {
+      setInteraction({
+        status: 'editing-details',
+        accountId: draft.accountId,
+        name: draft.name,
+        openingBalance: draft.openingBalance,
+        error: `Could not save account details. ${errorMessage(error)} Try again.`,
+      });
+    } finally {
+      mutationLockedRef.current = false;
+      onWritePending?.(false);
+    }
+  };
 
-  if (loadState.status === 'loading') {
-    return <Message title="Accounts" detail="Loading account balances…" />;
-  }
+  const saveReconcile = async () => {
+    if (interaction.status !== 'reconciling' || mutationLockedRef.current) return;
+    const draft = interaction;
+    const statedBalance = nonNegativeVndInputSchema.safeParse(draft.statedBalance);
+    if (!statedBalance.success) {
+      setInteraction({ ...draft, error: validationMessage('statedBalance') });
+      return;
+    }
 
-  if (loadState.status === 'error') {
-    return (
-      <View className="flex-1 gap-3 bg-ground-light px-5 py-16 dark:bg-ground-dark">
-        <Text accessibilityRole="header" className="text-title font-bold text-ink-light dark:text-ink-dark">
-          Accounts
-        </Text>
-        <Text accessibilityRole="alert" className="text-body text-error-light dark:text-error-dark">
-          {loadState.message}
-        </Text>
-        <Button onPress={() => void load()}>Try again</Button>
-      </View>
-    );
-  }
+    mutationLockedRef.current = true;
+    onWritePending?.(true);
+    setFeedback(undefined);
+    setInteraction({
+      status: 'saving-reconcile',
+      accountId: draft.accountId,
+      statedBalance: draft.statedBalance,
+    });
+    try {
+      const result = await data.reconcileAccount({
+        accountId: draft.accountId,
+        statedBalance: statedBalance.data,
+        occurredAt: new Date(),
+      });
+      setInteraction({ status: 'closed' });
+      try {
+        await onReload();
+        setFeedback({ accountId: draft.accountId, message: resultMessage(result) });
+      } catch (error: unknown) {
+        setFeedback({ accountId: draft.accountId, message: savedRefreshMessage(error) });
+      }
+    } catch (error: unknown) {
+      setInteraction({
+        status: 'reconciling',
+        accountId: draft.accountId,
+        statedBalance: draft.statedBalance,
+        error: `Could not reconcile this account. ${errorMessage(error)} Try again.`,
+      });
+    } finally {
+      mutationLockedRef.current = false;
+      onWritePending?.(false);
+    }
+  };
+
+  const retryRead = async () => {
+    if (onRetryRead === undefined) return;
+    try {
+      await onRetryRead();
+      setFeedback(undefined);
+    } catch {
+      // The route keeps the read error visible and retryable.
+    }
+  };
 
   return (
     <ScrollView
@@ -136,78 +208,55 @@ export function AccountReconcileScreen({
         </Text>
       </View>
 
-      {loadState.accounts.map((account) => {
-        const form = forms[account.accountId] ?? { status: 'closed' as const };
-        const activeForm = form.status === 'closed'
-          ? { status: 'open' as const, value: '' }
-          : form;
-        const isOpen = form.status !== 'closed';
-        const isSubmitting = form.status === 'submitting';
-        const accountFeedback = feedback?.accountId === account.accountId ? feedback : undefined;
-        return (
-          <View
-            key={account.accountId}
-            className="gap-3 rounded-surface border border-faint-light bg-surface-light p-4 dark:border-faint-dark dark:bg-surface-dark"
-          >
-            <View className="flex-row items-start justify-between gap-3">
-              <View className="flex-1 gap-1">
-                <Text className="text-body font-semibold text-ink-light dark:text-ink-dark">{account.name}</Text>
-                <Text className="text-detail uppercase text-muted-light dark:text-muted-dark">{account.kind}</Text>
-              </View>
-              <Text accessibilityLabel={`${account.name} current balance ${formatVnd(account.balance)}`} className="text-body font-semibold tabular-nums text-ink-light dark:text-ink-dark">
-                {formatVnd(account.balance)}
-              </Text>
-            </View>
-            <Text className="text-body text-muted-light dark:text-muted-dark">{promptFor(account)}</Text>
+      {refreshError ? (
+        <View className="gap-2">
+          <Text accessibilityRole="alert" className="text-detail text-error-light dark:text-error-dark">
+            Account data could not refresh. {refreshError}
+          </Text>
+          {onRetryRead ? (
+            <Button variant="secondary" onPress={() => void retryRead()}>
+              Try again
+            </Button>
+          ) : null}
+        </View>
+      ) : null}
 
-            {isOpen ? (
-              <>
-                <Input
-                  label="Actual balance"
-                  keyboardType="number-pad"
-                  value={activeForm.value}
-                  error={activeForm.status === 'open' ? activeForm.error : undefined}
-                  editable={!isSubmitting}
-                  onChangeText={(value) => updateForm(account.accountId, { status: 'open', value })}
-                />
-                <View className="flex-row gap-2">
-                  <Button disabled={isSubmitting} onPress={() => void reconcile(account)}>
-                    {isSubmitting ? 'Saving…' : 'Reconcile'}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    disabled={isSubmitting}
-                    onPress={() => updateForm(account.accountId, { status: 'closed' })}
-                  >
-                    Cancel
-                  </Button>
-                </View>
-              </>
-            ) : (
-              <Button variant="secondary" onPress={() => updateForm(account.accountId, { status: 'open', value: '' })}>
-                Reconcile
-              </Button>
-            )}
-
-            {accountFeedback ? (
-              <Text accessibilityRole="alert" className="text-detail text-muted-light dark:text-muted-dark">
-                {accountFeedback.status === 'adjusted'
-                  ? 'Balance adjusted. The adjustment is visible in Transactions.'
-                  : 'Balance already matched. Nothing changed.'}
-              </Text>
-            ) : null}
-          </View>
-        );
-      })}
+      {accounts.map((account) => (
+        <AccountCard
+          key={account.accountId}
+          account={account}
+          interaction={interaction}
+          feedback={feedback?.accountId === account.accountId ? feedback.message : undefined}
+          formDisabled={interaction.status !== 'closed'}
+          onEditDetails={() => beginDetails(account)}
+          onReconcile={() => beginReconcile(account)}
+          onNameChange={(name) => {
+            setInteraction((current) =>
+              current.status === 'editing-details' && current.accountId === account.accountId
+                ? { ...current, name, error: undefined }
+                : current
+            );
+          }}
+          onOpeningBalanceChange={(openingBalance) => {
+            setInteraction((current) =>
+              current.status === 'editing-details' && current.accountId === account.accountId
+                ? { ...current, openingBalance, error: undefined }
+                : current
+            );
+          }}
+          onSaveDetails={() => void saveDetails()}
+          onCancelDetails={cancel}
+          onStatedBalanceChange={(statedBalance) => {
+            setInteraction((current) =>
+              current.status === 'reconciling' && current.accountId === account.accountId
+                ? { ...current, statedBalance, error: undefined }
+                : current
+            );
+          }}
+          onSaveReconcile={() => void saveReconcile()}
+          onCancelReconcile={cancel}
+        />
+      ))}
     </ScrollView>
-  );
-}
-
-function Message({ title, detail }: { title: string; detail: string }) {
-  return (
-    <View className="flex-1 gap-2 bg-ground-light px-5 py-16 dark:bg-ground-dark">
-      <Text accessibilityRole="header" className="text-title font-bold text-ink-light dark:text-ink-dark">{title}</Text>
-      <Text className="text-body text-muted-light dark:text-muted-dark">{detail}</Text>
-    </View>
   );
 }

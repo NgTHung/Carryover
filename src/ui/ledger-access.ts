@@ -30,7 +30,7 @@ import {
 } from '../data/database';
 import type { CategoryEditorData } from './categories/category-editor-contract';
 import type { CommitmentManagerData } from './commitments/commitment-manager-contract';
-import type { AccountReconcileData } from './accounts/account-reconcile-contract';
+import type { AccountEditorData } from './accounts/account-editor-contract';
 import type {
   LedgerChange,
   LedgerChangeListener,
@@ -48,8 +48,12 @@ export function getCategoryEditorData(): CategoryEditorData {
   return categoryData;
 }
 
-export function getAccountReconcileData(): AccountReconcileData {
+export function getAccountEditorData(): AccountEditorData {
   return accountData;
+}
+
+export function getAccountReconcileData(): AccountEditorData {
+  return getAccountEditorData();
 }
 
 const commitmentManagerData: CommitmentManagerData = {

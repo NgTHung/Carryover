@@ -3,7 +3,7 @@ import { cleanup, render, screen, userEvent, waitFor } from '@testing-library/re
 import type { AccountBalance, ReconcileResult } from '../src/data/accounts';
 import AccountsWebRoute from '../src/app/settings/accounts.web';
 import { AccountReconcileScreen } from '../src/ui/accounts/AccountReconcileScreen';
-import type { AccountReconcileData } from '../src/ui/accounts/account-reconcile-contract';
+import type { AccountEditorData } from '../src/ui/accounts/account-editor-contract';
 
 const bankId = '10000000-0000-4000-8000-000000000001';
 const cashId = '10000000-0000-4000-8000-000000000002';
@@ -21,17 +21,18 @@ const adjustedResult: ReconcileResult = {
   adjustmentEffect: 'increase',
 };
 
-function repository(reconcileAccount: AccountReconcileData['reconcileAccount'] = jest.fn(async () => adjustedResult)) {
+function repository(reconcileAccount: AccountEditorData['reconcileAccount'] = jest.fn(async () => adjustedResult)): AccountEditorData {
   return {
     readAccountBalances: jest.fn(async () => balances),
+    editAccountDetails: jest.fn(async () => undefined),
     reconcileAccount,
-  } satisfies AccountReconcileData;
+  };
 }
 
 afterEach(() => cleanup());
 
 test('shows both account balances and the account-specific reconcile prompts', async () => {
-  await render(<AccountReconcileScreen data={repository()} />);
+  await render(<AccountReconcileScreen accounts={balances} data={repository()} />);
 
   await waitFor(() => expect(screen.getByText('₫800.000')).toBeTruthy());
   expect(screen.getByText('₫150.000')).toBeTruthy();
@@ -40,22 +41,22 @@ test('shows both account balances and the account-specific reconcile prompts', a
 });
 
 test('rejects fractional input before calling reconcile and reports a calm adjustment result', async () => {
-  const reconcileAccount: AccountReconcileData['reconcileAccount'] = jest.fn(async () => adjustedResult);
+  const reconcileAccount: AccountEditorData['reconcileAccount'] = jest.fn(async () => adjustedResult);
   const data = repository(reconcileAccount);
   const user = userEvent.setup();
-  await render(<AccountReconcileScreen data={data} />);
+  await render(<AccountReconcileScreen accounts={balances} data={data} />);
   await waitFor(() => expect(screen.getByText('Bank')).toBeTruthy());
 
-  await user.press(screen.getAllByRole('button', { name: 'Reconcile' })[0]);
+  await user.press(screen.getAllByRole('button', { name: 'Reconcile Bank' })[0]);
   await user.type(screen.getByLabelText('Actual balance'), '12.5');
-  await user.press(screen.getAllByRole('button', { name: 'Reconcile' })[0]);
+  await user.press(screen.getByRole('button', { name: 'Reconcile Bank' }));
 
   expect(reconcileAccount).not.toHaveBeenCalled();
   expect(screen.getByText('Enter a whole, nonnegative VND amount.')).toBeTruthy();
 
   await user.clear(screen.getByLabelText('Actual balance'));
   await user.type(screen.getByLabelText('Actual balance'), '900000');
-  await user.press(screen.getAllByRole('button', { name: 'Reconcile' })[0]);
+  await user.press(screen.getByRole('button', { name: 'Reconcile Bank' }));
   await waitFor(() => expect(reconcileAccount).toHaveBeenCalledWith(expect.objectContaining({
     accountId: bankId,
     statedBalance: 900000,
@@ -70,54 +71,33 @@ test('accepts zero, reports an unchanged balance, and rejects unsafe input local
     accountId: bankId,
     balance: 0,
   };
-  const reconcileAccount: AccountReconcileData['reconcileAccount'] = jest.fn(
+  const reconcileAccount: AccountEditorData['reconcileAccount'] = jest.fn(
     async () => unchanged
   );
   const user = userEvent.setup();
   await render(
-    <AccountReconcileScreen data={repository(reconcileAccount)} />
+    <AccountReconcileScreen accounts={balances} data={repository(reconcileAccount)} />
   );
   await waitFor(() => expect(screen.getByText('Bank')).toBeTruthy());
 
-  await user.press(screen.getAllByRole('button', { name: 'Reconcile' })[0]);
+  await user.press(screen.getByRole('button', { name: 'Reconcile Bank' }));
   await user.type(screen.getByLabelText('Actual balance'), '0');
-  await user.press(screen.getAllByRole('button', { name: 'Reconcile' })[0]);
+  await user.press(screen.getByRole('button', { name: 'Reconcile Bank' }));
   await waitFor(() => expect(reconcileAccount).toHaveBeenCalledTimes(1));
   expect(
     await screen.findByText('Balance already matched. Nothing changed.')
   ).toBeTruthy();
 
-  await user.press(screen.getAllByRole('button', { name: 'Reconcile' })[0]);
+  await user.press(screen.getByRole('button', { name: 'Reconcile Bank' }));
   await user.type(
     screen.getByLabelText('Actual balance'),
     '9007199254740992'
   );
-  await user.press(screen.getAllByRole('button', { name: 'Reconcile' })[0]);
+  await user.press(screen.getByRole('button', { name: 'Reconcile Bank' }));
   expect(reconcileAccount).toHaveBeenCalledTimes(1);
   expect(
     screen.getByText('Enter a whole, nonnegative VND amount.')
   ).toBeTruthy();
-});
-
-test('reports a load error and retries the account read', async () => {
-  const readAccountBalances = jest
-    .fn()
-    .mockRejectedValueOnce(new Error('Ledger unavailable'))
-    .mockResolvedValueOnce(balances);
-  const user = userEvent.setup();
-  await render(
-    <AccountReconcileScreen
-      data={{
-        readAccountBalances,
-        reconcileAccount: jest.fn(async () => adjustedResult),
-      }}
-    />
-  );
-
-  await waitFor(() => expect(screen.getByText('Ledger unavailable')).toBeTruthy());
-  await user.press(screen.getByRole('button', { name: 'Try again' }));
-  await waitFor(() => expect(screen.getByText('Bank')).toBeTruthy());
-  expect(readAccountBalances).toHaveBeenCalledTimes(2);
 });
 
 test('keeps the web route outside the ledger boundary', async () => {
