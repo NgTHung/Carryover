@@ -139,3 +139,25 @@ test('shows a native failure and allows the same fixture to be retried', async (
   expect(await screen.findByText('Prepared, not retained.')).toBeTruthy();
   expect(preparePhoto).toHaveBeenCalledTimes(2);
 });
+
+test('discards an unretained preparation when the probe unmounts', async () => {
+  const discardPreparedPhoto = jest.fn(async () => ({
+    status: 'discarded' as const,
+    photo: discardedPhoto,
+  }));
+  const access: PhotoProbeAccess = {
+    preparePhoto: async () => ({ status: 'prepared', photo: prepared }),
+    retainPhoto: async () => ({ status: 'failed', preparation: failedPreparation }),
+    discardPreparedPhoto,
+    resolvePhoto: async () => absentPhoto(),
+  };
+  const view = await render(<PhotoProbeScreen {...screenProps(access)} />);
+
+  await act(async () => {
+    fireEvent.press(await screen.findByRole('button', { name: 'Prepare photo' }));
+  });
+  await screen.findByText('Prepared, not retained.');
+  view.unmount();
+
+  await waitFor(() => expect(discardPreparedPhoto).toHaveBeenCalledWith(prepared));
+});

@@ -90,6 +90,7 @@ export function PhotoProbeScreen<TFixture extends PhotoProbeFixture>({
   const [thumbnailRevision, setThumbnailRevision] = useState(0);
   const [faultBusy, setFaultBusy] = useState(false);
   const controllerRef = useRef<AbortController | undefined>(undefined);
+  const preparedRef = useRef<PreparedPhoto | null>(null);
   const mountedRef = useRef(true);
 
   const loadState = useCallback(async () => {
@@ -105,12 +106,18 @@ export function PhotoProbeScreen<TFixture extends PhotoProbeFixture>({
   }, [readSavedKeys]);
 
   useEffect(() => {
+    mountedRef.current = true;
     void loadState();
     return () => {
       mountedRef.current = false;
       controllerRef.current?.abort();
+      const prepared = preparedRef.current;
+      preparedRef.current = null;
+      if (prepared !== null) {
+        void access.discardPreparedPhoto(prepared);
+      }
     };
-  }, [loadState]);
+  }, [access, loadState]);
 
   const selectedFixture = fixtures.find((fixture) => fixture.id === selectedId) ?? fixtures[0];
   const savedPhotoKey = savedKeys[selectedFixture.id] ?? null;
@@ -149,10 +156,14 @@ export function PhotoProbeScreen<TFixture extends PhotoProbeFixture>({
       try {
         const sourceUri = await loadFixture(selectedFixture);
         const result = await access.preparePhoto(sourceUri, { signal: controller.signal });
-        if (!mountedRef.current) return;
         if (result.status === 'prepared') {
+          if (!mountedRef.current) {
+            await access.discardPreparedPhoto(result.photo);
+            return;
+          }
+          preparedRef.current = result.photo;
           setOperation({ status: 'prepared', fixtureId, photo: result.photo });
-        } else {
+        } else if (mountedRef.current) {
           setOperation({ status: 'error', fixtureId, message: resultFailureMessage(result) });
         }
       } catch (error: unknown) {
@@ -181,6 +192,7 @@ export function PhotoProbeScreen<TFixture extends PhotoProbeFixture>({
     void (async () => {
       try {
         const result = await access.retainPhoto(photo);
+        preparedRef.current = null;
         if (!mountedRef.current) return;
         if (result.status !== 'retained') {
           setOperation({ status: 'error', fixtureId, message: resultFailureMessage(result) });
@@ -219,6 +231,7 @@ export function PhotoProbeScreen<TFixture extends PhotoProbeFixture>({
     void (async () => {
       try {
         const result = await access.discardPreparedPhoto(photo);
+        preparedRef.current = null;
         if (!mountedRef.current) return;
         if (result.status === 'discarded') {
           setOperation({ status: 'ready' });
