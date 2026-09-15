@@ -9,6 +9,7 @@ import {
   initializeCreationForm,
   initializeEditorForm,
   transitionDirection,
+  validateCreationTransactionForm,
   validateTransactionForm,
   type TransactionFormValues,
 } from '../src/ui/transactions/transaction-form';
@@ -62,7 +63,11 @@ function transaction(): Extract<Transaction, { status: 'complete' }> {
 }
 
 test('creation defaults to the sole active default bank without preselecting optional fields', () => {
-  const initialized = initializeCreationForm('expense', [bank, cash], now);
+  const initialized = initializeCreationForm(
+    { kind: 'manual', initialDirection: 'expense' },
+    [bank, cash],
+    now
+  );
   assert.deepEqual(initialized, {
     status: 'ready',
     values: {
@@ -77,13 +82,58 @@ test('creation defaults to the sole active default bank without preselecting opt
     },
   });
   assert.equal(
-    initializeCreationForm('income', [cash], now).status,
+    initializeCreationForm(
+      { kind: 'manual', initialDirection: 'income' },
+      [cash],
+      now
+    ).status,
     'error'
   );
   assert.equal(
-    initializeCreationForm('income', [bank, { ...bank, accountId: cash.accountId }], now).status,
+    initializeCreationForm(
+      { kind: 'manual', initialDirection: 'income' },
+      [bank, { ...bank, accountId: cash.accountId }],
+      now
+    ).status,
     'error'
   );
+});
+
+test('reserve payment creation fixes expense and leaf while keeping the amount blank', () => {
+  const intent = {
+    kind: 'reserve-payment' as const,
+    categoryId,
+    period: '2026-09' as const,
+  };
+  expect(initializeCreationForm(intent, [bank, cash], now)).toEqual({
+    status: 'ready',
+    values: {
+      amount: '',
+      date: '2026-09-15',
+      note: '',
+      sourceLabel: '',
+      direction: 'expense',
+      accountId: bank.accountId,
+      categoryId,
+      quality: null,
+    },
+  });
+
+  const outside = validateCreationTransactionForm(
+    values({ date: '2026-08-31' }),
+    intent,
+    now,
+    now
+  );
+  expect(outside).toEqual({
+    valid: false,
+    errors: {
+      date: 'Payment date must belong to the selected commitment period.',
+    },
+  });
+  expect(
+    validateCreationTransactionForm(values(), intent, now, now).valid
+  ).toBe(true);
 });
 
 test('editor initialization preserves known and unknown values', () => {

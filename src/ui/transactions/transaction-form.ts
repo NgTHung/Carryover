@@ -7,6 +7,7 @@
  */
 import { dateOnlyFromLocalDate, dateOnlySchema, localDateFromDateOnly } from '../../data/date-only';
 import { assertManualOccurredAt, optionalManualText } from '../../data/manual-transaction-policy';
+import { currentPeriod, type Period } from '../../data/period';
 import type { ActiveAccount } from '../../data/accounts';
 import type { CategoryGroupWithLeaves } from '../../data/category-types';
 import {
@@ -23,6 +24,10 @@ import {
 } from '../../data/transaction-validation';
 
 export type EditableTransactionDirection = 'expense' | 'income';
+
+export type TransactionFormCreationIntent =
+  | { kind: 'manual'; initialDirection: EditableTransactionDirection }
+  | { kind: 'reserve-payment'; categoryId: string; period: Period };
 
 export type TransactionFormValues = {
   amount: string;
@@ -80,7 +85,21 @@ export function initializeCreationForm(
   direction: EditableTransactionDirection,
   accounts: readonly ActiveAccount[],
   openedAt: Date
+): TransactionFormInitialization;
+export function initializeCreationForm(
+  intent: TransactionFormCreationIntent,
+  accounts: readonly ActiveAccount[],
+  openedAt: Date
+): TransactionFormInitialization;
+export function initializeCreationForm(
+  value: TransactionFormCreationIntent | EditableTransactionDirection,
+  accounts: readonly ActiveAccount[],
+  openedAt: Date
 ): TransactionFormInitialization {
+  const intent: TransactionFormCreationIntent =
+    typeof value === 'string'
+      ? { kind: 'manual', initialDirection: value }
+      : value;
   const account = defaultBankAccount(accounts);
   if (account === undefined) {
     return {
@@ -88,6 +107,8 @@ export function initializeCreationForm(
       message: 'Choose one active default bank account before creating a transaction.',
     };
   }
+  const direction =
+    intent.kind === 'manual' ? intent.initialDirection : 'expense';
   return {
     status: 'ready',
     values: {
@@ -97,10 +118,37 @@ export function initializeCreationForm(
       sourceLabel: '',
       direction,
       accountId: account.accountId,
-      categoryId: null,
+      categoryId: intent.kind === 'reserve-payment' ? intent.categoryId : null,
       quality: null,
     },
   };
+}
+
+export function validateCreationTransactionForm(
+  values: TransactionFormValues,
+  intent: TransactionFormCreationIntent,
+  dateAnchor: Date,
+  now: Date
+): TransactionFormValidation {
+  const validation = validateTransactionForm(
+    values,
+    'create',
+    dateAnchor,
+    now
+  );
+  if (
+    validation.valid &&
+    intent.kind === 'reserve-payment' &&
+    currentPeriod(validation.occurredAt) !== intent.period
+  ) {
+    return {
+      valid: false,
+      errors: {
+        date: 'Payment date must belong to the selected commitment period.',
+      },
+    };
+  }
+  return validation;
 }
 
 export function initializeEditorForm(
