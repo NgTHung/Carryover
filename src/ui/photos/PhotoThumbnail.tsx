@@ -23,7 +23,7 @@ export type PhotoThumbnailProps = {
 type PhotoThumbnailState =
   | { status: 'loading'; photoKey: string }
   | { status: 'absent'; photoKey: null }
-  | { status: 'available'; photoKey: string; uri: string }
+  | { status: 'available'; photoKey: string; uri: string; request: number }
   | { status: 'unavailable'; photoKey: string };
 
 function initialState(photoKey: PhotoThumbnailProps['photoKey']): PhotoThumbnailState {
@@ -74,6 +74,7 @@ export function PhotoThumbnail({
             status: 'available',
             photoKey,
             uri: availability.uri,
+            request,
           });
           return;
         }
@@ -108,7 +109,8 @@ export function PhotoThumbnail({
         onError={() => {
           setState((current) =>
             current.status === 'available' &&
-            current.photoKey === displayedState.photoKey
+            current.photoKey === displayedState.photoKey &&
+            current.request === displayedState.request
               ? unavailableState(displayedState.photoKey)
               : current
           );

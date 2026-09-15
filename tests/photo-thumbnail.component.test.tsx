@@ -157,3 +157,23 @@ test('renders resolver rejection as unavailable instead of leaving a stale thumb
 
   await waitFor(() => expect(screen.getByLabelText('Photo unavailable')).toBeTruthy());
 });
+
+test('ignores an image error from an earlier same-key reload', async () => {
+  const resolvePhoto = jest.fn(async () => available(firstKey, 'file:///retained/first.jpg'));
+  const view = await render(
+    <PhotoThumbnail photoKey={firstKey} resolvePhoto={resolvePhoto} revision={0} />
+  );
+  const earlierOnError = (await screen.findByLabelText('Photo')).props.onError as () => void;
+
+  await view.rerender(
+    <PhotoThumbnail photoKey={firstKey} resolvePhoto={resolvePhoto} revision={1} />
+  );
+  await waitFor(() => expect(resolvePhoto).toHaveBeenCalledTimes(2));
+  await screen.findByLabelText('Photo');
+
+  await act(async () => {
+    earlierOnError();
+  });
+
+  expect(screen.queryByLabelText('Photo')).not.toBeNull();
+});
