@@ -8,7 +8,7 @@ Task: [Store durable capture photos](../../.tasks/app/CAPTURE-002-store-durable-
 
 You can retain a purchase photo under a stable key before a draft references it. The photo survives an app restart and transaction soft deletion. If its file becomes unavailable, you see that explicitly and your transaction amount stays unchanged.
 
-CAPTURE-002 is To Do and ready. Its dependency UI-020 is Done. This plan leaves the task To Do and its criteria unchecked. Start it only when implementation begins.
+The local implementation and automated evidence for CAPTURE-002 are complete. Its dependency UI-020 is Done. Native iPhone verification is explicitly deferred to `build:BUILD-005`; the task record documents that deferral and does not claim device success.
 
 Use CONTEXT.md, docs/spec/carryover-v1.md, docs/state-and-validation.md, and docs/app-stack-and-testing.md as the product and architecture contracts. The decisions below define the implementation; compression parameters remain subject to the specified iPhone measurements.
 
@@ -188,7 +188,7 @@ Commit: feat(capture): render photo availability explicitly
 3. The probe prepares, retains, resolves by stable key, and displays bytes, dimensions, attempts, and elapsed time. Persist only test keys in a probe-owned document file so restart checks do not depend on React state. It must not seed or mutate the user's ledger. Database integration tests already exercise the ledger boundary.
 4. Add targeted probe tests only for release gating and error/retry behavior. Run the final local commands below and commit the probe and pending runbook as a buildable stage.
 5. Once an authorized CI-built development IPA is available, execute the device procedure. Record its commit, build number, iOS version, sample results, and failures. Commit measured evidence separately; correct any failures in small verified commits.
-6. Mark criteria checked only after their evidence exists. Run taskroot validate, then taskroot done app:CAPTURE-002 only when all criteria are satisfied. Validate and inspect taskroot show app:CAPTURE-002 afterward. Missing iPhone evidence leaves this task unfinished; it does not justify claiming device success.
+6. Keep the device procedure and its unrun fields available for `build:BUILD-005`. The CAPTURE-002 task may be completed against its locally scoped criteria, with the deferred device work recorded explicitly. Do not treat local checks as iPhone evidence or claim native verification passed.
 
 Commits: test(capture): add the photo storage device probe; docs(capture): record durable photo verification
 
