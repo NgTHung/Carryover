@@ -13,6 +13,7 @@ import {
 import type { AdjustmentEffect } from './transaction-validation';
 
 const accountIdSchema = z.string().uuid();
+export const accountNameSchema = z.string().trim().min(1);
 
 export const reconcileAccountSchema = z
   .object({
@@ -35,6 +36,16 @@ export const updateAccountOpeningBalanceSchema = z
 export type UpdateAccountOpeningBalance = z.infer<
   typeof updateAccountOpeningBalanceSchema
 >;
+
+export const editAccountDetailsSchema = z
+  .object({
+    accountId: accountIdSchema,
+    name: accountNameSchema,
+    openingBalance: nonNegativeVndAmountSchema,
+  })
+  .strict();
+
+export type EditAccountDetails = z.infer<typeof editAccountDetailsSchema>;
 
 export const recordTransferSchema = z
   .object({

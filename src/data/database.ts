@@ -58,7 +58,9 @@ const nativeAtomicRunner: AtomicTransactionRunner<'sync'> = (() => {
   };
 })();
 
-export const accountData = createAccountData(ledgerDb, ledgerChangeNotifier);
+export const accountData = createAccountData(ledgerDb, ledgerChangeNotifier, {
+  runAtomic: nativeAtomicRunner,
+});
 export const categoryData = createCategoryData(ledgerDb, ledgerChangeNotifier);
 export const commitmentData = createCommitmentData(ledgerDb, ledgerChangeNotifier);
 export const monthConfigData = createMonthConfigData(ledgerDb, ledgerChangeNotifier);

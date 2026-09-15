@@ -1,12 +1,12 @@
 ---
 id: "UI-024"
 title: "Edit bank and cash account details"
-status: "To Do"
+status: In Progress
 priority: "Medium"
 type: "Feature"
 milestone: "0.3.0"
 depends_on: ["app:DATA-002", "app:DATA-007", "app:DATA-015"]
-last_updated: "2026-09-15"
+last_updated: 2026-09-15
 ---
 
 ## Summary

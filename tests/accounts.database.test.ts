@@ -404,6 +404,7 @@ test('reconciling downward stores a decrease, while a no-op stays unchanged and 
     assert.equal(afterNoOp.count, beforeNoOp.count);
     assert.deepEqual(events, [
       'accounts:edited',
+      'month_config:created',
       'transactions:created',
     ]);
   } finally {
