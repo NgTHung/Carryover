@@ -6,8 +6,6 @@
  * preparation, the ledger mutation, and current-income maintenance inside one
  * caller-supplied SQLite transaction.
  */
-import { and, eq } from 'drizzle-orm';
-
 import {
   createDefaultAtomicRunner,
   type AtomicTransactionRunner,
@@ -15,27 +13,28 @@ import {
 } from './atomic';
 import { createCategoryData, type CategoryData } from './categories';
 import { assertManualOccurredAt, optionalManualText } from './manual-transaction-policy';
+import {
+  createCompleteManualTransactionInTransaction,
+  mergePeriodPreparationMutations,
+  notifyManualTransactionMutation,
+  parseCompleteManualTransactionCreate,
+  requireActiveManualAccount,
+} from './manual-transaction-atomic';
 import { currentPeriod } from './period';
 import {
   prepareCurrentPeriodInTransaction,
   refreshCurrentPeriodIncomeInTransaction,
   type PeriodPreparationMutation,
 } from './period-preparation';
-import { activeRowFilter } from './soft-delete';
 import {
   completeDraftInputSchema,
   editTransactionInputSchema,
-  parseCreateTransactionInput,
   parseTransaction,
   transactionIdSchema,
   type CompleteDraftInput,
-  type CreateTransactionInput,
   type EditTransactionInput,
   type Transaction,
 } from './transaction-validation';
-import {
-  accounts,
-} from './schema';
 import {
   createTransactionData,
   type TransactionData,
@@ -73,53 +72,8 @@ function manualDirectionRequired(): Error {
   return new Error('Manual transactions must use expense or income direction');
 }
 
-function completeManualTransactionRequired(): Error {
-  return new Error('Manual transaction creation requires a complete transaction');
-}
-
 function manualExpenseCategoryRequired(): Error {
   return new Error('A complete expense requires an active leaf category');
-}
-
-function activeAccountWriteFailed(accountId: string): Error {
-  return new Error(`Active account ${accountId} was not found`);
-}
-
-function mergePeriodMutation(
-  left: PeriodPreparationMutation,
-  right: PeriodPreparationMutation
-): PeriodPreparationMutation {
-  if (left === 'created' || right === 'created') return 'created';
-  if (left === 'edited' || right === 'edited') return 'edited';
-  return 'none';
-}
-
-async function requireActiveAccount<TResultKind extends 'sync' | 'async'>(
-  db: LedgerDatabase<TResultKind>,
-  accountId: string
-): Promise<void> {
-  const row = await db
-    .select({ id: accounts.id })
-    .from(accounts)
-    .where(and(eq(accounts.id, accountId), activeRowFilter(accounts.deletedAt)))
-    .get();
-  if (row === undefined) throw activeAccountWriteFailed(accountId);
-}
-
-function normalizeManualCreate(input: CreateTransactionInput): CreateTransactionInput {
-  if (input.status !== 'complete') throw completeManualTransactionRequired();
-  if (input.direction !== 'expense' && input.direction !== 'income') {
-    throw manualDirectionRequired();
-  }
-  return {
-    ...input,
-    adjustmentEffect: null,
-    categoryId: input.direction === 'expense' ? input.categoryId : null,
-    payer: { kind: 'you' },
-    photoKey: null,
-    note: optionalManualText(input.note),
-    sourceLabel: input.direction === 'income' ? optionalManualText(input.sourceLabel) : null,
-  };
 }
 
 function normalizeManualChanges(changes: AcceptedManualChanges): AcceptedManualChanges {
@@ -224,20 +178,6 @@ async function readActiveTransaction<TResultKind extends 'sync' | 'async'>(
   return transaction;
 }
 
-function notifyManualMutation(
-  changeNotifier: LedgerChangeNotifier,
-  periodMutation: PeriodPreparationMutation,
-  mutation: 'created' | 'edited' | 'completed' | 'deleted'
-): void {
-  if (periodMutation !== 'none') {
-    changeNotifier.notify({
-      table: 'month_config',
-      mutation: periodMutation === 'created' ? 'created' : 'edited',
-    });
-  }
-  changeNotifier.notify({ table: 'transactions', mutation });
-}
-
 export function createManualTransactionData<TResultKind extends 'sync' | 'async'>(
   db: LedgerDatabase<TResultKind>,
   _categoryData: CategoryData<TResultKind> = createCategoryData(db),
@@ -294,27 +234,29 @@ export function createManualTransactionData<TResultKind extends 'sync' | 'async'
       );
       return {
         value,
-        periodMutation: mergePeriodMutation(preparation.mutation, incomeMutation),
+        periodMutation: mergePeriodPreparationMutations(
+          preparation.mutation,
+          incomeMutation
+        ),
       };
     });
-    notifyManualMutation(changeNotifier, result.periodMutation, mutation);
+    notifyManualTransactionMutation(changeNotifier, result.periodMutation, mutation);
     return result.value;
   }
 
   return {
     async createTransaction(input: unknown): Promise<Transaction> {
-      const parsed = normalizeManualCreate(parseCreateTransactionInput(input));
-      return runManualMutation(
-        (_db, transactionData) => transactionData.createTransaction(parsed),
-        'created',
-        async (transactionDb, _transactionData, categoryData, at) => {
-          assertManualOccurredAt(parsed.occurredAt, at);
-          await requireActiveAccount(transactionDb, parsed.accountId);
-          if (parsed.direction === 'expense' && parsed.categoryId !== null) {
-            await categoryData.requireActiveLeafCategory(parsed.categoryId);
-          }
-        }
+      const parsed = parseCompleteManualTransactionCreate(input);
+      const at = now();
+      const result = await runAtomic((transactionDb) =>
+        createCompleteManualTransactionInTransaction(transactionDb, parsed, at)
       );
+      notifyManualTransactionMutation(
+        changeNotifier,
+        result.periodMutation,
+        'created'
+      );
+      return result.transaction;
     },
 
     async editTransaction(input: unknown): Promise<Transaction> {
@@ -336,7 +278,7 @@ export function createManualTransactionData<TResultKind extends 'sync' | 'async'
             edit.changes.accountId !== undefined &&
             edit.changes.accountId !== existing.accountId
           ) {
-            await requireActiveAccount(transactionDb, edit.changes.accountId);
+            await requireActiveManualAccount(transactionDb, edit.changes.accountId);
           }
           if (
             candidate.categoryId !== null &&
@@ -368,7 +310,10 @@ export function createManualTransactionData<TResultKind extends 'sync' | 'async'
           const existing = await readActiveTransaction(transactionData, complete.transactionId);
           const prepared = manualCompletionCandidate(existing, complete);
           assertManualOccurredAt(prepared.candidate.occurredAt, at);
-          await requireActiveAccount(transactionDb, prepared.candidate.accountId);
+          await requireActiveManualAccount(
+            transactionDb,
+            prepared.candidate.accountId
+          );
           if (prepared.candidate.direction === 'expense') {
             if (prepared.candidate.categoryId === null) {
               throw manualExpenseCategoryRequired();
