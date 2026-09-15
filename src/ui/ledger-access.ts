@@ -38,7 +38,10 @@ import type {
 import type { TransactionListData } from '../data/transaction-list';
 import type { TransactionCreateData } from './transactions/transaction-create-contract';
 import type { TransactionEditorData } from './transactions/transaction-editor-contract';
-import type { TransferCreationData } from './transfers/transfer-data-contract';
+import type {
+  TransferCreationData,
+  TransferDetailData,
+} from './transfers/transfer-data-contract';
 import type { HorizonEditorData } from './horizon/horizon-editor-contract';
 
 export function useLedgerMigrations() {
@@ -64,6 +67,14 @@ const transferCreationData: TransferCreationData = {
 
 export function getTransferCreationData(): TransferCreationData {
   return transferCreationData;
+}
+
+const transferDetailData: TransferDetailData = {
+  readTransfer: (transferId) => accountData.readTransfer(transferId),
+};
+
+export function getTransferDetailData(): TransferDetailData {
+  return transferDetailData;
 }
 
 const commitmentManagerData: CommitmentManagerData = {

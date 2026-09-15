@@ -1,5 +1,5 @@
 import { FlatList, Pressable, Text, View } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, type Href } from 'expo-router';
 
 import type { TransactionListRow as TransactionListItem } from '../../data/transaction-list';
 import { Button } from '../Button';
@@ -95,6 +95,19 @@ export function TransactionListView({
       }
       renderItem={({ item }) => {
         if (item.kind === 'transfer') {
+          if (item.source === 'transfers') {
+            return (
+              <Link href={`/transfers/${item.transfer.id}` as Href} asChild>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open transfer from ${item.fromAccount.name} to ${item.toAccount.name}`}
+                  className="min-h-touch active:opacity-80"
+                >
+                  <TransactionListRow row={item} />
+                </Pressable>
+              </Link>
+            );
+          }
           return <TransactionListRow row={item} />;
         }
         return (

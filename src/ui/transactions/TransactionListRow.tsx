@@ -26,7 +26,7 @@ function transactionDetail(row: Extract<TransactionListItem, { kind: 'transactio
   return row.category?.name ?? 'No leaf category';
 }
 
-function rowAccessibilityLabel(row: TransactionListItem): string {
+export function transactionListRowAccessibilityLabel(row: TransactionListItem): string {
   if (row.kind === 'transaction') {
     const { transaction } = row;
     const status = transaction.status === 'draft' ? ', Draft' : '';
@@ -61,7 +61,7 @@ export function TransactionListRow({ row }: { row: TransactionListItem }) {
       return (
         <View
           accessible
-          accessibilityLabel={rowAccessibilityLabel(row)}
+          accessibilityLabel={transactionListRowAccessibilityLabel(row)}
           className="gap-1 rounded-surface border border-faint-light bg-ground-light p-4 opacity-75 dark:border-faint-dark dark:bg-ground-dark"
         >
           <View className="flex-row items-start justify-between gap-3">
@@ -80,7 +80,7 @@ export function TransactionListRow({ row }: { row: TransactionListItem }) {
     return (
       <View
         accessible
-        accessibilityLabel={rowAccessibilityLabel(row)}
+        accessibilityLabel={transactionListRowAccessibilityLabel(row)}
         className="gap-1 rounded-surface border border-faint-light bg-surface-light p-4 dark:border-faint-dark dark:bg-surface-dark"
       >
         <View className="flex-row items-start justify-between gap-3">
@@ -108,7 +108,7 @@ export function TransactionListRow({ row }: { row: TransactionListItem }) {
     return (
       <View
         accessible
-        accessibilityLabel={rowAccessibilityLabel(row)}
+        accessibilityLabel={transactionListRowAccessibilityLabel(row)}
         className="gap-1 rounded-surface border border-faint-light bg-ground-light p-4 dark:border-faint-dark dark:bg-ground-dark"
       >
         <View className="flex-row items-start justify-between gap-3">
@@ -128,7 +128,7 @@ export function TransactionListRow({ row }: { row: TransactionListItem }) {
   return (
     <View
       accessible
-      accessibilityLabel={rowAccessibilityLabel(row)}
+      accessibilityLabel={transactionListRowAccessibilityLabel(row)}
       className="gap-1 rounded-surface border border-faint-light bg-ground-light p-4 dark:border-faint-dark dark:bg-ground-dark"
     >
       <View className="flex-row items-start justify-between gap-3">

@@ -183,6 +183,8 @@ test('keeps filter choices visible and opens only transaction rows', async () =>
   await user.press(screen.getAllByRole('button', { name: /Open expense transaction/ })[0]);
   expect(mockNavigate).toHaveBeenCalledWith(`/transactions/${transactionId}`);
   expect(screen.queryByRole('button', { name: /Open transfer transaction/ })).toBeNull();
+  await user.press(screen.getByRole('button', { name: 'Open transfer from Bank to Cash' }));
+  expect(mockNavigate).toHaveBeenCalledWith('/transfers/50000000-0000-4000-8000-000000000001');
 
   await user.press(screen.getByRole('button', { name: 'Groceries' }));
   await waitFor(() => expect(screen.getByText('No transactions match these filters.')).toBeTruthy());
