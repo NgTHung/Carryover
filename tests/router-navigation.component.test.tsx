@@ -38,6 +38,9 @@ jest.mock('../src/data/database', () => ({
     completeDraft: jest.fn(),
     softDeleteTransaction: jest.fn(),
   },
+  capturedDraftData: {
+    createCapturedDraft: jest.fn(),
+  },
   accountData: {
     listActiveAccounts: (...args: unknown[]) => mockReadAccounts(...args),
     readAccountBalances: (...args: unknown[]) => mockReadAccountBalances(...args),

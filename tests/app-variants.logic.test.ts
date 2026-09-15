@@ -41,7 +41,21 @@ test('default and explicit release preserve the installed app identity', () => {
         'com.apple.security.application-groups': ['group.com.bbq.carryover'],
       },
     },
-    plugins: ['expo-router', 'expo-sqlite', 'expo-asset', './plugins/with-release-pods'],
+    plugins: [
+      'expo-router',
+      'expo-sqlite',
+      'expo-asset',
+      [
+        'expo-camera',
+        {
+          cameraPermission: 'Carryover uses the camera to capture a purchase photo.',
+          microphonePermission: false,
+          recordAudioAndroid: false,
+          barcodeScannerEnabled: false,
+        },
+      ],
+      './plugins/with-release-pods',
+    ],
   });
 });
 
@@ -62,6 +76,15 @@ test.each(['0', '1'])('development isolates installation and launch with widget=
       'expo-router',
       'expo-sqlite',
       'expo-asset',
+      [
+        'expo-camera',
+        {
+          cameraPermission: 'Carryover uses the camera to capture a purchase photo.',
+          microphonePermission: false,
+          recordAudioAndroid: false,
+          barcodeScannerEnabled: false,
+        },
+      ],
       ['expo-dev-client', { addGeneratedScheme: false }],
     ],
   });

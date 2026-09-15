@@ -9,6 +9,11 @@ import { HomeSnapshotView } from '../src/ui/home/HomeSnapshotView';
 
 const mockRetryBudgetSnapshot = jest.fn();
 const mockNavigate = jest.fn();
+const mockRandomUUID = jest.fn();
+
+jest.mock('expo-crypto', () => ({
+  randomUUID: (...args: unknown[]) => mockRandomUUID(...args),
+}));
 
 jest.mock('expo-router', () => ({
   Link: ({ children, href }: { children: ReactNode; href: string }) => {
@@ -184,6 +189,27 @@ test('native Home chooses the local period when the horizon action is activated'
   await userEvent.setup().press(screen.getByRole('button', { name: 'Change horizon' }));
 
   expect(mockNavigate).toHaveBeenCalledWith('/horizon?period=2026-12');
+});
+
+test('native Home creates a fresh capture route id for each press', async () => {
+  snapshotStore.setState({ status: 'ready', snapshot }, true);
+  mockRandomUUID
+    .mockReturnValueOnce('AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA')
+    .mockReturnValueOnce('BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB');
+  await render(<NativeHomeRoute />);
+  const user = userEvent.setup();
+
+  await user.press(screen.getByRole('button', { name: 'Capture' }));
+  await user.press(screen.getByRole('button', { name: 'Capture' }));
+
+  expect(mockNavigate).toHaveBeenNthCalledWith(
+    1,
+    '/capture/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  );
+  expect(mockNavigate).toHaveBeenNthCalledWith(
+    2,
+    '/capture/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+  );
 });
 
 test('browser route uses the presentation preview without opening the ledger', async () => {
