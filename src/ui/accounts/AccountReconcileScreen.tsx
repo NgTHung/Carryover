@@ -45,6 +45,8 @@ export function AccountReconcileScreen({
   onRetryRead,
   onWritePending,
   refreshError,
+  onRecordTransfer,
+  recordTransferDisabled = false,
 }: {
   accounts: AccountBalance[];
   data: AccountEditorData;
@@ -52,6 +54,8 @@ export function AccountReconcileScreen({
   onRetryRead?: () => Promise<void>;
   onWritePending?: (pending: boolean) => void;
   refreshError?: string;
+  onRecordTransfer?: () => void;
+  recordTransferDisabled?: boolean;
 }) {
   const [interaction, setInteraction] = useState<AccountInteraction>({
     status: 'closed',
@@ -59,6 +63,11 @@ export function AccountReconcileScreen({
   const [feedback, setFeedback] = useState<Feedback>();
   const mutationLockedRef = useRef(false);
   const readUnavailable = refreshError !== undefined;
+  const canRecordTransfer =
+    onRecordTransfer !== undefined &&
+    !recordTransferDisabled &&
+    !readUnavailable &&
+    interaction.status === 'closed';
 
   useEffect(() => {
     if (!readUnavailable) return;
@@ -216,6 +225,15 @@ export function AccountReconcileScreen({
         <Text className="text-body text-muted-light dark:text-muted-dark">
           State what you actually hold when a balance drifts. Reconcile is routine maintenance and leaves a visible adjustment in the ledger.
         </Text>
+        {onRecordTransfer ? (
+          <Button
+            fullWidth
+            disabled={!canRecordTransfer}
+            onPress={onRecordTransfer}
+          >
+            Record transfer
+          </Button>
+        ) : null}
       </View>
 
       {refreshError ? (

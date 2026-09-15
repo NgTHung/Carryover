@@ -1,4 +1,5 @@
 /** Native route controller for account details and reconcile. */
+import { router, useFocusEffect, type Href } from 'expo-router';
 import { usePreventRemove } from 'expo-router/react-navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
@@ -46,6 +47,7 @@ export default function AccountsRoute({
   const mountedRef = useRef(false);
   const writePendingRef = useRef(false);
   const [writePending, setWritePending] = useState(false);
+  const focusedRef = useRef(false);
 
   const load = useCallback(
     async (showLoading: boolean): Promise<void> => {
@@ -84,6 +86,16 @@ export default function AccountsRoute({
   useEffect(() => {
     void load(true).catch(() => undefined);
   }, [load]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (focusedRef.current) {
+        void refresh().catch(() => undefined);
+      }
+      focusedRef.current = true;
+      return undefined;
+    }, [refresh])
+  );
 
   useEffect(
     () =>
@@ -136,6 +148,8 @@ export default function AccountsRoute({
       onRetryRead={refresh}
       onWritePending={updateWritePending}
       refreshError={state.refreshError}
+      onRecordTransfer={() => router.push('/transfers/new' as Href)}
+      recordTransferDisabled={writePending}
     />
   );
 }

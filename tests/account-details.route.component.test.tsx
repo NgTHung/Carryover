@@ -17,6 +17,14 @@ jest.mock('../src/ui/ledger-access', () => ({
   subscribeLedgerChanges: jest.fn(),
 }));
 
+jest.mock('expo-router', () => ({
+  router: { push: jest.fn() },
+  useFocusEffect: (effect: () => undefined | (() => void)) => {
+    const { useEffect } = require('react') as typeof import('react');
+    useEffect(effect, []);
+  },
+}));
+
 const bankId = '10000000-0000-4000-8000-000000000001';
 const cashId = '10000000-0000-4000-8000-000000000002';
 const balances: AccountBalance[] = [

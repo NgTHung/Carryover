@@ -68,6 +68,8 @@ export function TransferForm({
   navigationError,
   onRetryNavigation,
   navigationActionLabel = 'Back to accounts',
+  accountDataMessage,
+  onRetryAccountData,
   now = () => new Date(),
 }: {
   accounts: ActiveAccount[];
@@ -79,6 +81,8 @@ export function TransferForm({
   navigationError?: string;
   onRetryNavigation?: () => void;
   navigationActionLabel?: string;
+  accountDataMessage?: string;
+  onRetryAccountData?: () => void;
   now?: () => Date;
 }) {
   const initialization = useMemo(
@@ -183,6 +187,16 @@ export function TransferForm({
         <Text accessibilityRole="alert" className="text-detail text-error-light dark:text-error-dark">
           {navigationError}
         </Text>
+      ) : null}
+      {accountDataMessage ? (
+        <View className="gap-2">
+          <Text accessibilityRole="alert" className="text-detail text-error-light dark:text-error-dark">
+            Account data could not refresh. {accountDataMessage}
+          </Text>
+          {onRetryAccountData ? (
+            <Button variant="secondary" onPress={onRetryAccountData}>Try again</Button>
+          ) : null}
+        </View>
       ) : null}
 
       {saved ? (

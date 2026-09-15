@@ -38,6 +38,7 @@ import type {
 import type { TransactionListData } from '../data/transaction-list';
 import type { TransactionCreateData } from './transactions/transaction-create-contract';
 import type { TransactionEditorData } from './transactions/transaction-editor-contract';
+import type { TransferCreationData } from './transfers/transfer-data-contract';
 import type { HorizonEditorData } from './horizon/horizon-editor-contract';
 
 export function useLedgerMigrations() {
@@ -54,6 +55,15 @@ export function getAccountEditorData(): AccountEditorData {
 
 export function getAccountReconcileData(): AccountEditorData {
   return getAccountEditorData();
+}
+
+const transferCreationData: TransferCreationData = {
+  listActiveAccounts: () => accountData.listActiveAccounts(),
+  recordTransfer: (input) => accountData.recordTransfer(input),
+};
+
+export function getTransferCreationData(): TransferCreationData {
+  return transferCreationData;
 }
 
 const commitmentManagerData: CommitmentManagerData = {
