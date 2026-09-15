@@ -23,12 +23,14 @@ import {
 export type HomeSnapshotViewProps = {
   state: SnapshotState;
   onRetry?: () => void;
+  onChangeHorizon?: () => void;
   previewNotice?: string;
 };
 
 export function HomeSnapshotView({
   state,
   onRetry,
+  onChangeHorizon,
   previewNotice,
 }: HomeSnapshotViewProps) {
   return (
@@ -53,7 +55,11 @@ export function HomeSnapshotView({
             </Text>
           ) : null}
 
-          <HomeState state={state} onRetry={onRetry} />
+          <HomeState
+            state={state}
+            onRetry={onRetry}
+            onChangeHorizon={onChangeHorizon}
+          />
         </View>
 
         <View className="mt-auto gap-4">
@@ -97,9 +103,11 @@ export function HomeSnapshotView({
 function HomeState({
   state,
   onRetry,
+  onChangeHorizon,
 }: {
   state: SnapshotState;
   onRetry?: () => void;
+  onChangeHorizon?: () => void;
 }) {
   if (state.status === 'loading') {
     return (
@@ -145,7 +153,7 @@ function HomeState({
       <View className="gap-2">
         <HomeStat label="Carryover balance" value={formatCarryoverBalance(snapshot)} />
         <View className="flex-row flex-wrap items-baseline gap-x-3 gap-y-1">
-          <HomeStat label="Discretionary" value={formatDiscretionary(snapshot)} />
+        <HomeStat label="Discretionary" value={formatDiscretionary(snapshot)} />
           {snapshot.owedToYou !== 0 ? (
             <Text className="text-body tabular-nums text-muted-light dark:text-muted-dark">
               {formatReceivable(snapshot)} receivable
@@ -153,7 +161,14 @@ function HomeState({
           ) : null}
         </View>
         <HomeStat label="Runway" value={formatRunway(snapshot)} />
+        <HomeStat label="Horizon" value={snapshot.horizonDate} />
       </View>
+
+      {onChangeHorizon ? (
+        <Button variant="secondary" onPress={onChangeHorizon}>
+          Change horizon
+        </Button>
+      ) : null}
 
       {snapshot.unloggedDrafts !== 0 ? (
         <View testID="home-unknown" className="self-start rounded-chip border border-faint-light px-3 py-2 dark:border-faint-dark">

@@ -1,3 +1,6 @@
+import { router, type Href } from 'expo-router';
+
+import { currentPeriod } from '../data/period';
 import {
   selectSnapshotState,
   useSnapshotStore,
@@ -5,8 +8,20 @@ import {
 import { HomeSnapshotView } from '../ui/home/HomeSnapshotView';
 import { retryBudgetSnapshot } from '../ui/ledger-access';
 
-export default function HomeRoute() {
+export default function HomeRoute({
+  now = () => new Date(),
+}: {
+  now?: () => Date;
+} = {}) {
   const state = useSnapshotStore(selectSnapshotState);
 
-  return <HomeSnapshotView state={state} onRetry={retryBudgetSnapshot} />;
+  return (
+    <HomeSnapshotView
+      state={state}
+      onRetry={retryBudgetSnapshot}
+      onChangeHorizon={() =>
+        router.push(`/horizon?period=${currentPeriod(now())}` as Href)
+      }
+    />
+  );
 }
