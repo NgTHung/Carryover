@@ -6,12 +6,16 @@ priority: "Medium"
 type: "Feature"
 milestone: "0.3.0"
 depends_on: ["app:DATA-005", "app:UI-003", "app:DATA-015"]
-last_updated: "2026-09-13"
+last_updated: "2026-09-15"
 ---
 
 ## Summary
 
 You choose how long your discretionary money should last, even when you do not know when income will arrive. Expose the existing month config operation without computing figures in the form. DATA-015 prepares the period first; receiving income never moves this date automatically.
+
+## Execution Plan
+
+Follow [the UI-022 execution plan](../../docs/plans/UI-022.md) for the editor contract, period rollover behavior, commit stages, and verification. Planning leaves this task To Do.
 
 ## Acceptance Criteria
 

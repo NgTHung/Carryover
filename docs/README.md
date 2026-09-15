@@ -5,6 +5,7 @@ Carryover documentation separates the settled product contract from the mechanic
 - [Carryover v1 spec](spec/carryover-v1.md) is the settled product contract: decisions, data model, budget engine, and invariants.
 - [Income and period policy](spec/period-income-policy.md) defines actual income, current-period updates, historical freezing, and the DATA-015 prerequisite.
 - [UI-020 execution plan](plans/UI-020.md) records the reviewed implementation stages and verification for manual expense and income creation.
+- [UI-022 execution plan](plans/UI-022.md) defines the horizon editor, period boundaries, snapshot publication checks, and implementation stages.
 - [State and validation](state-and-validation.md) assigns ownership to SQLite, Zustand, and Zod, and defines validation and snapshot publication boundaries.
 - [App stack and testing](app-stack-and-testing.md) records navigation, styling, animation, Hermes, and the split between local tests and native CI checks.
 - [Design constitution](DESIGN.md) records the current design language. UI-026 revisits it after functional completion; it supersedes the design artifact and `design/BRIEF.md` wherever they disagree.
