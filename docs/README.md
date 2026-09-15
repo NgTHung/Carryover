@@ -7,6 +7,7 @@ Carryover documentation separates the settled product contract from the mechanic
 - [UI-020 execution plan](plans/UI-020.md) records the reviewed implementation stages and verification for manual expense and income creation.
 - [UI-022 execution plan](plans/UI-022.md) defines the horizon editor, period boundaries, snapshot publication checks, and implementation stages.
 - [UI-024 execution plan](plans/UI-024.md) defines account details editing, reconcile behavior, frozen period totals, and staged verification.
+- [CAPTURE-002 execution plan](plans/CAPTURE-002.md) defines durable photo storage, compression, failure recovery, unavailable thumbnails, and device verification.
 - [State and validation](state-and-validation.md) assigns ownership to SQLite, Zustand, and Zod, and defines validation and snapshot publication boundaries.
 - [App stack and testing](app-stack-and-testing.md) records navigation, styling, animation, Hermes, and the split between local tests and native CI checks.
 - [Design constitution](DESIGN.md) records the current design language. UI-026 revisits it after functional completion; it supersedes the design artifact and `design/BRIEF.md` wherever they disagree.

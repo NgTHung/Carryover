@@ -7,12 +7,16 @@ type: "Feature"
 parent: "app:CAPTURE-001"
 milestone: "0.4.0"
 depends_on: ["app:UI-020"]
-last_updated: "2026-09-13"
+last_updated: "2026-09-15"
 ---
 
 ## Summary
 
 Keep photo files durable before linking them to a draft, because a temporary camera URI can disappear after restart.
+
+## Execution Plan
+
+Follow [the CAPTURE-002 execution plan](../../docs/plans/CAPTURE-002.md) for stable keys, bounded compression, file ownership, cancellation and failure recovery, thumbnail behavior, staged commits, and iPhone verification. Planning leaves this task To Do and its acceptance criteria unchecked.
 
 ## Acceptance Criteria
 
