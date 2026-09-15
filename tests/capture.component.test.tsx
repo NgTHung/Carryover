@@ -246,7 +246,9 @@ test('waits for retention before SQLite and retries a database failure without a
 test('navigation failure retries home without repeating capture persistence', async () => {
   const navigateHome = jest
     .fn()
-    .mockRejectedValueOnce(new Error('Navigation unavailable'))
+    .mockImplementationOnce(() => {
+      throw new Error('Navigation unavailable');
+    })
     .mockResolvedValueOnce(undefined);
   const harness = await createHarness({ onNavigateHome: navigateHome });
   await captureAndReview(harness);

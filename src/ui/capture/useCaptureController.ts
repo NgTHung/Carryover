@@ -128,7 +128,7 @@ export function useCaptureController({
     if (state.status !== 'saved' || !isFocused || !isAppActive) return;
     if (navigationAttemptedRef.current) return;
     navigationAttemptedRef.current = true;
-    void Promise.resolve(onNavigateHome()).catch((error: unknown) => {
+    void Promise.resolve().then(onNavigateHome).catch((error: unknown) => {
       if (!mountedRef.current) return;
       navigationAttemptedRef.current = false;
       setState({
