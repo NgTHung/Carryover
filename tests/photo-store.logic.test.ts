@@ -25,6 +25,7 @@ type HarnessConfig = {
   failCopy?: boolean;
   partialCopyFailure?: boolean;
   failDeleteStaging?: boolean;
+  blockDeleteStaging?: boolean;
   failRelease?: boolean;
   throwAfterMove?: boolean;
   createFinalThenThrow?: boolean;
@@ -50,6 +51,8 @@ type Harness = {
   releaseEncode: () => void;
   copyStarted: Promise<void>;
   releaseCopy: () => void;
+  deleteStagingStarted: Promise<void>;
+  releaseDeleteStaging: () => void;
 };
 
 function deferred(): { promise: Promise<void>; resolve: () => void } {
@@ -67,13 +70,18 @@ function makeHarness(config: HarnessConfig = {}): Harness {
   const outputs = new Map<string, number>();
   const encodeBarrier = deferred();
   const copyBarrier = deferred();
+  const deleteStagingBarrier = deferred();
   let encodeStartedResolve: () => void = () => undefined;
   let copyStartedResolve: () => void = () => undefined;
+  let deleteStagingStartedResolve: () => void = () => undefined;
   const encodeStarted = new Promise<void>((resolve) => {
     encodeStartedResolve = resolve;
   });
   const copyStarted = new Promise<void>((resolve) => {
     copyStartedResolve = resolve;
+  });
+  const deleteStagingStarted = new Promise<void>((resolve) => {
+    deleteStagingStartedResolve = resolve;
   });
   let encodeCount = 0;
   let initializeCount = 0;
@@ -145,6 +153,10 @@ function makeHarness(config: HarnessConfig = {}): Harness {
     },
     async deleteStaging(file): Promise<void> {
       deleteStagingCount += 1;
+      if (config.blockDeleteStaging) {
+        deleteStagingStartedResolve();
+        await deleteStagingBarrier.promise;
+      }
       if (config.failDeleteStaging) {
         throw new Error('staging cleanup failed');
       }
@@ -225,6 +237,8 @@ function makeHarness(config: HarnessConfig = {}): Harness {
     releaseEncode: encodeBarrier.resolve,
     copyStarted,
     releaseCopy: copyBarrier.resolve,
+    deleteStagingStarted,
+    releaseDeleteStaging: deleteStagingBarrier.resolve,
   };
 }
 
@@ -427,6 +441,25 @@ test('retention races serialize with discard and never delete a promoted file', 
   assert.equal(discardedResult, retainedResult);
   assert.equal(harness.retained.size, 1);
   assert.equal(harness.deleteStagingCount, 1);
+});
+
+test('discard started first prevents retention while cleanup is in progress', async () => {
+  const harness = makeHarness({ blockDeleteStaging: true });
+  const prepared = preparedFrom(await harness.store.preparePhoto('camera://receipt.jpg'));
+
+  const discard = harness.store.discardPreparedPhoto(prepared);
+  await harness.deleteStagingStarted;
+  const retain = harness.store.retainPhoto(prepared);
+  harness.releaseDeleteStaging();
+
+  const [discardResult, retainResult] = await Promise.all([discard, retain]);
+  assert.equal(discardResult.status, 'discarded');
+  assert.equal(retainResult.status, 'failed');
+  if (retainResult.status === 'failed') {
+    assert.equal(retainResult.preparation.error.code, 'invalid-preparation-state');
+  }
+  assert.equal(harness.promoteCount, 0);
+  assert.equal(harness.retained.size, 0);
 });
 
 test('a new store clears abandoned staging once while keeping retained files', async () => {

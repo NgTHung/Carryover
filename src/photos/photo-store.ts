@@ -30,6 +30,7 @@ import {
   type EncodedPhotoCandidate,
 } from './photo-policy';
 import { retainPreparedPhoto } from './photo-retention';
+import { discardPhotoFiles } from './photo-discard';
 import {
   cleanupPreparedFiles,
   expectedStagedBytes,
@@ -246,6 +247,16 @@ export function createPhotoStore(options: PhotoStoreOptions): PhotoStore {
     if (entry.retainPromise !== undefined) {
       return entry.retainPromise;
     }
+    if (entry.discardPromise !== undefined) {
+      await entry.discardPromise;
+      if (entry.state.status === 'retained') {
+        return { status: 'retained', photo: entry.state };
+      }
+      return {
+        status: 'failed',
+        preparation: invalidStateError(prepared, entry.state.status),
+      };
+    }
     if (entry.state.status === 'retained') {
       return { status: 'retained', photo: entry.state };
     }
@@ -280,72 +291,30 @@ export function createPhotoStore(options: PhotoStoreOptions): PhotoStore {
         preparation: invalidStateError(prepared, 'unknown to this photo store'),
       };
     }
-    if (entry.discardResult !== undefined) {
-      return entry.discardResult;
+    if (entry.discardPromise !== undefined) {
+      return entry.discardPromise;
     }
     if (entry.retainPromise !== undefined) {
-      const result = await entry.retainPromise;
-      entry.discardResult = result;
-      return result;
+      entry.discardPromise = entry.retainPromise;
+      return entry.discardPromise;
     }
     if (entry.state.status === 'retained') {
       const result = { status: 'retained' as const, photo: entry.state };
-      entry.discardResult = result;
-      return result;
+      entry.discardPromise = Promise.resolve(result);
+      return entry.discardPromise;
     }
     if (entry.state.status === 'discarded') {
       const result = { status: 'discarded' as const, photo: entry.state };
-      entry.discardResult = result;
-      return result;
+      entry.discardPromise = Promise.resolve(result);
+      return entry.discardPromise;
     }
     if (entry.state.status !== 'prepared') {
       const result = {
         status: 'failed' as const,
         preparation: invalidStateError(prepared, entry.state.status),
       };
-      entry.discardResult = result;
-      return result;
-    }
-
-    const cleanupIssues = [...prepared.cleanupIssues];
-    await cleanupPreparedFiles(
-      options.files,
-      options.encoder,
-      {
-        kind: 'staging',
-        preparationId: prepared.preparationId,
-        uri: prepared.stagingUri,
-      },
-      [
-        {
-          output: entry.encodedOutput ?? {
-            uri: prepared.encodedUri,
-            dimensions: prepared.metrics.outputDimensions,
-          },
-          candidate: {
-            ...prepared.metrics,
-            uri: prepared.encodedUri,
-          },
-        },
-      ],
-      cleanupIssues,
-      new Set<string>()
-    );
-    if (cleanupIssues.length > 0) {
-      const failed = failedPreparation(
-        prepared.preparationId,
-        prepared.photoKey,
-        photoError(
-          'cleanup',
-          'photo-discard-cleanup-failed',
-          new Error('Prepared photo cleanup did not complete')
-        ),
-        cleanupIssues
-      );
-      entry.state = failed;
-      const result = { status: 'failed' as const, preparation: failed };
-      entry.discardResult = result;
-      return result;
+      entry.discardPromise = Promise.resolve(result);
+      return entry.discardPromise;
     }
 
     const discarded = {
@@ -354,9 +323,8 @@ export function createPhotoStore(options: PhotoStoreOptions): PhotoStore {
       photoKey: prepared.photoKey,
     };
     entry.state = discarded;
-    const result = { status: 'discarded' as const, photo: discarded };
-    entry.discardResult = result;
-    return result;
+    entry.discardPromise = discardPhotoFiles(options, entry, prepared, discarded);
+    return entry.discardPromise;
   }
 
   return {

@@ -34,7 +34,7 @@ export type PhotoStoreEntry = {
     status: 'failed';
     preparation: FailedPhoto;
   }>;
-  discardResult?: import('./photo-contract').DiscardPhotoResult;
+  discardPromise?: Promise<import('./photo-contract').DiscardPhotoResult>;
 };
 
 export function errorMessage(error: unknown): string {
