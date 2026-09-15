@@ -60,6 +60,7 @@ export type PreparedPhoto = {
   stagingUri: string;
   encodedUri: string;
   metrics: PhotoMetrics;
+  cleanupIssues: readonly PhotoCleanupIssue[];
 };
 
 export type RetainingPhoto = {
@@ -78,6 +79,7 @@ export type RetainedPhoto = {
   uri: string;
   metrics: PhotoMetrics;
   cleanupIssues: readonly PhotoCleanupIssue[];
+  recoveredFromError?: PhotoError;
 };
 
 export type DiscardedPhoto = {
@@ -171,3 +173,56 @@ export type PhotoAvailability =
       error?: PhotoError;
     };
 
+export type PhotoFileStat = {
+  uri: string;
+  bytes: number;
+};
+
+export type PhotoStagingFile = {
+  kind: 'staging';
+  preparationId: PhotoPreparationId;
+  uri: string;
+};
+
+export type PhotoRetainedFile = {
+  kind: 'retained';
+  photoKey: PhotoKey;
+  uri: string;
+};
+
+export interface PhotoFileAdapter {
+  initialize(): Promise<void>;
+  createStagingFile(preparationId: PhotoPreparationId): PhotoStagingFile;
+  createRetainedFile(photoKey: PhotoKey): PhotoRetainedFile;
+  copyIntoStaging(sourceUri: string, destination: PhotoStagingFile): Promise<void>;
+  promote(
+    source: PhotoStagingFile,
+    destination: PhotoRetainedFile
+  ): Promise<void>;
+  inspect(uri: string): Promise<PhotoFileStat | null>;
+  deleteStaging(file: PhotoStagingFile): Promise<void>;
+  resolve(photoKey: PhotoKey): Promise<PhotoFileStat | null>;
+}
+
+export type PhotoEncodedOutput = {
+  uri: string;
+  dimensions: PhotoDimensions;
+};
+
+export interface PhotoEncoder {
+  readDimensions(sourceUri: string): Promise<PhotoDimensions>;
+  encode(
+    sourceUri: string,
+    attempt: PhotoEncodingAttemptInput
+  ): Promise<PhotoEncodedOutput>;
+  release(output: PhotoEncodedOutput): Promise<void>;
+}
+
+export type PhotoEncodingAttemptInput = {
+  attempt: number;
+  maxLongEdge: number;
+  quality: number;
+  dimensions: PhotoDimensions;
+};
+
+export type PhotoKeyFactory = () => PhotoKey;
