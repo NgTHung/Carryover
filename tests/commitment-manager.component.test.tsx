@@ -218,6 +218,24 @@ test('confirms deactivate and delete while reactivation stays explicit', async (
   await waitFor(() => expect(result.onReload).toHaveBeenCalledTimes(3));
 });
 
+test('keeps an unfinished form after mutating another commitment', async () => {
+  const active = item(firstId, 'Existing rent', {
+    status: 'unpaid',
+    nextToAcceptPayment: true,
+  });
+  const result = await renderReady([active]);
+  const user = userEvent.setup();
+
+  await user.press(screen.getByRole('button', { name: 'Add commitment' }));
+  await user.type(screen.getByLabelText('Commitment name'), 'Power');
+  await user.press(screen.getByRole('button', { name: 'Deactivate' }));
+  await user.press(screen.getByRole('button', { name: 'Confirm deactivate' }));
+
+  await waitFor(() => expect(result.onReload).toHaveBeenCalledTimes(1));
+  expect(screen.getByLabelText('Commitment name').props.value).toBe('Power');
+  expect(screen.queryByRole('button', { name: 'Confirm deactivate' })).toBeNull();
+});
+
 test('offers payment only for the next unpaid row and disables future payment', async () => {
   const next = item(firstId, 'First rent', { status: 'unpaid', nextToAcceptPayment: true });
   const later = item(secondId, 'Second rent', { status: 'unpaid', nextToAcceptPayment: false });

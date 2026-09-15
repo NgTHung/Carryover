@@ -46,6 +46,8 @@ type ConfirmationState =
   | { status: 'delete'; commitmentId: string }
   | { status: 'deactivate'; commitmentId: string };
 
+type MutationOwner = 'form' | 'confirmation' | 'standalone';
+
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -81,7 +83,11 @@ export function CommitmentManagerView({
     );
   };
 
-  const runMutation = async (action: () => Promise<unknown>, success: string) => {
+  const runMutation = async (
+    action: () => Promise<unknown>,
+    success: string,
+    owner: MutationOwner
+  ) => {
     if (mutationLockedRef.current) return;
     mutationLockedRef.current = true;
     setBusy(true);
@@ -89,15 +95,15 @@ export function CommitmentManagerView({
     try {
       await action();
     } catch (error: unknown) {
-      setFormFailure(errorMessage(error));
+      if (owner === 'form') setFormFailure(errorMessage(error));
       setFeedback(errorMessage(error));
       mutationLockedRef.current = false;
       setBusy(false);
       return;
     }
 
-    setForm({ status: 'closed' });
-    setConfirmation({ status: 'closed' });
+    if (owner === 'form') setForm({ status: 'closed' });
+    if (owner === 'confirmation') setConfirmation({ status: 'closed' });
     setFeedback(success);
     try {
       await onReload();
@@ -117,7 +123,11 @@ export function CommitmentManagerView({
       <Message
         title="Commitments unavailable"
         detail={state.message}
-        action={<Button onPress={() => void onReload()}>Try again</Button>}
+        action={(
+          <Button onPress={() => void onReload().catch(() => undefined)}>
+            Try again
+          </Button>
+        )}
       />
     );
   }
@@ -136,13 +146,15 @@ export function CommitmentManagerView({
     if (form.status === 'create') {
       void runMutation(
         () => data.createCommitment(buildCommitmentCreateInput(validation)),
-        'Commitment created'
+        'Commitment created',
+        'form'
       );
       return;
     }
     void runMutation(
       () => data.editCommitment(buildCommitmentEditInput(form.item.commitment, validation)),
-      'Commitment updated'
+      'Commitment updated',
+      'form'
     );
   };
 
@@ -161,7 +173,8 @@ export function CommitmentManagerView({
         commitmentId: item.commitment.id,
         changes: { active: true },
       }),
-      'Commitment reactivated'
+      'Commitment reactivated',
+      'standalone'
     );
   };
 
@@ -263,14 +276,17 @@ export function CommitmentManagerView({
               onToggleActive={() => toggleActive(item)}
               onBeginDelete={() => setConfirmation({ status: 'delete', commitmentId: item.commitment.id })}
               onConfirmDelete={() => void runMutation(
-                () => data.softDeleteCommitment(item.commitment.id), 'Commitment deleted'
+                () => data.softDeleteCommitment(item.commitment.id),
+                'Commitment deleted',
+                'confirmation'
               )}
               onCancelDelete={() => setConfirmation({ status: 'closed' })}
               onConfirmDeactivate={() => void runMutation(
                 () => data.editCommitment({
                   commitmentId: item.commitment.id, changes: { active: false },
                 }),
-                'Commitment deactivated'
+                'Commitment deactivated',
+                'confirmation'
               )}
               onCancelDeactivate={() => setConfirmation({ status: 'closed' })}
             />

@@ -112,6 +112,26 @@ test('normalizes a missing period into the URL and retries load failures', async
   expect(read).toHaveBeenCalledTimes(2);
 });
 
+test('keeps a repeated retry failure handled in the error state', async () => {
+  mockParams.mockReturnValue({ period: '2026-09' });
+  const read = jest
+    .fn<Promise<CommitmentOverview>, [unknown]>()
+    .mockRejectedValue(new Error('Repeated overview failure'));
+  await render(
+    <NativeCommitmentRoute
+      data={managerData(read)}
+      subscribe={() => () => undefined}
+    />
+  );
+
+  await waitFor(() =>
+    expect(screen.getByText('Repeated overview failure')).toBeTruthy()
+  );
+  await userEvent.setup().press(screen.getByRole('button', { name: 'Try again' }));
+  await waitFor(() => expect(read).toHaveBeenCalledTimes(2));
+  expect(screen.getByText('Repeated overview failure')).toBeTruthy();
+});
+
 test('suppresses an older period response after parameters change', async () => {
   let resolveSeptember: (value: CommitmentOverview) => void = () => undefined;
   const september = new Promise<CommitmentOverview>((resolve) => {
