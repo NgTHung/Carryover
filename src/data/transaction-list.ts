@@ -11,7 +11,6 @@ import {
   gte,
   isNull,
   lt,
-  or,
   sql,
   type SQL,
 } from 'drizzle-orm';
@@ -29,9 +28,14 @@ import {
   accounts,
   ledgerTables,
   transactions,
-  transfers,
 } from './schema';
 import { toTransaction } from './transactions';
+import {
+  readDedicatedTransfers,
+  type AccountLabel,
+  type TransactionListTableTransferRow,
+  type TransferLabel,
+} from './transfer-reads';
 import {
   transactionQualitySchema,
   type Transaction,
@@ -64,11 +68,7 @@ export const transactionListFiltersSchema = z
   })
   .strict();
 
-export type AccountLabel = {
-  id: string;
-  name: string;
-  kind: 'bank' | 'cash';
-};
+export type { AccountLabel, TransactionListTableTransferRow, TransferLabel } from './transfer-reads';
 
 export type CategoryLabel = {
   id: string;
@@ -88,21 +88,6 @@ export type TransactionListTransactionTransferRow = {
   source: 'transaction';
   transaction: Transaction;
   account: AccountLabel;
-};
-
-export type TransferLabel = {
-  id: string;
-  amount: number;
-  occurredAt: Date;
-  createdAt: Date;
-};
-
-export type TransactionListTableTransferRow = {
-  kind: 'transfer';
-  source: 'transfers';
-  transfer: TransferLabel;
-  fromAccount: AccountLabel;
-  toAccount: AccountLabel;
 };
 
 export type TransactionListRow =
@@ -148,33 +133,6 @@ function transactionPredicates(
     predicates.push(isNull(transactions.quality), eq(transactions.direction, 'expense'));
   } else if (filters.quality !== null) {
     predicates.push(eq(transactions.quality, filters.quality), eq(transactions.direction, 'expense'));
-  }
-  return predicates.filter((predicate): predicate is SQL => predicate !== undefined);
-}
-
-function transferPredicates(
-  filters: TransactionListFilters,
-  start: Date,
-  end: Date
-) : SQL[] {
-  const predicates: Array<SQL | undefined> = [
-    activeRowFilter(transfers.deletedAt),
-    gte(transfers.occurredAt, start),
-    lt(transfers.occurredAt, end),
-  ];
-  if (filters.accountId !== null) {
-    predicates.push(
-      or(
-        eq(transfers.fromAccountId, filters.accountId),
-        eq(transfers.toAccountId, filters.accountId)
-      )
-    );
-  }
-  if (filters.categoryId !== null) {
-    predicates.push(sql`0`);
-  }
-  if (filters.quality !== null) {
-    predicates.push(sql`0`);
   }
   return predicates.filter((predicate): predicate is SQL => predicate !== undefined);
 }
@@ -266,50 +224,16 @@ export function createTransactionListData<TResultKind extends 'sync' | 'async'>(
         };
       });
 
-      const tableTransferRows = await db
-        .select({
-          transfer: {
-            id: transfers.id,
-            amount: transfers.amount,
-            occurredAt: transfers.occurredAt,
-            createdAt: transfers.createdAt,
-          },
-          fromAccount: {
-            id: transfers.fromAccountId,
-            name: sql<string>`(
-              SELECT name FROM accounts
-              WHERE accounts.id = ${transfers.fromAccountId}
-            )`,
-            kind: sql<'bank' | 'cash'>`(
-              SELECT kind FROM accounts
-              WHERE accounts.id = ${transfers.fromAccountId}
-            )`,
-          },
-          toAccount: {
-            id: transfers.toAccountId,
-            name: sql<string>`(
-              SELECT name FROM accounts
-              WHERE accounts.id = ${transfers.toAccountId}
-            )`,
-            kind: sql<'bank' | 'cash'>`(
-              SELECT kind FROM accounts
-              WHERE accounts.id = ${transfers.toAccountId}
-            )`,
-          },
-        })
-        .from(transfers)
-        .where(and(...transferPredicates(filters, start, end)) ?? sql`1`)
-        .all();
+      const tableTransferRows = await readDedicatedTransfers(db, {
+        start,
+        end,
+        accountId: filters.accountId,
+        include: filters.categoryId === null && filters.quality === null,
+      });
 
       const rows: TransactionListRow[] = [
         ...transactionListRows,
-        ...tableTransferRows.map((row) => ({
-          kind: 'transfer' as const,
-          source: 'transfers' as const,
-          transfer: row.transfer,
-          fromAccount: accountLabel(row.fromAccount),
-          toAccount: accountLabel(row.toAccount),
-        })),
+        ...tableTransferRows,
       ];
 
       return rows.sort((left, right) => {

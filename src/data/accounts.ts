@@ -22,6 +22,7 @@ import {
 } from './ledger-change-notifier';
 import { activeRowFilter } from './soft-delete';
 import { accounts, ledgerTables } from './schema';
+import { readTransfer } from './transfer-reads';
 import { createTransferData } from './transfers';
 
 export type { ReconcileResult } from './account-reconcile';
@@ -63,6 +64,8 @@ export function createAccountData<TResultKind extends 'sync' | 'async'>(
     },
 
     readAccountBalances: () => readAccountBalances(db),
+
+    readTransfer: (input: unknown) => readTransfer(db, input),
 
     async reconcileAccount(input: unknown): Promise<ReconcileResult> {
       return reconcileAccount(
