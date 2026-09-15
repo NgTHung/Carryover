@@ -91,7 +91,9 @@ export function PhotoProbeScreen<TFixture extends PhotoProbeFixture>({
   const [faultBusy, setFaultBusy] = useState(false);
   const controllerRef = useRef<AbortController | undefined>(undefined);
   const preparedRef = useRef<PreparedPhoto | null>(null);
+  const accessRef = useRef(access);
   const mountedRef = useRef(true);
+  accessRef.current = access;
 
   const loadState = useCallback(async () => {
     setStateError(null);
@@ -106,18 +108,21 @@ export function PhotoProbeScreen<TFixture extends PhotoProbeFixture>({
   }, [readSavedKeys]);
 
   useEffect(() => {
-    mountedRef.current = true;
     void loadState();
+  }, [loadState]);
+
+  useEffect(() => {
+    mountedRef.current = true;
     return () => {
       mountedRef.current = false;
       controllerRef.current?.abort();
       const prepared = preparedRef.current;
       preparedRef.current = null;
       if (prepared !== null) {
-        void access.discardPreparedPhoto(prepared);
+        void accessRef.current.discardPreparedPhoto(prepared);
       }
     };
-  }, [access, loadState]);
+  }, []);
 
   const selectedFixture = fixtures.find((fixture) => fixture.id === selectedId) ?? fixtures[0];
   const savedPhotoKey = savedKeys[selectedFixture.id] ?? null;

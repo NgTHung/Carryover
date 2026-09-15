@@ -74,21 +74,71 @@ function clamp(value) {
   return Math.max(0, Math.min(255, Math.round(value)));
 }
 
+const receiptGlyphs = {
+  '0': '111101101101111',
+  '1': '010110010010111',
+  '2': '111001111100111',
+  '3': '111001111001111',
+  '4': '101101111001001',
+  '5': '111100111001111',
+  '6': '111100111101111',
+  '9': '111101111001111',
+  A: '010101111101101',
+  C: '111100100100111',
+  D: '110101101101110',
+  E: '111100110100111',
+  F: '111100110100100',
+  H: '101101111101101',
+  I: '111010010010111',
+  K: '101101110101101',
+  L: '100100100100111',
+  M: '101111111101101',
+  N: '101111111111101',
+  O: '111101101101111',
+  P: '110101110100100',
+  R: '110101110101101',
+  T: '111010010010010',
+  U: '101101101101111',
+  V: '101101101101010',
+  Y: '101101010010010',
+};
+
+const receiptText = [
+  { text: 'CARRYOVER RECEIPT', x: 250, y: 225, scale: 8 },
+  { text: 'DATE 2026 09 15', x: 250, y: 390, scale: 5 },
+  { text: 'COFFEE', x: 250, y: 560, scale: 5 },
+  { text: '45000 VND', x: 650, y: 560, scale: 5 },
+  { text: 'LUNCH', x: 250, y: 690, scale: 5 },
+  { text: '65000 VND', x: 650, y: 690, scale: 5 },
+  { text: 'MARKET', x: 250, y: 820, scale: 5 },
+  { text: '123456 VND', x: 650, y: 820, scale: 5 },
+  { text: 'TOTAL', x: 250, y: 1060, scale: 7 },
+  { text: '233456 VND', x: 580, y: 1060, scale: 7 },
+  { text: 'THANK YOU', x: 390, y: 1390, scale: 6 },
+];
+
+function textPixel({ text, x, y, scale }, pixelX, pixelY) {
+  const relativeX = pixelX - x;
+  const relativeY = pixelY - y;
+  if (relativeX < 0 || relativeY < 0 || relativeY >= 5 * scale) return false;
+  const characterIndex = Math.floor(relativeX / (4 * scale));
+  if (characterIndex >= text.length) return false;
+  const column = Math.floor((relativeX % (4 * scale)) / scale);
+  if (column >= 3) return false;
+  const glyph = receiptGlyphs[text[characterIndex]];
+  if (glyph === undefined) return false;
+  const row = Math.floor(relativeY / scale);
+  return glyph[row * 3 + column] === '1';
+}
+
 function receiptPixel(x, y) {
   const paper = x >= 150 && x < 1050 && y >= 90 && y < 1710;
   if (!paper) return [224, 219, 207, 255];
   const edge = x === 150 || x === 1049 || y === 90 || y === 1709;
   if (edge) return [52, 60, 57, 255];
-  if (y > 220 && y < 300 && x > 260 && x < 930) return [32, 82, 69, 255];
-  const row = Math.floor((y - 360) / 74);
-  const lineY = (y - 360) % 74;
-  const lineWidth = 190 + ((row * 97) % 470);
-  if (row >= 0 && row < 15 && lineY >= 8 && lineY < 18 && x >= 250 && x < 250 + lineWidth) {
-    return [50, 57, 54, 255];
-  }
-  if (row >= 0 && row < 15 && lineY >= 27 && lineY < 35 && x >= 250 && x < 250 + Math.floor(lineWidth * 0.55)) {
-    return [143, 148, 140, 255];
-  }
+  if (receiptText.some((line) => textPixel(line, x, y))) return [42, 48, 45, 255];
+  if (y >= 990 && y < 1000 && x >= 230 && x < 970) return [50, 57, 54, 255];
+  if (y >= 1190 && y < 1200 && x >= 230 && x < 970) return [50, 57, 54, 255];
   return [250, 248, 240, 255];
 }
 
