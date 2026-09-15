@@ -48,12 +48,12 @@ export default function TransferRouteScreen({
 
   const load = useCallback(
     async (showLoading: boolean): Promise<void> => {
+      const request = requestRef.current + 1;
+      requestRef.current = request;
       if (parsed.status === 'invalid') {
         setState(parsed);
         return;
       }
-      const request = requestRef.current + 1;
-      requestRef.current = request;
       if (showLoading) setState({ status: 'loading' });
       try {
         const result = await loadTransferRoute(parsed.transferId, data.readTransfer);

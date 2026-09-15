@@ -28,6 +28,7 @@ let accountListener: LedgerChangeListener | undefined;
 const mockUsePreventRemove = jest.fn();
 
 type MockRouter = {
+  dismissTo: jest.Mock;
   replace: jest.Mock;
   push: jest.Mock;
   back: jest.Mock;
@@ -38,6 +39,7 @@ const mockedRouter = mockRouter as unknown as MockRouter;
 
 jest.mock('expo-router', () => ({
   router: {
+    dismissTo: jest.fn(),
     replace: jest.fn(),
     push: jest.fn(),
     back: jest.fn(),
@@ -77,6 +79,7 @@ function renderRoute(
 
 beforeEach(() => {
   accountListener = undefined;
+  mockedRouter.dismissTo.mockReset();
   mockedRouter.replace.mockReset();
   mockedRouter.push.mockReset();
   mockedRouter.back.mockReset();
@@ -114,7 +117,37 @@ test('loads active accounts, preserves typed fields across refresh, and records 
     amount: 200_000,
     occurredAt: openedAt,
   });
-  await waitFor(() => expect(mockedRouter.replace).toHaveBeenCalledWith('/settings/accounts'));
+  await waitFor(() => expect(mockedRouter.dismissTo).toHaveBeenCalledWith('/settings/accounts'));
+  expect(mockedRouter.replace).not.toHaveBeenCalled();
+});
+
+test('blocks submission when refreshed accounts no longer contain the selected pair', async () => {
+  const listActiveAccounts = jest
+    .fn()
+    .mockResolvedValueOnce(accounts)
+    .mockResolvedValueOnce([accounts[0]])
+    .mockResolvedValueOnce(accounts);
+  const recordTransfer = jest.fn(async () => undefined);
+  const user = userEvent.setup();
+  await renderRoute(createData(listActiveAccounts, recordTransfer));
+  await waitFor(() => expect(screen.getByLabelText('Amount')).toBeTruthy());
+
+  await user.type(screen.getByLabelText('Amount'), '1000');
+  await act(async () => {
+    accountListener?.({ table: 'accounts', mutation: 'deleted' });
+  });
+
+  await waitFor(() => expect(screen.getByText(/Two active accounts/)).toBeTruthy());
+  expect(screen.queryByRole('button', { name: 'To: Cash (cash)' })).toBeNull();
+  expect(screen.getByLabelText('Amount').props.value).toBe('1000');
+  expect(screen.getByRole('button', { name: 'Record transfer' }).props.accessibilityState.disabled).toBe(true);
+  expect(recordTransfer).not.toHaveBeenCalled();
+
+  await user.press(screen.getByRole('button', { name: 'Try again' }));
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: 'Record transfer' }).props.accessibilityState.disabled).toBe(false)
+  );
+  expect(screen.getByLabelText('Amount').props.value).toBe('1000');
 });
 
 test('shows a retryable read error without allowing a duplicate save', async () => {

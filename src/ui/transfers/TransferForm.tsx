@@ -103,7 +103,7 @@ export function TransferForm({
     }
   }, [form, initialization]);
 
-  if (form === undefined || initialization.status === 'error') {
+  if (form === undefined) {
     return (
       <View className="flex-1 gap-3 bg-ground-light px-5 py-16 dark:bg-ground-dark">
         <Text className="text-eyebrow font-semibold tracking-widest text-need-light dark:text-need-dark">LEDGER</Text>
@@ -120,9 +120,14 @@ export function TransferForm({
 
   const saving = mutation.status === 'saving';
   const saved = mutation.status === 'saved';
+  const selectedAccountUnavailable =
+    !accounts.some((account) => account.accountId === form.fromAccountId) ||
+    !accounts.some((account) => account.accountId === form.toAccountId);
+  const submissionUnavailable =
+    accountDataMessage !== undefined || selectedAccountUnavailable;
 
   const submit = async () => {
-    if (saving || saved || submissionLockedRef.current) return;
+    if (saving || saved || submissionLockedRef.current || submissionUnavailable) return;
     const validation = validateTransferForm(form, accounts, openedAt, now());
     if (!validation.valid) {
       setErrors(validation.errors);
@@ -248,7 +253,14 @@ export function TransferForm({
                 />
               ))}
             </View>
-            <FieldError message={errors.accounts} />
+            <FieldError
+              message={
+                errors.accounts ??
+                (selectedAccountUnavailable
+                  ? 'A selected account is unavailable. Refresh account data before saving.'
+                  : undefined)
+              }
+            />
           </View>
 
           <Input
@@ -266,7 +278,7 @@ export function TransferForm({
           <FieldError message={errors.form} />
 
           <View className="gap-2">
-            <Button fullWidth disabled={saving} onPress={() => void submit()}>Record transfer</Button>
+            <Button fullWidth disabled={saving || submissionUnavailable} onPress={() => void submit()}>Record transfer</Button>
             <Button variant="secondary" fullWidth disabled={saving} onPress={cancel}>Cancel</Button>
           </View>
         </>

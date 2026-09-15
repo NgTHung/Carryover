@@ -81,7 +81,12 @@ export default function NewTransferRoute({
         if (initialized.status === 'error') {
           setState((current) =>
             !showLoading && current.status === 'ready'
-              ? { ...current, pairError: initialized.message, refreshError: undefined }
+              ? {
+                  ...current,
+                  accounts,
+                  pairError: initialized.message,
+                  refreshError: undefined,
+                }
               : { status: 'unavailable', message: initialized.message }
           );
           return;
@@ -143,7 +148,7 @@ export default function NewTransferRoute({
   useEffect(() => {
     if (!navigationIntent || writePending) return;
     try {
-      router.replace('/settings/accounts' as Href);
+      router.dismissTo('/settings/accounts' as Href);
     } catch (error: unknown) {
       setNavigationIntent(false);
       setNavigationError(errorMessage(error));

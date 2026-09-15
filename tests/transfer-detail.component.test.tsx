@@ -119,6 +119,32 @@ test('invalid links cause no read', async () => {
   expect(invalidRead).not.toHaveBeenCalled();
 });
 
+test('ignores an in-flight read after the route becomes invalid', async () => {
+  let resolveRead: (value: TransferRead) => void = () => undefined;
+  const pendingRead = new Promise<TransferRead>((resolve) => {
+    resolveRead = resolve;
+  });
+  const readTransfer = jest.fn(() => pendingRead);
+  const route = await render(
+    <TransferRouteScreen data={createData(readTransfer)} subscribe={subscribe} />
+  );
+  await waitFor(() => expect(readTransfer).toHaveBeenCalledTimes(1));
+
+  mockRouteParameter = 'not-a-uuid';
+  await act(async () => {
+    await route.rerender(
+      <TransferRouteScreen data={createData(readTransfer)} subscribe={subscribe} />
+    );
+  });
+  await waitFor(() => expect(screen.getByRole('header', { name: 'Invalid transfer link' })).toBeTruthy());
+
+  await act(async () => {
+    resolveRead(transfer);
+    await pendingRead;
+  });
+  expect(screen.getByRole('header', { name: 'Invalid transfer link' })).toBeTruthy();
+});
+
 test('read failures offer retry without changing the route contract', async () => {
   const readTransfer = jest.fn()
     .mockRejectedValueOnce(new Error('read unavailable'))
