@@ -21,6 +21,7 @@ import {
   ledgerDb,
   ledgerMigrations,
   manualTransactionData,
+  monthConfigData,
   readCommittedMonthSummary,
   readCommittedBudgetInput,
   reservePaymentData,
@@ -37,6 +38,7 @@ import type {
 import type { TransactionListData } from '../data/transaction-list';
 import type { TransactionCreateData } from './transactions/transaction-create-contract';
 import type { TransactionEditorData } from './transactions/transaction-editor-contract';
+import type { HorizonEditorData } from './horizon/horizon-editor-contract';
 
 export function useLedgerMigrations() {
   return useMigrations(ledgerDb, ledgerMigrations);
@@ -61,6 +63,10 @@ const commitmentManagerData: CommitmentManagerData = {
 
 export function getCommitmentManagerData(): CommitmentManagerData {
   return commitmentManagerData;
+}
+
+export function getHorizonEditorData(): HorizonEditorData {
+  return monthConfigData;
 }
 
 export function readTransaction(id: string) {

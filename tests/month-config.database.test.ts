@@ -154,6 +154,43 @@ test('horizon edits change only the horizon, preserve frozen totals, and notify 
   }
 });
 
+test('horizon edits accept the period start and elapsed dates, including leap day', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const data = createMonthConfigData(createProxyDatabase(database));
+    await data.openPeriod({
+      period: '2024-02',
+      openingBalance: 1,
+      incomeTotal: 2,
+      reservedTotal: 3,
+    });
+    await data.openPeriod({
+      period: '2026-09',
+      openingBalance: 1,
+      incomeTotal: 2,
+      reservedTotal: 3,
+    });
+
+    assert.equal(
+      (await data.updateHorizon({ period: '2024-02', horizonDate: '2024-02-29' })).horizonDate,
+      '2024-02-29'
+    );
+    assert.equal(
+      (await data.updateHorizon({ period: '2026-09', horizonDate: '2026-09-01' })).horizonDate,
+      '2026-09-01'
+    );
+    assert.equal(
+      (await data.updateHorizon({ period: '2026-09', horizonDate: '2026-09-15' })).horizonDate,
+      '2026-09-15'
+    );
+    await assert.rejects(
+      data.updateHorizon({ period: '2026-09', horizonDate: '2026-02-29' })
+    );
+  } finally {
+    database.close();
+  }
+});
+
 test('stale horizon edits report a concurrent change without overwriting or notifying', async () => {
   const database = openMigratedDatabase();
   try {
