@@ -15,6 +15,10 @@ import type {
 } from './transaction-form';
 import { transitionDirection } from './transaction-form';
 
+export type TransactionFormPresentation =
+  | { kind: 'editable' }
+  | { kind: 'fixed-expense'; leafName: string };
+
 function Choice({
   label,
   selected,
@@ -53,7 +57,7 @@ export function TransactionFormFields({
   accounts,
   errors,
   disabled,
-  fixedExpenseLeaf,
+  presentation,
   onChange,
 }: {
   values: TransactionFormValues;
@@ -61,7 +65,7 @@ export function TransactionFormFields({
   accounts: ActiveAccount[];
   errors: TransactionFormErrors;
   disabled: boolean;
-  fixedExpenseLeaf?: string;
+  presentation: TransactionFormPresentation;
   onChange: (values: TransactionFormValues) => void;
 }) {
   const update = (changes: Partial<TransactionFormValues>) => {
@@ -79,7 +83,7 @@ export function TransactionFormFields({
         onChangeText={(amount) => update({ amount })}
       />
 
-      {fixedExpenseLeaf === undefined ? (
+      {presentation.kind === 'editable' ? (
         <View className="gap-2">
           <Text className="text-body font-semibold text-ink-light dark:text-ink-dark">Direction</Text>
           <View className="flex-row flex-wrap gap-2">
@@ -98,12 +102,12 @@ export function TransactionFormFields({
         <View className="gap-1 rounded-surface border border-faint-light bg-surface-light p-4 dark:border-faint-dark dark:bg-surface-dark">
           <Text className="text-detail text-muted-light dark:text-muted-dark">Expense leaf</Text>
           <Text className="text-body font-semibold text-ink-light dark:text-ink-dark">
-            {fixedExpenseLeaf}
+            {presentation.leafName}
           </Text>
         </View>
       )}
 
-      {values.direction === 'expense' && fixedExpenseLeaf === undefined ? (
+      {values.direction === 'expense' && presentation.kind === 'editable' ? (
         <View className="gap-2">
           <Text className="text-body font-semibold text-ink-light dark:text-ink-dark">Leaf</Text>
           <View className="flex-row flex-wrap gap-2">

@@ -82,24 +82,10 @@ function defaultBankAccount(accounts: readonly ActiveAccount[]): ActiveAccount |
 }
 
 export function initializeCreationForm(
-  direction: EditableTransactionDirection,
-  accounts: readonly ActiveAccount[],
-  openedAt: Date
-): TransactionFormInitialization;
-export function initializeCreationForm(
   intent: TransactionFormCreationIntent,
   accounts: readonly ActiveAccount[],
   openedAt: Date
-): TransactionFormInitialization;
-export function initializeCreationForm(
-  value: TransactionFormCreationIntent | EditableTransactionDirection,
-  accounts: readonly ActiveAccount[],
-  openedAt: Date
 ): TransactionFormInitialization {
-  const intent: TransactionFormCreationIntent =
-    typeof value === 'string'
-      ? { kind: 'manual', initialDirection: value }
-      : value;
   const account = defaultBankAccount(accounts);
   if (account === undefined) {
     return {

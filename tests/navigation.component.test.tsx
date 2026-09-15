@@ -233,6 +233,12 @@ test('native creation route loads and returns an eligible reserve payment to its
   });
   mockReadCommitmentOverview.mockResolvedValue(eligibleCommitmentOverview());
   mockCreateReservePayment.mockResolvedValue(transaction);
+  useTransactionFilters.setState({
+    selectedPeriod: '2026-02',
+    categoryId: commitmentId,
+    accountId: transaction.accountId,
+    quality: 'want',
+  });
   const data = creationData();
   const view = await render(<NativeNewTransactionRoute data={data} />);
 
@@ -261,6 +267,12 @@ test('native creation route loads and returns an eligible reserve payment to its
     })
   );
   expect(mockCreateTransaction).not.toHaveBeenCalled();
+  expect(useTransactionFilters.getState()).toMatchObject({
+    selectedPeriod: '2026-02',
+    categoryId: commitmentId,
+    accountId: transaction.accountId,
+    quality: 'want',
+  });
 });
 
 test('native creation route refuses a stale reserve payment before showing the form', async () => {
@@ -282,6 +294,24 @@ test('native creation route refuses a stale reserve payment before showing the f
   await waitFor(() => expect(view.getByText('Payment unavailable')).toBeTruthy());
   expect(view.getByText(/already paid/i)).toBeTruthy();
   expect(view.queryByLabelText('Amount')).toBeNull();
+  expect(mockCreateReservePayment).not.toHaveBeenCalled();
+});
+
+test('cold reserve-payment cancellation returns to the selected commitment period without writing', async () => {
+  mockUseLocalSearchParams.mockReturnValue({
+    mode: 'reserve-payment',
+    commitmentId,
+    period: '2026-09',
+  });
+  mockReadCommitmentOverview.mockResolvedValue(eligibleCommitmentOverview());
+  const view = await render(<NativeNewTransactionRoute data={creationData()} />);
+  await waitFor(() => expect(view.getByText('Record payment')).toBeTruthy());
+
+  await fireEvent.press(view.getByRole('button', { name: 'Cancel' }));
+
+  expect(mockReplace).toHaveBeenCalledWith(
+    '/settings/commitments?period=2026-09'
+  );
   expect(mockCreateReservePayment).not.toHaveBeenCalled();
 });
 
@@ -398,6 +428,33 @@ test('navigation failure keeps the saved state and retries navigation only', asy
   expect(mockCreateTransaction).toHaveBeenCalledTimes(1);
 });
 
+test('reserve-payment navigation failure retries the commitment return without another expense', async () => {
+  mockUseLocalSearchParams.mockReturnValue({
+    mode: 'reserve-payment',
+    commitmentId,
+    period: '2026-09',
+  });
+  mockReadCommitmentOverview.mockResolvedValue(eligibleCommitmentOverview());
+  mockCreateReservePayment.mockResolvedValue(transaction);
+  mockReplace.mockImplementationOnce(() => {
+    throw new Error('Navigation unavailable');
+  });
+  const view = await render(<NativeNewTransactionRoute data={creationData()} />);
+  await waitFor(() => expect(view.getByText('Record payment')).toBeTruthy());
+
+  await fireEvent.changeText(view.getByLabelText('Amount'), '725000');
+  await fireEvent.press(view.getByRole('button', { name: 'Save transaction' }));
+  await waitFor(() => expect(view.getByText('Navigation unavailable')).toBeTruthy());
+  expect(view.getByText('Transaction saved.')).toBeTruthy();
+
+  await fireEvent.press(view.getByRole('button', { name: 'Back to commitments' }));
+  await waitFor(() => expect(mockReplace).toHaveBeenCalledTimes(2));
+  expect(mockReplace).toHaveBeenLastCalledWith(
+    '/settings/commitments?period=2026-09'
+  );
+  expect(mockCreateReservePayment).toHaveBeenCalledTimes(1);
+});
+
 test('web creation route never enters the ledger boundary', async () => {
   mockUseLocalSearchParams.mockReturnValue({ direction: 'income' });
 
@@ -408,4 +465,19 @@ test('web creation route never enters the ledger boundary', async () => {
   expect(mockReadAccounts).not.toHaveBeenCalled();
   expect(mockListCategories).not.toHaveBeenCalled();
   expect(mockCreateTransaction).not.toHaveBeenCalled();
+});
+
+test('web reserve-payment route names the intent without reading the ledger', async () => {
+  mockUseLocalSearchParams.mockReturnValue({
+    mode: 'reserve-payment',
+    commitmentId,
+    period: '2026-09',
+  });
+
+  const view = await render(<WebNewTransactionRoute />);
+
+  expect(view.getByText('Record commitment payment')).toBeTruthy();
+  expect(view.getByText(/browser preview does not open the ledger/)).toBeTruthy();
+  expect(mockReadCommitmentOverview).not.toHaveBeenCalled();
+  expect(mockCreateReservePayment).not.toHaveBeenCalled();
 });

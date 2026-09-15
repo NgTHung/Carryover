@@ -228,6 +228,20 @@ test('keeps a reserve payment in its selected period before writing', async () =
     screen.getByText('Payment date must belong to the selected commitment period.')
   ).toBeTruthy();
   expect(createReservePayment).not.toHaveBeenCalled();
+
+  await user.clear(screen.getByLabelText('Date'));
+  await user.type(screen.getByLabelText('Date'), '2026-08-31');
+  await user.press(screen.getByRole('button', { name: 'Save transaction' }));
+  await waitFor(() =>
+    expect(createReservePayment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        period: '2026-08',
+        transaction: expect.objectContaining({
+          occurredAt: new Date(2026, 7, 31, 12, 30),
+        }),
+      })
+    )
+  );
 });
 
 test('creates a minimal income without a category', async () => {

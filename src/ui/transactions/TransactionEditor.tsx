@@ -156,6 +156,7 @@ export function TransactionEditor({
         accounts={accounts}
         errors={errors}
         disabled={busy}
+        presentation={{ kind: 'editable' }}
         onChange={(next) => setForm(next)}
       />
 

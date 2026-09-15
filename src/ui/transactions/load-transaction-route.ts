@@ -32,12 +32,8 @@ export type TransactionCreationIntent =
       period: Period;
     };
 
-export type ParsedTransactionCreationIntentRoute =
-  | { status: 'valid'; intent: TransactionCreationIntent }
-  | { status: 'invalid'; message: string };
-
 export type ParsedTransactionCreationRoute =
-  | { status: 'valid'; direction: TransactionCreationDirection }
+  | { status: 'valid'; intent: TransactionCreationIntent }
   | { status: 'invalid'; message: string };
 
 export type ReservePaymentPresentation = {
@@ -75,38 +71,7 @@ export function parseTransactionCreationRoute(
     commitmentId?: unknown;
     period?: unknown;
   }
-): ParsedTransactionCreationIntentRoute;
-export function parseTransactionCreationRoute(
-  direction: unknown
-): ParsedTransactionCreationRoute;
-export function parseTransactionCreationRoute(
-  value:
-    | {
-        direction?: unknown;
-        mode?: unknown;
-        commitmentId?: unknown;
-        period?: unknown;
-      }
-    | unknown
-): ParsedTransactionCreationIntentRoute | ParsedTransactionCreationRoute {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    if (value === undefined || value === 'expense') {
-      return { status: 'valid', direction: 'expense' };
-    }
-    if (value === 'income') {
-      return { status: 'valid', direction: 'income' };
-    }
-    return {
-      status: 'invalid',
-      message: 'This transaction creation link is invalid.',
-    };
-  }
-  const params = value as {
-    direction?: unknown;
-    mode?: unknown;
-    commitmentId?: unknown;
-    period?: unknown;
-  };
+): ParsedTransactionCreationRoute {
   const { direction, mode, commitmentId, period } = params;
   if (
     mode === undefined &&

@@ -286,6 +286,44 @@ test('reserve payment rejects a later duplicate and mismatched transaction inten
   }
 });
 
+test('concurrent reserve payment submissions serialize and insert exactly once', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const proxy = createProxyDatabase(database);
+    const commitment = await createCommitmentData(proxy).createCommitment({
+      name: 'Rent',
+      amount: 700_000,
+      dueDay: 5,
+      categoryId: reserveLeafId,
+    });
+    const changes: string[] = [];
+    const notifier = createLedgerChangeNotifier({ onListenerError: () => undefined });
+    notifier.subscribe(({ table, mutation }) => changes.push(`${table}:${mutation}`));
+    const payments = createReservePaymentData(proxy, notifier, { now: () => now });
+    const input = paymentInput(database, commitment.id);
+
+    const results = await Promise.allSettled([
+      payments.createReservePayment(input),
+      payments.createReservePayment(input),
+    ]);
+
+    assert.equal(results.filter(({ status }) => status === 'fulfilled').length, 1);
+    const rejection = results.find(({ status }) => status === 'rejected');
+    assert.equal(rejection?.status, 'rejected');
+    if (rejection?.status !== 'rejected') {
+      throw new Error('Expected one rejected payment');
+    }
+    assert.match(String(rejection.reason), /already paid/i);
+    assert.equal(rowCount(database, 'transactions'), 1);
+    assert.deepEqual(changes, [
+      'month_config:created',
+      'transactions:created',
+    ]);
+  } finally {
+    database.close();
+  }
+});
+
 test('reserve payment rolls back the expense and period preparation when commit fails', async () => {
   const database = openMigratedDatabase();
   try {

@@ -69,14 +69,17 @@ export function TransactionCreator({
   navigationActionLabel?: string;
   now?: () => Date;
 }) {
-  const formIntent: TransactionFormCreationIntent =
-    intent.kind === 'manual'
-      ? intent
-      : {
-          kind: 'reserve-payment',
-          categoryId: intent.categoryId,
-          period: intent.period,
-        };
+  const formIntent = useMemo<TransactionFormCreationIntent>(
+    () =>
+      intent.kind === 'manual'
+        ? intent
+        : {
+            kind: 'reserve-payment',
+            categoryId: intent.categoryId,
+            period: intent.period,
+          },
+    [intent]
+  );
   const initialization = useMemo(
     () => initializeCreationForm(formIntent, accounts, openedAt),
     [accounts, formIntent, openedAt]
@@ -213,8 +216,10 @@ export function TransactionCreator({
           accounts={accounts}
           errors={errors}
           disabled={saving}
-          fixedExpenseLeaf={
-            intent.kind === 'reserve-payment' ? intent.leafName : undefined
+          presentation={
+            intent.kind === 'reserve-payment'
+              ? { kind: 'fixed-expense', leafName: intent.leafName }
+              : { kind: 'editable' }
           }
           onChange={(next) => {
             setForm(next);
