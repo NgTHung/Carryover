@@ -21,12 +21,12 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { timingConfig, useMotionPlan } from './motion';
-import type { MotionPlan } from './motion-plan';
+import type { MotionIntent, MotionPlan } from './motion-plan';
 
 export interface CrossFadeProps {
   children: ReactNode;
   stateKey: string;
-  intent?: 'crossFade' | 'heroRecount';
+  intent?: MotionIntent;
 }
 
 interface Layer {

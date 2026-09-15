@@ -35,7 +35,20 @@ const widgetPlugin = [
   },
 ];
 
-const plugins = ['expo-router', 'expo-sqlite', 'expo-asset'];
+const plugins = [
+  'expo-router',
+  'expo-sqlite',
+  'expo-asset',
+  [
+    'expo-camera',
+    {
+      cameraPermission: 'Carryover uses the camera to capture a purchase photo.',
+      microphonePermission: false,
+      recordAudioAndroid: false,
+      barcodeScannerEnabled: false,
+    },
+  ],
+];
 if (development) {
   // The default exp+carryover scheme also belongs to the release app.
   plugins.push(['expo-dev-client', { addGeneratedScheme: false }]);
