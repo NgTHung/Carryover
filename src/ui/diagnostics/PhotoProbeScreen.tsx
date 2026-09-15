@@ -23,7 +23,7 @@ import type {
   PhotoProbeFixture,
   PhotoProbeFixtureId,
   PhotoProbeSavedKeys,
-} from '../../app/diagnostics/photo-probe-contract';
+} from '../../diagnostics/photos/photo-probe-contract';
 import {
   PhotoProbeFixtureSection,
   PhotoProbeLifecycleSection,

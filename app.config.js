@@ -60,6 +60,9 @@ module.exports = {
     experiments: {
       typedRoutes: true,
     },
+    extra: {
+      carryoverVariant: variant,
+    },
     web: {
       bundler: 'metro',
     },

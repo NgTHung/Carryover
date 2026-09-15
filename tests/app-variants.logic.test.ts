@@ -32,6 +32,9 @@ test('default and explicit release preserve the installed app identity', () => {
   expect(release).toMatchObject({
     name: 'Carryover',
     scheme: 'carryover',
+    extra: {
+      carryoverVariant: 'release',
+    },
     ios: {
       bundleIdentifier: 'com.bbq.carryover',
       entitlements: {
@@ -46,6 +49,9 @@ test.each(['0', '1'])('development isolates installation and launch with widget=
   expect(config('development', widget)).toMatchObject({
     name: 'Carryover Dev',
     scheme: 'carryover-dev',
+    extra: {
+      carryoverVariant: 'development',
+    },
     ios: {
       bundleIdentifier: 'com.bbq.carryover.dev',
       entitlements: {

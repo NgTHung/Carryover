@@ -8,7 +8,7 @@ import type {
 } from '../../photos/photo-contract';
 import { Button } from '../Button';
 import { PhotoThumbnail } from '../photos/PhotoThumbnail';
-import type { PhotoProbeFixture } from '../../app/diagnostics/photo-probe-contract';
+import type { PhotoProbeFixture } from '../../diagnostics/photos/photo-probe-contract';
 import type { ProbeOperation, ResolveState } from './photo-probe-types';
 
 function metricsLabel(photo: PreparedPhoto | RetainedPhoto): string {

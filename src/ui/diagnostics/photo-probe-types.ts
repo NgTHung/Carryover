@@ -11,7 +11,7 @@ import type { PreparePhotoOptions } from '../../photos/photo-store';
 import type {
   PhotoProbeFixtureId,
   PhotoProbeSavedKeys,
-} from '../../app/diagnostics/photo-probe-contract';
+} from '../../diagnostics/photos/photo-probe-contract';
 
 export type PhotoProbeAccess = {
   preparePhoto: (

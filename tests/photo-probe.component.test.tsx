@@ -11,7 +11,7 @@ import type {
   PreparedPhoto,
 } from '../src/photos/photo-contract';
 import { PhotoProbeScreen } from '../src/ui/diagnostics/PhotoProbeScreen';
-import type { PhotoProbeFixture } from '../src/app/diagnostics/photo-probe-contract';
+import type { PhotoProbeFixture } from '../src/diagnostics/photos/photo-probe-contract';
 import type { PhotoProbeAccess } from '../src/ui/diagnostics/photo-probe-types';
 
 const fixture: PhotoProbeFixture = {
