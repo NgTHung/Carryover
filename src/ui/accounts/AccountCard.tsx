@@ -22,6 +22,7 @@ export function AccountCard({
   interaction,
   feedback,
   formDisabled,
+  readUnavailable,
   onEditDetails,
   onReconcile,
   onNameChange,
@@ -36,6 +37,7 @@ export function AccountCard({
   interaction: AccountInteraction;
   feedback?: string;
   formDisabled: boolean;
+  readUnavailable: boolean;
   onEditDetails: () => void;
   onReconcile: () => void;
   onNameChange: (value: string) => void;
@@ -104,7 +106,7 @@ export function AccountCard({
           accountName={interaction.status === 'saving-details' ? interaction.name : interaction.name}
           openingBalance={interaction.status === 'saving-details' ? interaction.openingBalance : interaction.openingBalance}
           error={detailsError}
-          disabled={isSaving}
+          disabled={isSaving || readUnavailable}
           onNameChange={onNameChange}
           onOpeningBalanceChange={onOpeningBalanceChange}
           onSave={onSaveDetails}
@@ -119,12 +121,12 @@ export function AccountCard({
             value={interaction.status === 'saving-reconcile' ? interaction.statedBalance : interaction.statedBalance}
             keyboardType="number-pad"
             error={reconcileError}
-            editable={!isSaving}
+            editable={!isSaving && !readUnavailable}
             onChangeText={onStatedBalanceChange}
           />
           <View className="flex-row gap-2">
             <Button
-              disabled={isSaving}
+              disabled={isSaving || readUnavailable}
               accessibilityLabel={`Reconcile ${account.name}`}
               onPress={onSaveReconcile}
             >
@@ -132,7 +134,7 @@ export function AccountCard({
             </Button>
             <Button
               variant="secondary"
-              disabled={isSaving}
+              disabled={isSaving || readUnavailable}
               accessibilityLabel={`Cancel reconciling ${account.name}`}
               onPress={onCancelReconcile}
             >

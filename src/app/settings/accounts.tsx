@@ -58,15 +58,12 @@ export default function AccountsRoute({
         setState({ status: 'ready', accounts });
       } catch (error: unknown) {
         if (mountedRef.current && request === requestRef.current) {
-          if (showLoading) {
-            setState({ status: 'error', message: errorMessage(error) });
-          } else {
-            setState((current) =>
-              current.status === 'ready'
-                ? { ...current, refreshError: errorMessage(error) }
-                : current
-            );
-          }
+          const message = errorMessage(error);
+          setState((current) =>
+            !showLoading && current.status === 'ready'
+              ? { ...current, refreshError: message }
+              : { status: 'error', message }
+          );
         }
         throw error;
       }

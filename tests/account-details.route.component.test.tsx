@@ -104,13 +104,20 @@ test('loads again after an account notification and ignores a stale read', async
   expect(readAccountBalances).toHaveBeenCalledTimes(2);
 });
 
-test('keeps saved details visible when the follow-up read fails, then retries only the read', async () => {
+test('blocks stale account edits after a failed save refresh, then retries only the read', async () => {
   const readAccountBalances = jest
     .fn()
     .mockResolvedValueOnce(balances)
     .mockRejectedValueOnce(new Error('read unavailable'))
     .mockResolvedValueOnce(balances.map((account) =>
-      account.accountId === bankId ? { ...account, name: 'Main bank' } : account
+      account.accountId === bankId
+        ? {
+            ...account,
+            name: 'Main bank',
+            openingBalance: 1_200_000,
+            balance: 1_000_000,
+          }
+        : account
     ));
   const editAccountDetails = jest.fn(async () => undefined);
   await render(
@@ -123,15 +130,68 @@ test('keeps saved details visible when the follow-up read fails, then retries on
 
   await fireEvent.press(screen.getByRole('button', { name: 'Edit details for Bank' }));
   await fireEvent.changeText(screen.getByLabelText('Account name'), 'Main bank');
+  await fireEvent.changeText(screen.getByLabelText('Opening balance'), '1200000');
   await fireEvent.press(screen.getByRole('button', { name: 'Save details for Bank' }));
   await waitFor(() => expect(editAccountDetails).toHaveBeenCalledTimes(1));
+  expect(editAccountDetails).toHaveBeenCalledWith({
+    accountId: bankId,
+    name: 'Main bank',
+    openingBalance: 1_200_000,
+  });
   await waitFor(() => expect(screen.getAllByText(/read unavailable/).length).toBeGreaterThan(0));
+  await fireEvent.press(screen.getByRole('button', { name: 'Edit details for Bank' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Reconcile Bank' }));
+  expect(screen.queryByLabelText('Account name')).toBeNull();
+  expect(screen.queryByLabelText('Actual balance')).toBeNull();
   expect(editAccountDetails).toHaveBeenCalledTimes(1);
 
   await fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
   await waitFor(() => expect(screen.queryByText(/read unavailable/)).toBeNull());
+  await fireEvent.press(screen.getByRole('button', { name: 'Edit details for Main bank' }));
+  expect(screen.getByLabelText('Account name')).toBeTruthy();
   expect(readAccountBalances).toHaveBeenCalledTimes(3);
   expect(editAccountDetails).toHaveBeenCalledTimes(1);
+});
+
+test('shows a retryable error when a notification refresh supersedes initial loading', async () => {
+  let resolveInitialRead: (value: AccountBalance[]) => void = () => undefined;
+  const initialRead = new Promise<AccountBalance[]>((resolve) => {
+    resolveInitialRead = resolve;
+  });
+  const readAccountBalances = jest
+    .fn()
+    .mockImplementationOnce(() => initialRead)
+    .mockRejectedValueOnce(new Error('Refresh unavailable'))
+    .mockResolvedValueOnce(balances);
+  let listener: LedgerChangeListener | undefined;
+  const subscribe = jest.fn((next: LedgerChangeListener) => {
+    listener = next;
+    return () => undefined;
+  });
+
+  await render(
+    <AccountsRoute
+      data={repository(readAccountBalances)}
+      subscribe={subscribe}
+    />
+  );
+  await waitFor(() => expect(subscribe).toHaveBeenCalledTimes(1));
+  if (listener === undefined) throw new Error('Expected account listener');
+
+  await act(async () => {
+    listener?.({ table: 'accounts', mutation: 'edited' });
+  });
+  await waitFor(() => expect(screen.getByText('Refresh unavailable')).toBeTruthy());
+
+  await act(async () => {
+    resolveInitialRead(balances);
+    await initialRead;
+  });
+  expect(screen.queryByText('Loading account balances…')).toBeNull();
+
+  await fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
+  await waitFor(() => expect(screen.getByText('Bank')).toBeTruthy());
+  expect(readAccountBalances).toHaveBeenCalledTimes(3);
 });
 
 test('the route removal guard follows a deferred account save', async () => {

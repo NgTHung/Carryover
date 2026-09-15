@@ -4,7 +4,7 @@
  * The route owns reads and navigation. This view keeps only one local draft,
  * so a background refresh can update balances without replacing typed input.
  */
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import { accountNameSchema } from '../../data/account-validation';
@@ -58,6 +58,16 @@ export function AccountReconcileScreen({
   });
   const [feedback, setFeedback] = useState<Feedback>();
   const mutationLockedRef = useRef(false);
+  const readUnavailable = refreshError !== undefined;
+
+  useEffect(() => {
+    if (!readUnavailable) return;
+    setInteraction((current) =>
+      current.status === 'saving-details' || current.status === 'saving-reconcile'
+        ? current
+        : { status: 'closed' }
+    );
+  }, [readUnavailable]);
 
   const beginDetails = (account: AccountBalance) => {
     if (mutationLockedRef.current || interaction.status !== 'closed') return;
@@ -227,7 +237,8 @@ export function AccountReconcileScreen({
           account={account}
           interaction={interaction}
           feedback={feedback?.accountId === account.accountId ? feedback.message : undefined}
-          formDisabled={interaction.status !== 'closed'}
+          formDisabled={readUnavailable || interaction.status !== 'closed'}
+          readUnavailable={readUnavailable}
           onEditDetails={() => beginDetails(account)}
           onReconcile={() => beginReconcile(account)}
           onNameChange={(name) => {
