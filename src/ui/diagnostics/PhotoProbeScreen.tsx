@@ -6,7 +6,7 @@
  * budgeting data.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { File, Paths } from 'expo-file-system';
+import { Directory, File, Paths } from 'expo-file-system';
 import { ScrollView, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -63,6 +63,14 @@ function photoFileName(photoKey: PhotoKey): string {
 
 function retainedPhotoFile(photoKey: PhotoKey): File {
   return new File(Paths.document, 'photos', 'v1', photoFileName(photoKey));
+}
+
+function faultBackupFile(photoKey: PhotoKey): File {
+  return new File(Paths.document, 'capture-photo-probe-fault', photoFileName(photoKey));
+}
+
+function faultBackupDirectory(): Directory {
+  return new Directory(Paths.document, 'capture-photo-probe-fault');
 }
 
 export function PhotoProbeScreen<TFixture extends PhotoProbeFixture>({
@@ -269,6 +277,10 @@ export function PhotoProbeScreen<TFixture extends PhotoProbeFixture>({
           setNotice(`Cannot remove the retained file: ${availability.status}`);
           return;
         }
+        const backup = faultBackupFile(photoKey);
+        faultBackupDirectory().create({ intermediates: true, idempotent: true });
+        if (backup.exists) backup.delete();
+        await new File(availability.uri).copy(backup, { overwrite: false });
         new File(availability.uri).delete();
         setResolveState({ status: 'idle' });
         setThumbnailRevision((revision) => revision + 1);
@@ -296,8 +308,13 @@ export function PhotoProbeScreen<TFixture extends PhotoProbeFixture>({
           setNotice('The retained fixture file is already available.');
           return;
         }
-        const sourceUri = await loadFixture(selectedFixture);
-        await new File(sourceUri).copy(retainedPhotoFile(photoKey), { overwrite: false });
+        const backup = faultBackupFile(photoKey);
+        if (!backup.exists) {
+          setNotice('No probe-owned backup exists for this missing-file fault.');
+          return;
+        }
+        await backup.copy(retainedPhotoFile(photoKey), { overwrite: false });
+        backup.delete();
         setResolveState({ status: 'idle' });
         setThumbnailRevision((revision) => revision + 1);
         setNotice('Restored the retained fixture file under the same photo key.');
@@ -307,7 +324,7 @@ export function PhotoProbeScreen<TFixture extends PhotoProbeFixture>({
         if (mountedRef.current) setFaultBusy(false);
       }
     })();
-  }, [access, loadFixture, savedKeys, selectedFixture]);
+  }, [access, savedKeys, selectedFixture.id]);
 
   return (
     <SafeAreaView className="flex-1 bg-ground-light dark:bg-ground-dark" edges={['top', 'bottom']}>

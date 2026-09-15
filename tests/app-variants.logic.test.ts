@@ -38,7 +38,7 @@ test('default and explicit release preserve the installed app identity', () => {
         'com.apple.security.application-groups': ['group.com.bbq.carryover'],
       },
     },
-    plugins: ['expo-router', 'expo-sqlite', './plugins/with-release-pods'],
+    plugins: ['expo-router', 'expo-sqlite', 'expo-asset', './plugins/with-release-pods'],
   });
 });
 
@@ -55,6 +55,7 @@ test.each(['0', '1'])('development isolates installation and launch with widget=
     plugins: [
       'expo-router',
       'expo-sqlite',
+      'expo-asset',
       ['expo-dev-client', { addGeneratedScheme: false }],
     ],
   });
