@@ -1,7 +1,7 @@
 ---
 id: "UI-023"
 title: "Record transfers between bank and cash"
-status: In Progress
+status: Done
 priority: "Medium"
 type: "Feature"
 milestone: "0.3.0"
@@ -15,11 +15,21 @@ Make the existing transfer operation reachable from Accounts so you can track mo
 
 ## Execution Plan
 
-Follow [the UI-023 execution plan](../../docs/plans/UI-023.md) for the transfer form, validated write and detail read APIs, navigation, failure recovery, commit stages, and verification. This planning update leaves the task To Do and its acceptance criteria unchecked.
+Follow [the UI-023 execution plan](../../docs/plans/UI-023.md) for the transfer form, validated write and detail read APIs, navigation, failure recovery, commit stages, and verification. The plan was executed in six reviewable stages. Native iPhone verification remains owned by BUILD-005.
 
 ## Acceptance Criteria
 
-- [ ] You can choose two distinct active accounts, enter a positive integer VND amount and date, and record a transfer.
-- [ ] Transfer details are reachable from the transaction list and clearly identify both accounts; no expense or income is created.
-- [ ] Cancel and failed writes preserve the ledger; a successful write refreshes account balances and the snapshot through existing APIs.
-- [ ] Database and component tests prove both account effects, unchanged spending and income reports, invalid input rejection, and restart persistence.
+- [x] You can choose two distinct active accounts, enter a positive integer VND amount and date, and record a transfer.
+- [x] Transfer details are reachable from the transaction list and clearly identify both accounts; no expense or income is created.
+- [x] Cancel and failed writes preserve the ledger; a successful write refreshes account balances and the snapshot through existing APIs.
+- [x] Database and component tests prove both account effects, unchanged spending and income reports, invalid input rejection, and restart persistence.
+
+## Verification Evidence
+
+- `npm test -- --runInBand`: 85 suites passed, 431 tests passed.
+- `npm run typecheck`: passed.
+- `npx expo export --platform web`: passed.
+- `npx expo export --platform ios`: passed JavaScript bundling. This does not prove native compilation.
+- `taskroot validate`, `taskroot list`, and `git diff --check`: passed.
+- Transfer database, form, route, publication, report, and restart coverage passes in `tests/`. Publication tests trigger the real `transfers:created` notification, compare report and snapshot financial fields, cover rollover and writer retry, and reopen the same SQLite file with fresh services.
+- Native device checks for keyboard and safe-area behavior, VoiceOver, back gestures during delayed writes, and force-close persistence were not run here. BUILD-005 owns those checks.
