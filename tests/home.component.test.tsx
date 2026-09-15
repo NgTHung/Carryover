@@ -17,6 +17,9 @@ jest.mock('expo-router', () => ({
       onPress: () => mockNavigate(href),
     });
   },
+  router: {
+    push: (href: string) => mockNavigate(href),
+  },
 }));
 
 jest.mock('../src/ui/CrossFade', () => ({
@@ -86,9 +89,23 @@ test('renders ready snapshot fields with no unknown badge or estimate marker', a
   expect(screen.getByText('₫4.250.000')).toBeTruthy();
   expect(screen.getByText('₫1.250.000')).toBeTruthy();
   expect(screen.getByText('21 days runway')).toBeTruthy();
+  expect(screen.getByText('2026-09-30')).toBeTruthy();
   expect(screen.queryByTestId('home-unknown')).toBeNull();
   expect(screen.queryByText(/receivable/)).toBeNull();
   expect(screen.queryByText('~₫43.000')).toBeNull();
+});
+
+test('ready Home shows the stored horizon action without deriving a replacement', async () => {
+  await render(
+    <HomeSnapshotView
+      state={{ status: 'ready', snapshot: { ...snapshot, horizonDate: '2027-01-01' } }}
+      onChangeHorizon={() => mockNavigate('/horizon?period=2026-09')}
+    />
+  );
+
+  expect(screen.getByText('2027-01-01')).toBeTruthy();
+  await userEvent.setup().press(screen.getByRole('button', { name: 'Change horizon' }));
+  expect(mockNavigate).toHaveBeenCalledWith('/horizon?period=2026-09');
 });
 
 test('marks a ready figure as approximate and shows unknowns and receivables', async () => {
@@ -158,6 +175,15 @@ test('native route subscribes to the published snapshot store', async () => {
   });
 
   await waitFor(() => expect(screen.getByTestId('home-hero')).toHaveTextContent('₫40.000'));
+});
+
+test('native Home chooses the local period when the horizon action is activated', async () => {
+  snapshotStore.setState({ status: 'ready', snapshot }, true);
+  await render(<NativeHomeRoute now={() => new Date(2026, 11, 31)} />);
+
+  await userEvent.setup().press(screen.getByRole('button', { name: 'Change horizon' }));
+
+  expect(mockNavigate).toHaveBeenCalledWith('/horizon?period=2026-12');
 });
 
 test('browser route uses the presentation preview without opening the ledger', async () => {
