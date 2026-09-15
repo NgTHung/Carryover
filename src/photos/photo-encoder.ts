@@ -72,6 +72,7 @@ export function createPhotoEncoder(): PhotoEncoder {
           height: attempt.dimensions.height,
       });
       let image: ImageRef | undefined;
+      let savedUri: string | undefined;
       try {
         image = await context.renderAsync();
         const saved = await image.saveAsync({
@@ -79,12 +80,19 @@ export function createPhotoEncoder(): PhotoEncoder {
           compress: attempt.quality,
           base64: false,
         });
+        savedUri = saved.uri;
         const output = assertOutput({
           uri: saved.uri,
           dimensions: { width: saved.width, height: saved.height },
         });
         ownedOutputs.add(output.uri);
         return output;
+      } catch (error) {
+        if (savedUri !== undefined && savedUri.length > 0 && !ownedOutputs.has(savedUri)) {
+          const savedFile = new File(savedUri);
+          if (savedFile.exists) savedFile.delete();
+        }
+        throw error;
       } finally {
         image?.release();
         context.release();

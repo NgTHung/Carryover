@@ -9,7 +9,7 @@
 import { z } from 'zod';
 
 const photoKeyPattern =
-  /^photos\/v1\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.jpg$/;
+  /^photos\/v1\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.jpg(?![\s\S])/;
 
 /** The only key format produced by the photo store. */
 export const photoKeySchema = z

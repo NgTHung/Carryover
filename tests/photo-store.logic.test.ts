@@ -27,6 +27,7 @@ type HarnessConfig = {
   failDeleteStaging?: boolean;
   failRelease?: boolean;
   throwAfterMove?: boolean;
+  createFinalThenThrow?: boolean;
   retainedBytes?: number;
   blockEncode?: boolean;
   blockCopy?: boolean;
@@ -125,9 +126,14 @@ function makeHarness(config: HarnessConfig = {}): Harness {
         throw new Error('staging output is missing');
       }
       retained.set(destination.uri, config.retainedBytes ?? stagedBytes);
-      staging.delete(source.uri);
+      if (!config.createFinalThenThrow) {
+        staging.delete(source.uri);
+      }
       if (config.throwAfterMove) {
         throw new Error('move completed before the native call reported an error');
+      }
+      if (config.createFinalThenThrow) {
+        throw new Error('move reported an error while staging remained');
       }
     },
     async inspect(uri): Promise<{ uri: string; bytes: number } | null> {
@@ -382,6 +388,19 @@ test('a move that completes before throwing is recovered by final verification',
   assert.equal(result.status, 'retained');
   if (result.status === 'retained') {
     assert.equal(result.photo.recoveredFromError?.code, 'photo-promotion-failed');
+  }
+  assert.equal(harness.retained.size, 1);
+  assert.equal(harness.staging.size, 0);
+});
+
+test('a same-sized final file with staging still present is not claimed as owned', async () => {
+  const harness = makeHarness({ createFinalThenThrow: true });
+  const prepared = preparedFrom(await harness.store.preparePhoto('camera://receipt.jpg'));
+
+  const result = await harness.store.retainPhoto(prepared);
+  assert.equal(result.status, 'failed');
+  if (result.status === 'failed') {
+    assert.equal(result.preparation.error.code, 'photo-promotion-failed');
   }
   assert.equal(harness.retained.size, 1);
   assert.equal(harness.staging.size, 0);

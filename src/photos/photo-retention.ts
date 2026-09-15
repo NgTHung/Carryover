@@ -105,8 +105,23 @@ export async function retainPreparedPhoto(
     });
   }
 
+  let moveOwnershipEstablished = moveError === undefined;
+  if (moveError !== undefined && primaryError === undefined) {
+    try {
+      moveOwnershipEstablished = (await options.files.inspect(staging.uri)) === null;
+    } catch (error) {
+      primaryError = photoError(
+        'verification',
+        'staged-photo-inspection-failed',
+        error,
+        { photoKey: prepared.photoKey }
+      );
+    }
+  }
+
   const verified =
     primaryError === undefined &&
+    moveOwnershipEstablished &&
     expectedStagedBytes(finalStat, prepared.metrics.bytes);
   if (verified && finalStat !== null) {
     await cleanupStaging(options.files, staging, cleanupIssues);

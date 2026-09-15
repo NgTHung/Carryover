@@ -45,7 +45,7 @@ function keyFileName(photoKey: PhotoKey): string {
 }
 
 function assertPreparationId(preparationId: string): void {
-  if (!/^[a-z0-9-]+$/.test(preparationId)) {
+  if (!/^[a-z0-9-]+(?![\s\S])/.test(preparationId)) {
     throw new TypeError('photo preparation id contains an unsafe path character');
   }
 }
@@ -146,4 +146,3 @@ export function createPhotoFileAdapter(): PhotoFileAdapter {
     },
   };
 }
-

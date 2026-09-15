@@ -47,6 +47,7 @@ test('photo keys use the strict lowercase v4 JPEG grammar', () => {
     'photos/v1/../123e4567-e89b-42d3-a456-426614174000.jpg',
     'photos/v1/%2e%2e/123e4567-e89b-42d3-a456-426614174000.jpg',
     'photos/v1/123e4567-e89b-42d3-a456-426614174000.jpg/extra',
+    'photos/v1/123e4567-e89b-42d3-a456-426614174000.jpg\n',
   ]) {
     assert.equal(isPhotoKey(invalid), false, invalid);
   }
