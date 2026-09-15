@@ -24,6 +24,7 @@ import { createMonthConfigData } from './month-config';
 import { createMonthSummaryData } from './month-summary';
 import { createManualTransactionData } from './manual-transactions';
 import { createPeriodPreparationData } from './period-preparation';
+import { createReservePaymentData } from './reserve-payments';
 import { ledgerTables } from './schema';
 import { createShareData } from './shares';
 import { createTransactionData } from './transactions';
@@ -76,6 +77,11 @@ export const transactionData = createTransactionData(
 export const manualTransactionData = createManualTransactionData(
   ledgerDb,
   categoryData,
+  ledgerChangeNotifier,
+  { runAtomic: nativeAtomicRunner }
+);
+export const reservePaymentData = createReservePaymentData(
+  ledgerDb,
   ledgerChangeNotifier,
   { runAtomic: nativeAtomicRunner }
 );
