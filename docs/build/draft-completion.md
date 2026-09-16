@@ -14,7 +14,7 @@ the widget disabled for this run.
 
 | Field | Result |
 | --- | --- |
-| Tested implementation revision | `713540c9add62581d5fd8381ac6bb411de50c3fc` |
+| Tested implementation revision | `71be74c29bc8526e99ebd838227929ffaed64e31` |
 | GitHub Actions workflow URL | PENDING |
 | IPA artifact | PENDING |
 | Development build number | PENDING |
@@ -65,7 +65,7 @@ manual transaction facade:
 | Snapshot integration, rollback, income changes, and publication retry | PASS |
 | File-backed completion close and reopen | PASS |
 | TypeScript check | PASS |
-| Jest gate, 107 suites and 575 tests | PASS |
+| Jest gate, 107 suites and 578 tests | PASS |
 | Python gate, 12 tests | PASS |
 | Web export | PASS |
 | iOS JavaScript export | PASS |
