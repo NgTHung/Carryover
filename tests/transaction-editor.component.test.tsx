@@ -77,6 +77,7 @@ function editorData(): TransactionEditorData {
     readTransaction: jest.fn(),
     listActiveCategoryGroups: jest.fn(),
     listActiveAccounts: jest.fn(),
+    createCategory: jest.fn(),
     editTransaction: jest.fn(async () => complete()),
     completeDraft: jest.fn(async () => complete()),
     softDeleteTransaction: jest.fn(async () => undefined),
@@ -242,4 +243,64 @@ test('two immediate save events issue one edit', async () => {
     await editPromise;
   });
   await waitFor(() => expect(data.editTransaction).toHaveBeenCalledTimes(1));
+});
+
+test('preserves transaction input while creating and refreshing a leaf', async () => {
+  const createdLeaf: CategoryGroupWithLeaves['leaves'][number] = {
+    level: 'leaf',
+    id: '33333333-3333-4333-8333-333333333334',
+    name: 'Market',
+    sort: 1,
+    kind: 'spend',
+    isSuggestion: false,
+    deletedAt: null,
+    group: {
+      level: 'group',
+      id: groupId,
+      name: 'Food',
+      sort: 0,
+      kind: 'spend',
+    },
+  };
+  const refreshedGroups: CategoryGroupWithLeaves[] = [{
+    ...groups[0]!,
+    leaves: [...groups[0]!.leaves, createdLeaf],
+  }];
+  const data = editorData();
+  data.createCategory = jest.fn(async () => createdLeaf);
+  data.listActiveCategoryGroups = jest.fn(async () => refreshedGroups);
+  const user = userEvent.setup();
+  await render(
+    <TransactionEditor
+      transaction={draft()}
+      groups={groups}
+      accounts={accounts}
+      data={data}
+      onDone={jest.fn()}
+      now={() => new Date(2026, 0, 12, 11)}
+    />
+  );
+
+  await user.type(screen.getByLabelText('Amount'), '45001');
+  await user.type(screen.getByLabelText('Note'), 'Keep this');
+  await user.press(screen.getByRole('button', { name: 'want' }));
+  await user.type(screen.getByLabelText('Search leaves'), 'gro');
+  await user.press(screen.getByRole('button', { name: 'New leaf' }));
+  await user.type(screen.getByLabelText('Leaf name'), 'Market');
+  await user.press(screen.getByRole('button', { name: 'Food' }));
+  await user.press(screen.getByRole('button', { name: 'Create leaf' }));
+
+  await waitFor(() => expect(screen.queryByTestId('inline-category-creator')).toBeNull());
+  expect(data.createCategory).toHaveBeenCalledWith({
+    level: 'leaf',
+    name: 'Market',
+    groupId,
+  });
+  expect(data.listActiveCategoryGroups).toHaveBeenCalledTimes(1);
+  expect(screen.getByLabelText('Amount').props.value).toBe('45001');
+  expect(screen.getByLabelText('Note').props.value).toBe('Keep this');
+  expect(screen.getByLabelText('Date').props.value).toBe('2026-01-12');
+  expect(screen.getByRole('button', { name: 'want' }).props.accessibilityState.selected).toBe(true);
+  expect(screen.getByLabelText('Search leaves').props.value).toBe('');
+  expect(screen.getByRole('button', { name: 'Market' }).props.accessibilityState.selected).toBe(true);
 });

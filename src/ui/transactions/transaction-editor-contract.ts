@@ -6,7 +6,8 @@
  * unavailable.
  */
 import type { ActiveAccount } from '../../data/accounts';
-import type { CategoryGroupWithLeaves } from '../../data/category-types';
+import type { Category, CategoryGroupWithLeaves } from '../../data/category-types';
+import type { CreateCategoryInput } from '../../data/category-validation';
 import type {
   CompleteDraftInput,
   EditTransactionInput,
@@ -17,6 +18,7 @@ export type TransactionEditorData = {
   readTransaction(id: string): Promise<Transaction | undefined>;
   listActiveCategoryGroups(): Promise<CategoryGroupWithLeaves[]>;
   listActiveAccounts(): Promise<ActiveAccount[]>;
+  createCategory(input: CreateCategoryInput): Promise<Category>;
   editTransaction(input: EditTransactionInput): Promise<Transaction>;
   completeDraft(input: CompleteDraftInput): Promise<Transaction>;
   softDeleteTransaction(id: string): Promise<void>;

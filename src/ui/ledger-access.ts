@@ -167,6 +167,7 @@ const transactionEditorData: TransactionEditorData = {
   readTransaction: (id) => transactionData.readTransaction(id),
   listActiveCategoryGroups: () => categoryData.listActiveCategoryGroups(),
   listActiveAccounts: () => accountData.listActiveAccounts(),
+  createCategory: (input) => categoryData.createCategory(input),
   editTransaction: (input) => manualTransactionData.editTransaction(input),
   completeDraft: (input) => manualTransactionData.completeDraft(input),
   softDeleteTransaction: (id) => manualTransactionData.softDeleteTransaction(id),

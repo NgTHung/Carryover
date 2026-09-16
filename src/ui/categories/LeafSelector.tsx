@@ -5,7 +5,7 @@
  * remains visible while a query filters it out, so typing never changes the
  * transaction by itself.
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Button, Input } from '../index';
@@ -79,9 +79,14 @@ export function LeafSelector({
   disabled,
   onSelect,
   capability = { kind: 'selection-only' },
+  queryResetKey,
 }: LeafSelectorProps) {
   const [query, setQuery] = useState('');
   const results = useMemo(() => filterLeafChoices(groups, query), [groups, query]);
+
+  useEffect(() => {
+    if (queryResetKey !== undefined) setQuery('');
+  }, [queryResetKey]);
 
   return (
     <View className="gap-3">

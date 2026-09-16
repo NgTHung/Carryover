@@ -21,4 +21,5 @@ export type LeafSelectorProps = {
   disabled: boolean;
   onSelect: (leafId: string) => void;
   capability?: LeafSelectorCapability;
+  queryResetKey?: number;
 };

@@ -61,6 +61,7 @@ export function TransactionFormFields({
   disabled,
   presentation,
   leafSelectorCapability = { kind: 'selection-only' },
+  leafSelectorResetKey,
   onChange,
 }: {
   values: TransactionFormValues;
@@ -70,6 +71,7 @@ export function TransactionFormFields({
   disabled: boolean;
   presentation: TransactionFormPresentation;
   leafSelectorCapability?: LeafSelectorCapability;
+  leafSelectorResetKey?: number;
   onChange: (values: TransactionFormValues) => void;
 }) {
   const update = (changes: Partial<TransactionFormValues>) => {
@@ -119,6 +121,7 @@ export function TransactionFormFields({
             selectedLeafId={values.categoryId}
             disabled={disabled}
             capability={leafSelectorCapability}
+            queryResetKey={leafSelectorResetKey}
             onSelect={(categoryId) => update({ categoryId })}
           />
           <FieldError message={errors.leaf} />

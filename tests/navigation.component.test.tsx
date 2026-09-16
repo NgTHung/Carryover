@@ -150,6 +150,7 @@ function editorData(
     readTransaction: async () => transaction,
     listActiveCategoryGroups: async () => [],
     listActiveAccounts,
+    createCategory: jest.fn(),
     editTransaction: jest.fn(),
     completeDraft: jest.fn(),
     softDeleteTransaction: jest.fn(),
