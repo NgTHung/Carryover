@@ -8,7 +8,7 @@ Task: [Capture a photo as a saved draft](../../.tasks/app/CAPTURE-003-capture-a-
 
 From Home, you can open the back camera, take one purchase photo, enter a positive whole-dong amount or skip it, and return to Home only after the retained photo and draft row are durable. A skipped amount stays `null` and causes the next snapshot to report one more unknown. Retrying an uncertain write cannot create a second draft.
 
-The local implementation and automated evidence through Stage 5 are complete. CAPTURE-003 remains In Progress because Stage 6 requires a CI-built iPhone candidate. Native permission, keyboard, lifecycle, restart, and timing results remain pending. No device success is claimed by the local checks.
+The local implementation and automated evidence through Stage 5 are complete. CAPTURE-003 is closed at your request on 2026-09-16, with detailed checking deferred. This closure overrides the original Stage 6 completion gate below; Stage 6 still requires a CI-built iPhone candidate. Native permission, keyboard, lifecycle, restart, and timing results remain pending. No device success is claimed by the local checks.
 
 Use `CONTEXT.md`, `docs/spec/carryover-v1.md`, `docs/state-and-validation.md`, `docs/app-stack-and-testing.md`, `docs/DESIGN.md`, and the CAPTURE-002 plan as contracts. Correct money and an honest saved state take priority over the two-second target.
 

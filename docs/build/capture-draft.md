@@ -80,5 +80,6 @@ The local evidence for this stage is kept in the capture test suites:
   with a recreated retained-photo store.
 
 The local gate is listed in
-[the CAPTURE-003 execution plan](../plans/CAPTURE-003.md). The task stays
-`In Progress` until the native matrix is run and recorded here.
+[the CAPTURE-003 execution plan](../plans/CAPTURE-003.md). You requested CAPTURE-003 be marked Done on 2026-09-16 with detailed checking
+deferred. The native matrix remains pending and must still be run and recorded
+here. Task closure is not evidence of a device pass.
