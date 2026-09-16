@@ -84,7 +84,9 @@ function editorData(): TransactionEditorData {
   };
 }
 
-afterEach(cleanup);
+afterEach(async () => {
+  await cleanup();
+});
 
 test('edits supported fields without rewriting hidden metadata', async () => {
   const data = editorData();
@@ -243,6 +245,188 @@ test('two immediate save events issue one edit', async () => {
     await editPromise;
   });
   await waitFor(() => expect(data.editTransaction).toHaveBeenCalledTimes(1));
+});
+
+test('two immediate completion events issue one write and keep the saved state terminal', async () => {
+  let resolveComplete: (value: Transaction) => void = () => undefined;
+  const completePromise = new Promise<Transaction>((resolve) => {
+    resolveComplete = resolve;
+  });
+  const data = editorData();
+  data.completeDraft = jest.fn(() => completePromise);
+  const pending = jest.fn();
+  const done = jest.fn();
+  const view = await render(
+    <TransactionEditor
+      transaction={draft()}
+      groups={groups}
+      accounts={accounts}
+      data={data}
+      onDone={done}
+      onWritePending={pending}
+    />
+  );
+
+  await fireEvent.changeText(view.getByLabelText('Amount'), '45001');
+  await fireEvent.press(view.getByRole('button', { name: 'Groceries' }));
+  const completeButton = view.getByRole('button', { name: 'Complete' });
+  await fireEvent.press(completeButton);
+  await fireEvent.press(completeButton);
+
+  expect(data.completeDraft).toHaveBeenCalledTimes(1);
+  expect(pending).toHaveBeenLastCalledWith(true);
+  await act(async () => {
+    resolveComplete(complete({ quality: null }));
+    await completePromise;
+  });
+
+  await waitFor(() => expect(done).toHaveBeenCalledTimes(1));
+  expect(pending).toHaveBeenLastCalledWith(false);
+  expect(view.getByTestId('transaction-saved-state')).toBeTruthy();
+  expect(data.completeDraft).toHaveBeenCalledTimes(1);
+});
+
+test('recognizes a committed completion after the write rejects without writing again', async () => {
+  const data = editorData();
+  data.completeDraft = jest.fn(async () => {
+    throw new Error('connection lost after commit');
+  });
+  data.readTransaction = jest.fn(async () => complete({ amount: 45_001, quality: null }));
+  const done = jest.fn();
+  const user = userEvent.setup();
+  const view = await render(
+    <TransactionEditor transaction={draft()} groups={groups} accounts={accounts} data={data} onDone={done} />
+  );
+
+  await user.type(screen.getByLabelText('Amount'), '45001');
+  await user.press(screen.getByRole('button', { name: 'Groceries' }));
+  await user.press(screen.getByRole('button', { name: 'Complete' }));
+
+  await waitFor(() => expect(view.getByTestId('transaction-saved-state')).toBeTruthy());
+  expect(data.readTransaction).toHaveBeenCalledWith(transactionId);
+  expect(data.completeDraft).toHaveBeenCalledTimes(1);
+  expect(done).toHaveBeenCalledTimes(1);
+  await user.press(view.getByRole('button', { name: 'Back to transactions' }));
+  expect(data.completeDraft).toHaveBeenCalledTimes(1);
+  expect(done).toHaveBeenCalledTimes(2);
+});
+
+test('offers a retry with the same id when reconciliation finds the original draft', async () => {
+  const data = editorData();
+  let writes = 0;
+  const completeDraft = jest.fn(data.completeDraft);
+  completeDraft.mockImplementation(async () => {
+    writes += 1;
+    if (writes === 1) throw new Error('temporary failure');
+    return complete({ quality: null });
+  });
+  data.completeDraft = completeDraft;
+  data.readTransaction = jest.fn(async () => draft());
+  const done = jest.fn();
+  const user = userEvent.setup();
+  const view = await render(
+    <TransactionEditor transaction={draft()} groups={groups} accounts={accounts} data={data} onDone={done} />
+  );
+
+  await user.type(screen.getByLabelText('Amount'), '45001');
+  await user.press(screen.getByRole('button', { name: 'Groceries' }));
+  await user.press(screen.getByRole('button', { name: 'Complete' }));
+  await waitFor(() => expect(view.getByRole('button', { name: 'Retry completion' })).toBeTruthy());
+
+  await user.press(view.getByRole('button', { name: 'Retry completion' }));
+  await waitFor(() => expect(done).toHaveBeenCalledTimes(1));
+  expect(data.completeDraft).toHaveBeenCalledTimes(2);
+  expect(completeDraft.mock.calls[0]?.[0].transactionId).toBe(transactionId);
+  expect(completeDraft.mock.calls[1]?.[0].transactionId).toBe(transactionId);
+});
+
+test('shows a read-only retry when completion reconciliation cannot read the row', async () => {
+  const data = editorData();
+  data.completeDraft = jest.fn(async () => {
+    throw new Error('write failed');
+  });
+  data.readTransaction = jest.fn(async () => {
+    throw new Error('read failed');
+  });
+  const user = userEvent.setup();
+  const view = await render(
+    <TransactionEditor transaction={draft()} groups={groups} accounts={accounts} data={data} onDone={jest.fn()} />
+  );
+
+  await user.type(screen.getByLabelText('Amount'), '45001');
+  await user.press(screen.getByRole('button', { name: 'Groceries' }));
+  await user.press(screen.getByRole('button', { name: 'Complete' }));
+  await waitFor(() => expect(view.getByRole('button', { name: 'Retry completion check' })).toBeTruthy());
+  expect(data.completeDraft).toHaveBeenCalledTimes(1);
+
+  data.readTransaction = jest.fn(async () => draft());
+  await user.press(view.getByRole('button', { name: 'Retry completion check' }));
+  await waitFor(() => expect(view.getByRole('button', { name: 'Retry completion' })).toBeTruthy());
+  expect(data.completeDraft).toHaveBeenCalledTimes(1);
+});
+
+test('does not retry a changed row after an uncertain completion', async () => {
+  const data = editorData();
+  data.completeDraft = jest.fn(async () => {
+    throw new Error('write uncertain');
+  });
+  data.readTransaction = jest.fn(async () => complete({ amount: 45_002, quality: null }));
+  const user = userEvent.setup();
+  const view = await render(
+    <TransactionEditor transaction={draft()} groups={groups} accounts={accounts} data={data} onDone={jest.fn()} />
+  );
+
+  await user.type(screen.getByLabelText('Amount'), '45001');
+  await user.press(screen.getByRole('button', { name: 'Groceries' }));
+  await user.press(screen.getByRole('button', { name: 'Complete' }));
+  await waitFor(() => expect(view.getByText(/changed while completion/)).toBeTruthy());
+  expect(view.queryByRole('button', { name: 'Retry completion' })).toBeNull();
+  expect(data.completeDraft).toHaveBeenCalledTimes(1);
+});
+
+test('keeps a saved state and retries navigation without another completion', async () => {
+  const data = editorData();
+  data.completeDraft = jest.fn(async () => complete({ quality: null }));
+  const done = jest.fn()
+    .mockImplementationOnce(() => { throw new Error('Navigation unavailable'); })
+    .mockImplementation(() => undefined);
+  const user = userEvent.setup();
+  const view = await render(
+    <TransactionEditor transaction={draft()} groups={groups} accounts={accounts} data={data} onDone={done} />
+  );
+
+  await user.type(screen.getByLabelText('Amount'), '45001');
+  await user.press(screen.getByRole('button', { name: 'Groceries' }));
+  await user.press(screen.getByRole('button', { name: 'Complete' }));
+  await waitFor(() => expect(view.getByText(/Navigation unavailable/)).toBeTruthy());
+  expect(view.getByTestId('transaction-saved-state')).toBeTruthy();
+
+  await user.press(view.getByRole('button', { name: 'Back to transactions' }));
+  expect(done).toHaveBeenCalledTimes(2);
+  expect(data.completeDraft).toHaveBeenCalledTimes(1);
+});
+
+test('does not navigate when a completion resolves after the editor unmounts', async () => {
+  let resolveComplete: (value: Transaction) => void = () => undefined;
+  const completePromise = new Promise<Transaction>((resolve) => {
+    resolveComplete = resolve;
+  });
+  const data = editorData();
+  data.completeDraft = jest.fn(() => completePromise);
+  const done = jest.fn();
+  const view = await render(
+    <TransactionEditor transaction={draft()} groups={groups} accounts={accounts} data={data} onDone={done} />
+  );
+
+  await fireEvent.changeText(view.getByLabelText('Amount'), '45001');
+  await fireEvent.press(view.getByRole('button', { name: 'Groceries' }));
+  await fireEvent.press(view.getByRole('button', { name: 'Complete' }));
+  view.unmount();
+  resolveComplete(complete({ quality: null }));
+  await completePromise;
+  await new Promise<void>((finish) => setImmediate(finish));
+
+  expect(done).not.toHaveBeenCalled();
 });
 
 test('preserves transaction input while creating and refreshing a leaf', async () => {

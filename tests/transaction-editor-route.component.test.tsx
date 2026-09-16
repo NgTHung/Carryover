@@ -25,6 +25,7 @@ const photoKey = 'photos/v1/55555555-5555-4555-8555-555555555555.jpg' as PhotoKe
 
 const mockUseLocalSearchParams = jest.fn();
 const mockReplace = jest.fn();
+const mockUsePreventRemove = jest.fn();
 
 jest.mock('expo-router', () => ({
   Link: ({ children }: { children: ReactNode }) => children,
@@ -32,6 +33,10 @@ jest.mock('expo-router', () => ({
     replace: (...args: unknown[]) => mockReplace(...args),
   },
   useLocalSearchParams: (...args: unknown[]) => mockUseLocalSearchParams(...args),
+}));
+
+jest.mock('expo-router/react-navigation', () => ({
+  usePreventRemove: (...args: unknown[]) => mockUsePreventRemove(...args),
 }));
 
 jest.mock('../src/ui/ledger-access', () => ({
@@ -166,6 +171,36 @@ test('loads a draft with its photo and completes without changing optional field
   expect(listener).toBeDefined();
 });
 
+test('protects the route during completion and navigates only after the write settles', async () => {
+  mockUseLocalSearchParams.mockReturnValue({ transactionId: firstId });
+  let resolveComplete: (value: Transaction) => void = () => undefined;
+  const completePromise = new Promise<Transaction>((resolve) => {
+    resolveComplete = resolve;
+  });
+  const data = editorData();
+  data.completeDraft = jest.fn(() => completePromise);
+  const view = await render(<TransactionRouteScreen data={data} />);
+  await waitFor(() => expect(view.getByText('Complete draft')).toBeTruthy());
+
+  await fireEvent.changeText(view.getByLabelText('Amount'), '45001');
+  await fireEvent.press(view.getByRole('button', { name: 'Groceries' }));
+  await fireEvent.press(view.getByRole('button', { name: 'Complete' }));
+  await waitFor(() => {
+    const latest = mockUsePreventRemove.mock.calls[mockUsePreventRemove.mock.calls.length - 1];
+    expect(latest?.[0]).toBe(true);
+  });
+  expect(mockReplace).not.toHaveBeenCalled();
+
+  await act(async () => {
+    resolveComplete(transaction(firstId, { status: 'complete', amount: 45_001, categoryId: leafId }));
+    await completePromise;
+  });
+  await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/transactions'));
+  const latest = mockUsePreventRemove.mock.calls[mockUsePreventRemove.mock.calls.length - 1];
+  expect(latest?.[0]).toBe(false);
+  expect(data.completeDraft).toHaveBeenCalledTimes(1);
+});
+
 test('keeps completion available when the retained photo is missing', async () => {
   mockUseLocalSearchParams.mockReturnValue({ transactionId: firstId });
   const data = editorData();
@@ -248,6 +283,55 @@ test('ignores an old route read when the route id changes', async () => {
   await waitFor(() => expect(view.getByText('Complete draft')).toBeTruthy());
   expect(view.getByLabelText('Date').props.value).toBe('2026-09-14');
   expect(view.getByLabelText('Amount').props.value).toBe('');
+});
+
+test('keeps a committed write from an old route from navigating after the route changes', async () => {
+  let routeId = firstId;
+  mockUseLocalSearchParams.mockImplementation(() => ({ transactionId: routeId }));
+  let resolveComplete: (value: Transaction) => void = () => undefined;
+  const completePromise = new Promise<Transaction>((resolve) => {
+    resolveComplete = resolve;
+  });
+  const data = editorData(jest.fn(async (id) => transaction(id)));
+  data.completeDraft = jest.fn(() => completePromise);
+  const view = await render(<TransactionRouteScreen data={data} />);
+  await waitFor(() => expect(view.getByText('Complete draft')).toBeTruthy());
+
+  await fireEvent.changeText(view.getByLabelText('Amount'), '45001');
+  await fireEvent.press(view.getByRole('button', { name: 'Groceries' }));
+  await fireEvent.press(view.getByRole('button', { name: 'Complete' }));
+
+  routeId = secondId;
+  await view.rerender(<TransactionRouteScreen data={data} />);
+  await waitFor(() => expect(data.readTransaction).toHaveBeenCalledWith(secondId));
+  await waitFor(() => expect(view.getByText('Complete draft')).toBeTruthy());
+
+  resolveComplete(transaction(firstId, { status: 'complete', amount: 45_001, categoryId: leafId }));
+  await completePromise;
+  await new Promise<void>((finish) => setImmediate(finish));
+  expect(mockReplace).not.toHaveBeenCalled();
+  expect(view.getByLabelText('Date').props.value).toBe('2026-09-15');
+});
+
+test('shows a saved state when route navigation fails and retries navigation only', async () => {
+  mockUseLocalSearchParams.mockReturnValue({ transactionId: firstId });
+  mockReplace.mockImplementationOnce(() => {
+    throw new Error('Navigation unavailable');
+  });
+  const data = editorData();
+  const view = await render(<TransactionRouteScreen data={data} />);
+  await waitFor(() => expect(view.getByText('Complete draft')).toBeTruthy());
+
+  await fireEvent.changeText(view.getByLabelText('Amount'), '45001');
+  await fireEvent.press(view.getByRole('button', { name: 'Groceries' }));
+  await fireEvent.press(view.getByRole('button', { name: 'Complete' }));
+  await waitFor(() => expect(view.getByText(/Navigation unavailable/)).toBeTruthy());
+  expect(view.getByTestId('transaction-saved-state')).toBeTruthy();
+  expect(data.completeDraft).toHaveBeenCalledTimes(1);
+
+  await fireEvent.press(view.getByRole('button', { name: 'Back to transactions' }));
+  await waitFor(() => expect(mockReplace).toHaveBeenCalledTimes(2));
+  expect(data.completeDraft).toHaveBeenCalledTimes(1);
 });
 
 async function actResolve<T>(

@@ -1,4 +1,5 @@
 import { router, useLocalSearchParams, type Href } from 'expo-router';
+import { usePreventRemove } from 'expo-router/react-navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { resolvePhoto as nativeResolvePhoto } from '../../photos/photo-access';
@@ -15,6 +16,10 @@ import {
   type TransactionRouteState,
 } from '../../ui/transactions/TransactionRouteView';
 import type { TransactionEditorData } from '../../ui/transactions/transaction-editor-contract';
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
 
 type RouteState = TransactionRouteState | {
   status: 'ready';
@@ -45,6 +50,15 @@ export default function TransactionRouteScreen({
   const mountedRef = useRef(false);
   const accountRefreshRequestRef = useRef(0);
   const categoryRefreshRequestRef = useRef(0);
+  const writePendingRef = useRef(false);
+  const [writePending, setWritePending] = useState(false);
+  const [navigationIntent, setNavigationIntent] = useState(false);
+  const [navigationError, setNavigationError] = useState<string>();
+
+  const preventRemove = useCallback(() => {
+    if (!writePendingRef.current) return;
+  }, []);
+  usePreventRemove(writePending, preventRemove);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -60,6 +74,10 @@ export default function TransactionRouteScreen({
     const parsed = parseTransactionRoute(transactionId);
     const routeRequest = routeRequestRef.current + 1;
     routeRequestRef.current = routeRequest;
+    writePendingRef.current = false;
+    setWritePending(false);
+    setNavigationIntent(false);
+    setNavigationError(undefined);
     if (parsed.status === 'invalid') {
       setState(parsed);
       return;
@@ -101,6 +119,31 @@ export default function TransactionRouteScreen({
       cancelled = true;
     };
   }, [data, transactionId]);
+
+  useEffect(() => {
+    if (writePending || !navigationIntent) return;
+    try {
+      router.replace('/transactions' as Href);
+    } catch (error: unknown) {
+      setNavigationIntent(false);
+      setNavigationError(errorMessage(error));
+    }
+  }, [navigationIntent, writePending]);
+
+  const updateWritePending = useCallback((pending: boolean) => {
+    if (writePendingRef.current === pending) return;
+    writePendingRef.current = pending;
+    setWritePending(pending);
+  }, []);
+
+  const queueNavigation = useCallback(() => {
+    setNavigationError(undefined);
+    setNavigationIntent(true);
+  }, []);
+
+  const retryNavigation = useCallback(() => {
+    queueNavigation();
+  }, [queueNavigation]);
 
   const refreshAccounts = useCallback(() => {
     const routeRequest = routeRequestRef.current;
@@ -211,7 +254,10 @@ export default function TransactionRouteScreen({
         onRetryAccountRefresh={refreshAccounts}
         categoryRefreshError={state.categoryRefreshError}
         onRetryCategoryRefresh={refreshCategories}
-        onDone={() => router.replace('/transactions' as Href)}
+        onWritePending={updateWritePending}
+        navigationError={navigationError}
+        onRetryNavigation={retryNavigation}
+        onDone={queueNavigation}
       />
     );
   }
