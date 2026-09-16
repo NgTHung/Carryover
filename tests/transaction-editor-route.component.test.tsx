@@ -334,6 +334,40 @@ test('shows a saved state when route navigation fails and retries navigation onl
   expect(data.completeDraft).toHaveBeenCalledTimes(1);
 });
 
+test('returns completed drafts to the inbox and retries navigation without another write', async () => {
+  mockUseLocalSearchParams.mockReturnValue({ transactionId: firstId, from: 'drafts' });
+  mockReplace.mockImplementationOnce(() => {
+    throw new Error('Navigation unavailable');
+  });
+  const data = editorData();
+  const view = await render(<TransactionRouteScreen data={data} />);
+  await waitFor(() => expect(view.getByText('Complete draft')).toBeTruthy());
+
+  await fireEvent.changeText(view.getByLabelText('Amount'), '45001');
+  await fireEvent.press(view.getByRole('button', { name: 'Groceries' }));
+  await fireEvent.press(view.getByRole('button', { name: 'Complete' }));
+
+  await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/drafts'));
+  expect(view.getByRole('button', { name: 'Back to drafts' })).toBeTruthy();
+  await fireEvent.press(view.getByRole('button', { name: 'Back to drafts' }));
+  expect(mockReplace).toHaveBeenCalledTimes(2);
+  expect(data.completeDraft).toHaveBeenCalledTimes(1);
+});
+
+test('stale Drafts links provide an inbox return and untrusted origins use transactions', async () => {
+  mockUseLocalSearchParams.mockReturnValue({ transactionId: firstId, from: 'drafts' });
+  const draftsView = await render(
+    <TransactionRouteScreen data={editorData(jest.fn(async () => undefined))} />
+  );
+  await waitFor(() => expect(draftsView.getByText('Transaction unavailable')).toBeTruthy());
+  expect(draftsView.getByRole('button', { name: 'Back to drafts' })).toBeTruthy();
+
+  mockUseLocalSearchParams.mockReturnValue({ transactionId: firstId, from: ['drafts'] });
+  await draftsView.rerender(<TransactionRouteScreen data={editorData(jest.fn(async () => undefined))} />);
+  await waitFor(() => expect(draftsView.getByText('Transaction unavailable')).toBeTruthy());
+  expect(draftsView.getByRole('button', { name: 'Back to transactions' })).toBeTruthy();
+});
+
 async function actResolve<T>(
   resolve: ((value: T) => void) | undefined,
   value: T

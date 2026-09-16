@@ -244,11 +244,21 @@ test('shows expense and income entry actions with rows', async () => {
   await waitFor(() => expect(screen.getByText('₫125.000')).toBeTruthy());
   expect(screen.getByRole('button', { name: 'Add expense' })).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Add income' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Drafts' })).toBeTruthy();
 
   await user.press(screen.getByRole('button', { name: 'Add expense' }));
   await user.press(screen.getByRole('button', { name: 'Add income' }));
   expect(mockNavigate).toHaveBeenNthCalledWith(1, '/transactions/new?direction=expense');
   expect(mockNavigate).toHaveBeenNthCalledWith(2, '/transactions/new?direction=income');
+});
+
+test('opens Drafts from the transaction list without changing its filters', async () => {
+  await render(<TransactionsScreen data={repository()} subscribe={() => () => undefined} />);
+  await waitFor(() => expect(screen.getByText('₫125.000')).toBeTruthy());
+
+  await userEvent.setup().press(screen.getByRole('button', { name: 'Drafts' }));
+
+  expect(mockNavigate).toHaveBeenCalledWith('/drafts');
 });
 
 test('keeps entry actions reachable in an empty list', async () => {
@@ -291,8 +301,21 @@ test('shows a read error and retries it', async () => {
   const failing = repository(rows(), readTransactionList);
   await render(<TransactionsScreen data={failing} subscribe={() => () => undefined} />);
   await waitFor(() => expect(screen.getByText('Ledger unavailable')).toBeTruthy());
+  expect(screen.getByRole('button', { name: 'Drafts' })).toBeTruthy();
   await userEvent.setup().press(screen.getByRole('button', { name: 'Try again' }));
   await waitFor(() => expect(screen.getAllByText('Groceries').length).toBeGreaterThan(0));
+});
+
+test('keeps Drafts reachable while transactions are loading', async () => {
+  const pending = new Promise<TransactionListRow[]>(() => undefined);
+  await render(
+    <TransactionsScreen
+      data={repository([], jest.fn(async () => pending))}
+      subscribe={() => () => undefined}
+    />
+  );
+
+  expect(screen.getByRole('button', { name: 'Drafts' })).toBeTruthy();
 });
 
 test('retry restores both transaction rows and filter choices', async () => {

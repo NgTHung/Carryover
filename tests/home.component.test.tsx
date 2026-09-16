@@ -166,6 +166,29 @@ test('keeps ledger and settings routes reachable from home', async () => {
   expect(mockNavigate).toHaveBeenNthCalledWith(4, '/settings/commitments');
 });
 
+test('keeps Drafts reachable from ready Home and its unknown badge', async () => {
+  await render(
+    <HomeSnapshotView
+      state={{ status: 'ready', snapshot: { ...snapshot, unloggedDrafts: 1 } }}
+    />
+  );
+  const user = userEvent.setup();
+
+  await user.press(screen.getByRole('button', { name: 'Drafts' }));
+  await user.press(screen.getByRole('button', { name: 'Open Drafts' }));
+
+  expect(mockNavigate).toHaveBeenNthCalledWith(1, '/drafts');
+  expect(mockNavigate).toHaveBeenNthCalledWith(2, '/drafts');
+});
+
+test.each([
+  [{ status: 'loading' } as const],
+  [{ status: 'error', error: new Error('publication failed') } as const],
+])('keeps the permanent Drafts action in the Home %s state', async (state) => {
+  await render(<HomeSnapshotView state={state} />);
+  expect(screen.getByRole('button', { name: 'Drafts' })).toBeTruthy();
+});
+
 test('native route subscribes to the published snapshot store', async () => {
   snapshotStore.setState({ status: 'ready', snapshot }, true);
   await render(<NativeHomeRoute />);

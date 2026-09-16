@@ -83,6 +83,7 @@ export function TransactionEditor({
   accounts,
   data,
   onDone,
+  returnLabel = 'Back to transactions',
   resolvePhoto = unavailablePhoto,
   accountRefreshError,
   onRetryAccountRefresh,
@@ -98,6 +99,7 @@ export function TransactionEditor({
   accounts: ActiveAccount[];
   data: TransactionEditorData;
   onDone: () => void;
+  returnLabel?: string;
   resolvePhoto?: PhotoThumbnailResolver;
   accountRefreshError?: string;
   onRetryAccountRefresh?: () => void;
@@ -216,7 +218,7 @@ export function TransactionEditor({
             ? 'Adjustments are read-only. Reconcile the account to create another one.'
             : 'Transfers are read-only in this screen.'}
         </Text>
-        <Button onPress={onDone}>Back to transactions</Button>
+        <Button onPress={onDone}>{returnLabel}</Button>
       </View>
     );
   }
@@ -487,7 +489,7 @@ export function TransactionEditor({
         <View testID="transaction-saved-state" className="gap-3 rounded-surface border border-need-light p-4 dark:border-need-dark">
           <Text className="text-body font-semibold text-ink-light dark:text-ink-dark">Transaction saved.</Text>
           <Text className="text-body text-muted-light dark:text-muted-dark">
-            The ledger write is complete. You can return to transactions safely.
+            The ledger write is complete. You can return to {returnLabel === 'Back to drafts' ? 'drafts' : 'transactions'} safely.
           </Text>
           {submission.status === 'navigation-failed' ? (
             <Text accessibilityRole="alert" className="text-detail text-error-light dark:text-error-dark">
@@ -499,7 +501,7 @@ export function TransactionEditor({
               Navigation failed. {navigationError}
             </Text>
           ) : null}
-          <Button variant="secondary" onPress={retryNavigation}>Back to transactions</Button>
+          <Button variant="secondary" onPress={retryNavigation}>{returnLabel}</Button>
         </View>
       ) : (
         <>

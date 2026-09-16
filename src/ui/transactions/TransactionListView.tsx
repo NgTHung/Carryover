@@ -41,6 +41,9 @@ function Header({
           <Button className="flex-1" variant="secondary">Add income</Button>
         </Link>
       </View>
+      <Link href={'/drafts' as never} asChild>
+        <Button variant="secondary" fullWidth>Drafts</Button>
+      </Link>
       <TransactionListFilters rows={rows} filters={filters} />
       {hasFilters ? <Button variant="secondary" fullWidth onPress={onReset}>Reset filters</Button> : null}
     </View>
@@ -70,6 +73,9 @@ export function TransactionListView({
         <Text accessibilityRole="header" className="text-title font-bold text-ink-light dark:text-ink-dark">Transactions</Text>
         <Text accessibilityRole="alert" className="text-body text-error-light dark:text-error-dark">{state.message}</Text>
         <Button onPress={onRetry}>Try again</Button>
+        <Link href={'/drafts' as never} asChild>
+          <Button variant="secondary">Drafts</Button>
+        </Link>
       </View>
     );
   }
@@ -135,6 +141,9 @@ function Message({ title, detail }: { title: string; detail: string }) {
     <View className="flex-1 gap-2 bg-ground-light px-5 py-16 dark:bg-ground-dark">
       <Text accessibilityRole="header" className="text-title font-bold text-ink-light dark:text-ink-dark">{title}</Text>
       <Text className="text-body text-muted-light dark:text-muted-dark">{detail}</Text>
+      <Link href={'/drafts' as never} asChild>
+        <Button variant="secondary">Drafts</Button>
+      </Link>
     </View>
   );
 }

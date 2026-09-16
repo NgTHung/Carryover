@@ -16,6 +16,10 @@ import {
   type TransactionRouteState,
 } from '../../ui/transactions/TransactionRouteView';
 import type { TransactionEditorData } from '../../ui/transactions/transaction-editor-contract';
+import {
+  parseTransactionReturnRoute,
+  type TransactionReturnRoute,
+} from '../../ui/transactions/transaction-return-route';
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -39,9 +43,11 @@ export default function TransactionRouteScreen({
   subscribe?: typeof subscribeLedgerChanges;
   resolvePhoto?: PhotoThumbnailResolver;
 }) {
-  const { transactionId } = useLocalSearchParams<{
+  const { transactionId, from } = useLocalSearchParams<{
     transactionId?: string | string[];
+    from?: string | string[];
   }>();
+  const returnRoute: TransactionReturnRoute = parseTransactionReturnRoute(from);
   const [state, setState] = useState<RouteState>(() => {
     const parsed = parseTransactionRoute(transactionId);
     return parsed.status === 'invalid' ? parsed : { status: 'loading' };
@@ -123,12 +129,12 @@ export default function TransactionRouteScreen({
   useEffect(() => {
     if (writePending || !navigationIntent) return;
     try {
-      router.replace('/transactions' as Href);
+      router.replace(returnRoute.destination as Href);
     } catch (error: unknown) {
       setNavigationIntent(false);
       setNavigationError(errorMessage(error));
     }
-  }, [navigationIntent, writePending]);
+  }, [navigationIntent, returnRoute.destination, writePending]);
 
   const updateWritePending = useCallback((pending: boolean) => {
     if (writePendingRef.current === pending) return;
@@ -238,7 +244,7 @@ export default function TransactionRouteScreen({
         <TransactionAdjustmentDetail
           transaction={state.transaction}
           account={account}
-          onDone={() => router.replace('/transactions' as Href)}
+          onDone={() => router.replace(returnRoute.destination as Href)}
         />
       );
     }
@@ -256,10 +262,11 @@ export default function TransactionRouteScreen({
         onRetryCategoryRefresh={refreshCategories}
         onWritePending={updateWritePending}
         navigationError={navigationError}
-        onRetryNavigation={retryNavigation}
-        onDone={queueNavigation}
+          onRetryNavigation={retryNavigation}
+          returnLabel={returnRoute.label}
+          onDone={queueNavigation}
       />
     );
   }
-  return <TransactionRouteView state={state} />;
+  return <TransactionRouteView state={state} returnRoute={returnRoute} />;
 }

@@ -4,7 +4,7 @@
  * like a zero-valued budget.
  */
 import { Link } from 'expo-router';
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { SnapshotState } from '../../budget/snapshot-store';
@@ -69,6 +69,11 @@ export function HomeSnapshotView({
             <Link href={'/transactions' as never} asChild>
               <Button variant="secondary" fullWidth className="flex-1">
                 Transactions
+              </Button>
+            </Link>
+            <Link href={'/drafts' as never} asChild>
+              <Button variant="secondary" fullWidth className="flex-1">
+                Drafts
               </Button>
             </Link>
             <Link href={'/summary' as never} asChild>
@@ -178,11 +183,18 @@ function HomeState({
       ) : null}
 
       {snapshot.unloggedDrafts !== 0 ? (
-        <View testID="home-unknown" className="self-start rounded-chip border border-faint-light px-3 py-2 dark:border-faint-dark">
+        <Link href={'/drafts' as never} asChild>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Open Drafts"
+            testID="home-unknown"
+            className="self-start rounded-chip border border-faint-light px-3 py-2 dark:border-faint-dark"
+          >
           <Text className="text-body font-semibold text-muted-light dark:text-muted-dark">
             {formatUnknownDrafts(snapshot)}
           </Text>
-        </View>
+          </Pressable>
+        </Link>
       ) : null}
     </View>
   );
