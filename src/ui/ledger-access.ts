@@ -18,6 +18,7 @@ import {
   capturedDraftData,
   categoryData,
   commitmentData,
+  draftInboxData,
   ledgerChangeNotifier,
   ledgerDb,
   ledgerMigrations,
@@ -39,6 +40,7 @@ import type {
   LedgerChangeListener,
 } from '../data/ledger-change-notifier';
 import type { TransactionListData } from '../data/transaction-list';
+import type { DraftInboxData } from '../data/draft-inbox';
 import type { TransactionCreateData } from './transactions/transaction-create-contract';
 import type { TransactionEditorData } from './transactions/transaction-editor-contract';
 import type {
@@ -123,6 +125,10 @@ export function getCaptureLedgerData(): CaptureLedgerData {
 
 export function getTransactionListData(): TransactionListData<'sync'> {
   return transactionListData;
+}
+
+export function getDraftInboxData(): DraftInboxData<'sync'> {
+  return draftInboxData;
 }
 
 const monthSummaryData = { readMonthSummary: readCommittedMonthSummary };

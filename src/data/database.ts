@@ -19,6 +19,7 @@ import type { AtomicTransactionRunner, LedgerDatabase } from './atomic';
 import { createCategoryData } from './categories';
 import { createCommitmentData } from './commitments';
 import { createCapturedDraftData } from './captured-drafts';
+import { createDraftInboxData } from './draft-inbox';
 import { ledgerChangeNotifier } from './ledger-change-notifier';
 import { createLedgerReads } from './ledger-reads';
 import { createMonthConfigData } from './month-config';
@@ -82,6 +83,7 @@ export const capturedDraftData = createCapturedDraftData(
   ledgerChangeNotifier,
   { runAtomic: nativeAtomicRunner }
 );
+export const draftInboxData = createDraftInboxData(ledgerDb);
 export const manualTransactionData = createManualTransactionData(
   ledgerDb,
   categoryData,
