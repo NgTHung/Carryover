@@ -1,13 +1,13 @@
 ---
 id: "CAPTURE-004"
 title: "Complete drafts with searchable leaf selection"
-status: "To Do"
+status: In Progress
 priority: "Medium"
 type: "Feature"
 parent: "app:CAPTURE-001"
 milestone: "0.4.0"
 depends_on: ["app:CAPTURE-003", "app:UI-002"]
-last_updated: "2026-09-16"
+last_updated: 2026-09-16
 ---
 
 ## Summary
