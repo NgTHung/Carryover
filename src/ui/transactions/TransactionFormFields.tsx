@@ -9,6 +9,8 @@ import { Text, View } from 'react-native';
 import type { ActiveAccount } from '../../data/accounts';
 import type { CategoryGroupWithLeaves } from '../../data/category-types';
 import { Button, Input, QualityChip } from '../index';
+import { LeafSelector } from '../categories/LeafSelector';
+import type { LeafSelectorCapability } from '../categories/leaf-selector-contract';
 import type {
   TransactionFormErrors,
   TransactionFormValues,
@@ -58,6 +60,7 @@ export function TransactionFormFields({
   errors,
   disabled,
   presentation,
+  leafSelectorCapability = { kind: 'selection-only' },
   onChange,
 }: {
   values: TransactionFormValues;
@@ -66,6 +69,7 @@ export function TransactionFormFields({
   errors: TransactionFormErrors;
   disabled: boolean;
   presentation: TransactionFormPresentation;
+  leafSelectorCapability?: LeafSelectorCapability;
   onChange: (values: TransactionFormValues) => void;
 }) {
   const update = (changes: Partial<TransactionFormValues>) => {
@@ -110,17 +114,13 @@ export function TransactionFormFields({
       {values.direction === 'expense' && presentation.kind === 'editable' ? (
         <View className="gap-2">
           <Text className="text-body font-semibold text-ink-light dark:text-ink-dark">Leaf</Text>
-          <View className="flex-row flex-wrap gap-2">
-            {groups.flatMap((group) => group.leaves).map((leaf) => (
-              <Choice
-                key={leaf.id}
-                label={leaf.name}
-                selected={values.categoryId === leaf.id}
-                disabled={disabled}
-                onPress={() => update({ categoryId: leaf.id })}
-              />
-            ))}
-          </View>
+          <LeafSelector
+            groups={groups}
+            selectedLeafId={values.categoryId}
+            disabled={disabled}
+            capability={leafSelectorCapability}
+            onSelect={(categoryId) => update({ categoryId })}
+          />
           <FieldError message={errors.leaf} />
         </View>
       ) : (
