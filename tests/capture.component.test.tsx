@@ -19,6 +19,7 @@ import type { PreparedPhoto, RetainedPhoto } from '../src/photos/photo-contract'
 
 const draftId = '123e4567-e89b-42d3-a456-426614174000';
 const photoKey = 'photos/v1/123e4567-e89b-42d3-a456-426614174001.jpg';
+const retriedPhotoKey = 'photos/v1/123e4567-e89b-42d3-a456-426614174003.jpg';
 const occurredAt = new Date(2026, 8, 15, 12, 30);
 
 function deferred<T>(): {
@@ -58,6 +59,21 @@ const retained: RetainedPhoto = {
   uri: 'file:///documents/photos/v1/123e4567-e89b-42d3-a456-426614174001.jpg',
   metrics: prepared.metrics,
   cleanupIssues: [],
+};
+
+const retriedPrepared: PreparedPhoto = {
+  ...prepared,
+  preparationId: 'capture-2',
+  photoKey: retriedPhotoKey,
+  stagingUri: 'file:///staging/capture-2.jpg',
+  encodedUri: 'file:///cache/capture-2.jpg',
+};
+
+const retriedRetained: RetainedPhoto = {
+  ...retained,
+  preparationId: retriedPrepared.preparationId,
+  photoKey: retriedPhotoKey,
+  uri: 'file:///documents/photos/v1/123e4567-e89b-42d3-a456-426614174003.jpg',
 };
 
 const savedDraft: CapturedDraftWriteResult = {
@@ -139,7 +155,11 @@ async function createHarness(overrides: {
     overrides.createCapturedDraft ??
     jest.fn(async (input) => ({
       ...savedDraft,
-      transaction: { ...savedDraft.transaction, amount: input.amount as number | null },
+      transaction: {
+        ...savedDraft.transaction,
+        amount: input.amount as number | null,
+        photoKey: input.photoKey,
+      },
     }));
   const navigateHome = jest.fn();
   const onNavigateHome = overrides.onNavigateHome ?? navigateHome;
@@ -232,6 +252,7 @@ test('waits for retention before SQLite and retries a database failure without a
   await fireEvent.changeText(screen.getByTestId('capture-amount'), '45001');
   await fireEvent.press(screen.getByRole('button', { name: 'Done' }));
   await waitFor(() => expect(screen.getByRole('alert').props.children).toContain('SQLite unavailable'));
+  expect(screen.getByTestId('capture-amount').props.editable).toBe(false);
   expect(harness.photos.preparePhoto).toHaveBeenCalledTimes(1);
   expect(harness.photos.retainPhoto).toHaveBeenCalledTimes(1);
   expect(createCapturedDraft).toHaveBeenCalledTimes(1);
@@ -241,6 +262,82 @@ test('waits for retention before SQLite and retries a database failure without a
   expect(harness.photos.preparePhoto).toHaveBeenCalledTimes(1);
   expect(harness.photos.retainPhoto).toHaveBeenCalledTimes(1);
   expect(harness.navigateHome).toHaveBeenCalledTimes(1);
+});
+
+test('reprepares the camera source after retention consumes a failed handle', async () => {
+  const preparePhoto = jest
+    .fn()
+    .mockResolvedValueOnce({ status: 'prepared', photo: prepared })
+    .mockResolvedValueOnce({ status: 'prepared', photo: retriedPrepared });
+  const retainPhoto = jest
+    .fn()
+    .mockResolvedValueOnce({
+      status: 'failed',
+      preparation: {
+        status: 'failed',
+        preparationId: prepared.preparationId,
+        photoKey,
+        error: {
+          phase: 'retention',
+          code: 'photo-promotion-failed',
+          message: 'Temporary storage failure',
+        },
+        cleanupIssues: [],
+      },
+    })
+    .mockResolvedValueOnce({ status: 'retained', photo: retriedRetained });
+  const harness = await createHarness({ preparePhoto, retainPhoto });
+  await captureAndReview(harness);
+  await fireEvent.press(screen.getByRole('button', { name: 'Skip amount' }));
+  await waitFor(() =>
+    expect(screen.getByRole('alert').props.children).toContain(
+      'Temporary storage failure'
+    )
+  );
+
+  await fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
+
+  await waitFor(() => expect(harness.navigateHome).toHaveBeenCalledTimes(1));
+  expect(preparePhoto).toHaveBeenCalledTimes(2);
+  expect(preparePhoto).toHaveBeenLastCalledWith('camera://receipt.jpg', {
+    signal: expect.any(AbortSignal),
+  });
+  expect(retainPhoto).toHaveBeenNthCalledWith(1, prepared);
+  expect(retainPhoto).toHaveBeenNthCalledWith(2, retriedPrepared);
+  expect(harness.createCapturedDraft).toHaveBeenCalledWith({
+    draftId,
+    photoKey: retriedPhotoKey,
+    amount: null,
+    occurredAt,
+  });
+});
+
+test('retakes without discarding a handle consumed by failed retention', async () => {
+  const retainPhoto = jest.fn(async () => ({
+    status: 'failed' as const,
+    preparation: {
+      status: 'failed' as const,
+      preparationId: prepared.preparationId,
+      photoKey,
+      error: {
+        phase: 'retention' as const,
+        code: 'photo-promotion-failed',
+        message: 'Temporary storage failure',
+      },
+      cleanupIssues: [],
+    },
+  }));
+  const harness = await createHarness({ retainPhoto });
+  await captureAndReview(harness);
+  await fireEvent.press(screen.getByRole('button', { name: 'Skip amount' }));
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: 'Retake' })).toBeTruthy()
+  );
+
+  await fireEvent.press(screen.getByRole('button', { name: 'Retake' }));
+
+  expect(harness.photos.discardPreparedPhoto).not.toHaveBeenCalled();
+  expect(screen.getByRole('button', { name: 'Take photo' })).toBeTruthy();
 });
 
 test('navigation failure retries home without repeating capture persistence', async () => {
@@ -335,4 +432,53 @@ test('denied permission offers retry or Settings and cancellation never touches 
   expect(harness.navigateHome).toHaveBeenCalledTimes(1);
   expect(request).not.toHaveBeenCalled();
   expect(harness.camera.renderPreview).not.toHaveBeenCalled();
+});
+
+test('refreshes denied permission once after returning from Settings', async () => {
+  const refresh = jest.fn(async () => undefined);
+  const permission: CapturePermission = {
+    status: 'denied',
+    canAskAgain: false,
+    request: async () => undefined,
+    openSettings: async () => undefined,
+    refresh,
+  };
+  const camera: CaptureCamera = {
+    renderPreview: jest.fn(() => <View />),
+    takePicture: jest.fn(async () => undefined),
+  };
+  const photos: CapturePhotoAccess = {
+    preparePhoto: jest.fn(),
+    retainPhoto: jest.fn(),
+    discardPreparedPhoto: jest.fn(),
+  };
+  const props = {
+    draftId,
+    camera,
+    photos,
+    createCapturedDraft: jest.fn(),
+    isFocused: true,
+    onCancel: jest.fn(),
+    onNavigateHome: jest.fn(),
+  };
+  const view = await render(
+    <CaptureScreen {...props} permission={permission} isAppActive />
+  );
+
+  expect(refresh).not.toHaveBeenCalled();
+  await view.rerender(
+    <CaptureScreen
+      {...props}
+      permission={{ ...permission }}
+      isAppActive={false}
+    />
+  );
+  await view.rerender(
+    <CaptureScreen {...props} permission={{ ...permission }} isAppActive />
+  );
+  await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
+  await view.rerender(
+    <CaptureScreen {...props} permission={{ ...permission }} isAppActive />
+  );
+  expect(refresh).toHaveBeenCalledTimes(1);
 });

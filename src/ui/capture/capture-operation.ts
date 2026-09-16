@@ -60,6 +60,7 @@ export type CaptureAttempt = {
   prepared?: PreparedPhoto;
   retained?: RetainedPhoto;
   amount: number | null;
+  persistWhenPrepared: boolean;
 };
 
 export type CaptureAmountResult =

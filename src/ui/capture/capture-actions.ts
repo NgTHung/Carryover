@@ -37,7 +37,12 @@ export type CaptureActionContext = {
   setAmountError: StringStateSetter;
   setTerminalPending: (pending: boolean) => void;
   currentAttempt: () => CaptureAttempt | undefined;
-  startPreparation: (sourceUri: string, occurredAt: Date) => void;
+  startPreparation: (
+    sourceUri: string,
+    occurredAt: Date,
+    amount?: number | null,
+    persistWhenPrepared?: boolean
+  ) => void;
   persistAttempt: (attempt: CaptureAttempt) => void;
   setFailure: (failure: CaptureFailure, attempt?: CaptureAttempt) => void;
 };
@@ -125,6 +130,17 @@ export function createCaptureActions(context: CaptureActionContext): CaptureActi
       return;
     }
     if (attempt.retained !== undefined) return;
+    if (state.status === 'failed' && state.failure.kind === 'retention') {
+      attemptRef.current = undefined;
+      if (target === 'cancel') {
+        setTerminalPending(false);
+        await onCancel();
+      } else {
+        shutterLockedRef.current = false;
+        setState({ status: 'live', cameraReady: false });
+      }
+      return;
+    }
     cancellationLockedRef.current = true;
     setTerminalPending(true);
     attempt.controller.abort();
@@ -193,6 +209,15 @@ export function createCaptureActions(context: CaptureActionContext): CaptureActi
     if (submitLockedRef.current || cancellationLockedRef.current) return;
     submitLockedRef.current = true;
     setTerminalPending(true);
+    if (state.failure.kind === 'retention') {
+      startPreparation(
+        attempt.sourceUri,
+        attempt.occurredAt,
+        attempt.amount,
+        true
+      );
+      return;
+    }
     persistAttempt(attempt);
   }
 

@@ -73,6 +73,7 @@ export function useCaptureController({
   const cancellationLockedRef = useRef(false);
   const permissionRequestedRef = useRef(false);
   const navigationAttemptedRef = useRef(false);
+  const appWasActiveRef = useRef(isAppActive);
   const takingPromiseRef = useRef<Promise<{ uri: string } | undefined> | undefined>(undefined);
   const attemptRef = useRef<CaptureAttempt | undefined>(undefined);
   const savedTransactionRef = useRef<SavedTransaction | undefined>(undefined);
@@ -111,12 +112,17 @@ export function useCaptureController({
     });
   }, [permission]);
 
+  const permissionRefresh =
+    permission.status === 'denied' ? permission.refresh : undefined;
+
   useEffect(() => {
-    if (!isAppActive || permission.status !== 'denied' || permission.refresh === undefined) {
+    const wasActive = appWasActiveRef.current;
+    appWasActiveRef.current = isAppActive;
+    if (wasActive || !isAppActive || permissionRefresh === undefined) {
       return;
     }
-    void permission.refresh().catch(() => undefined);
-  }, [isAppActive, permission]);
+    void permissionRefresh().catch(() => undefined);
+  }, [isAppActive, permissionRefresh]);
 
   useEffect(() => {
     if (state.status === 'live' && state.cameraReady && isFocused && isAppActive) {
@@ -181,6 +187,10 @@ export function useCaptureController({
     }
     if (result.status === 'prepared') {
       attempt.prepared = result.photo;
+      if (attempt.persistWhenPrepared) {
+        persistAttempt(attempt);
+        return;
+      }
       setState((previous) =>
         previous.status === 'preparing'
           ? {
@@ -208,7 +218,8 @@ export function useCaptureController({
   function startPreparation(
     sourceUri: string,
     occurredAt: Date,
-    amount = attemptRef.current?.amount ?? null
+    amount = attemptRef.current?.amount ?? null,
+    persistWhenPrepared = false
   ): void {
     const controller = new AbortController();
     const preparation = photos.preparePhoto(sourceUri, { signal: controller.signal });
@@ -218,6 +229,7 @@ export function useCaptureController({
       controller,
       preparation,
       amount,
+      persistWhenPrepared,
     };
     attemptRef.current = attempt;
     setState({ status: 'preparing', sourceUri, occurredAt });

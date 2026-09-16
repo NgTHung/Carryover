@@ -78,6 +78,12 @@ export function CaptureView({
   onRetryNavigation,
   onRetake,
 }: CaptureViewProps) {
+  const amountLocked =
+    terminalPending ||
+    (state.status === 'failed' &&
+      (state.failure.kind === 'retention' ||
+        state.failure.kind === 'database'));
+
   return (
     <SafeAreaView className="flex-1 bg-ground-light dark:bg-ground-dark" edges={['top', 'bottom']}>
       <KeyboardAvoidingView
@@ -153,7 +159,7 @@ export function CaptureView({
               keyboardType="number-pad"
               inputMode="numeric"
               autoCorrect={false}
-              editable={!terminalPending}
+              editable={!amountLocked}
               placeholder="Optional"
               accessibilityHint={amountError ?? 'Enter positive whole dong only.'}
             />
