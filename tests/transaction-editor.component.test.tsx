@@ -488,3 +488,86 @@ test('preserves transaction input while creating and refreshing a leaf', async (
   expect(screen.getByLabelText('Search leaves').props.value).toBe('');
   expect(screen.getByRole('button', { name: 'Market' }).props.accessibilityState.selected).toBe(true);
 });
+
+test('switches an open inline creator to the newly requested category level', async () => {
+  const data = editorData();
+  const user = userEvent.setup();
+  await render(
+    <TransactionEditor
+      transaction={draft()}
+      groups={[]}
+      accounts={accounts}
+      data={data}
+      onDone={jest.fn()}
+    />
+  );
+
+  await user.press(screen.getByRole('button', { name: 'New leaf' }));
+  expect(screen.getByLabelText('Leaf name')).toBeTruthy();
+  await user.press(screen.getByRole('button', { name: 'New group' }));
+
+  await waitFor(() => expect(screen.getByLabelText('Group name')).toBeTruthy());
+  expect(screen.queryByLabelText('Leaf name')).toBeNull();
+});
+
+test('closes inline creation before starting a transaction write', async () => {
+  let resolveComplete: (value: Transaction) => void = () => undefined;
+  const completePromise = new Promise<Transaction>((resolve) => {
+    resolveComplete = resolve;
+  });
+  const data = editorData();
+  data.completeDraft = jest.fn(() => completePromise);
+  data.createCategory = jest.fn();
+  const user = userEvent.setup();
+  await render(
+    <TransactionEditor
+      transaction={draft()}
+      groups={groups}
+      accounts={accounts}
+      data={data}
+      onDone={jest.fn()}
+    />
+  );
+
+  await user.type(screen.getByLabelText('Amount'), '45001');
+  await user.press(screen.getByRole('button', { name: 'Groceries' }));
+  await user.press(screen.getByRole('button', { name: 'New group' }));
+  await user.type(screen.getByLabelText('Group name'), 'Weekend');
+  await user.press(screen.getByRole('button', { name: 'Complete' }));
+
+  expect(screen.queryByTestId('inline-category-creator')).toBeNull();
+  expect(data.createCategory).not.toHaveBeenCalled();
+  await act(async () => {
+    resolveComplete(complete({ amount: 45_001, quality: null }));
+    await completePromise;
+  });
+});
+
+test('closes inline leaf creation when direction changes to income', async () => {
+  const data = editorData();
+  const user = userEvent.setup();
+  await render(
+    <TransactionEditor
+      transaction={draft()}
+      groups={groups}
+      accounts={accounts}
+      data={data}
+      onDone={jest.fn()}
+    />
+  );
+
+  await user.type(screen.getByLabelText('Amount'), '45001');
+  await user.press(screen.getByRole('button', { name: 'New leaf' }));
+  await user.type(screen.getByLabelText('Leaf name'), 'Market');
+  await user.press(screen.getByRole('button', { name: 'income' }));
+
+  expect(screen.queryByTestId('inline-category-creator')).toBeNull();
+  await user.press(screen.getByRole('button', { name: 'Complete' }));
+  await waitFor(() => expect(data.completeDraft).toHaveBeenCalledWith({
+    transactionId,
+    amount: 45_001,
+    categoryId: null,
+    changes: { direction: 'income' },
+  }));
+  expect(data.createCategory).not.toHaveBeenCalled();
+});

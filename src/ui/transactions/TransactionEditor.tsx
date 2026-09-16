@@ -166,7 +166,9 @@ export function TransactionEditor({
       choices.mergeCreatedCategory(category);
       if (category.level === 'leaf') {
         setForm((current) =>
-          current === undefined ? current : { ...current, categoryId: category.id }
+          current === undefined || current.direction !== 'expense'
+            ? current
+            : { ...current, categoryId: category.id }
         );
         setErrors((current) => ({ ...current, leaf: undefined }));
         setLeafSelectorResetKey((current) => current + 1);
@@ -253,6 +255,7 @@ export function TransactionEditor({
     const generation = submissionGenerationRef.current;
     const completing = transaction.status === 'draft' && canCompleteDraft;
     busyRef.current = true;
+    setCategoryCreation(null);
     onWritePending?.(true);
     setErrors({});
     setSubmission({ status: 'pending', kind: completing ? 'completion' : 'edit' });
@@ -318,6 +321,7 @@ export function TransactionEditor({
     if (busyRef.current || committedRef.current || categoryPendingRef.current || terminal) return;
     const generation = submissionGenerationRef.current;
     busyRef.current = true;
+    setCategoryCreation(null);
     onWritePending?.(true);
     setErrors({});
     setSubmission({ status: 'pending', kind: 'delete' });
@@ -509,6 +513,7 @@ export function TransactionEditor({
             leafSelectorResetKey={leafSelectorResetKey}
             presentation={{ kind: 'editable' }}
             onChange={(next) => {
+              if (next.direction !== form.direction) closeCategoryCreator();
               setForm(next);
               if (submission.status === 'failed') setSubmission({ status: 'editing' });
             }}
@@ -518,6 +523,7 @@ export function TransactionEditor({
             <InlineCategoryCreator
               groups={choices.groups}
               intent={categoryCreation}
+              disabled={formDisabled}
               createCategory={data.createCategory}
               refreshCategories={choices.refreshCategories}
               onCreated={onCategoryCreated}

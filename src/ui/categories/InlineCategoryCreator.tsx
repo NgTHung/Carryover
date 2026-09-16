@@ -59,6 +59,7 @@ function refreshErrorText(mutation: InlineCategoryMutation): string | undefined 
 export function InlineCategoryCreator({
   groups,
   intent,
+  disabled,
   createCategory,
   refreshCategories,
   onCreated,
@@ -67,6 +68,7 @@ export function InlineCategoryCreator({
 }: {
   groups: CategoryGroupWithLeaves[];
   intent: InlineCategoryCreationIntent;
+  disabled: boolean;
   createCategory: (input: CreateCategoryInput) => Promise<Category>;
   refreshCategories: () => Promise<void>;
   onCreated: (category: Category) => void;
@@ -77,6 +79,7 @@ export function InlineCategoryCreator({
   const [mutation, setMutation] = useState<InlineCategoryMutation>({ status: 'idle' });
   const createLockedRef = useRef(false);
   const activeRef = useRef(true);
+  const intentGroupId = intent.kind === 'leaf' ? intent.groupId : undefined;
 
   useEffect(() => {
     activeRef.current = true;
@@ -86,7 +89,14 @@ export function InlineCategoryCreator({
     };
   }, [onPendingChange]);
 
+  useEffect(() => {
+    if (createLockedRef.current) return;
+    setForm(initialForm(intent));
+    setMutation({ status: 'idle' });
+  }, [intent.kind, intentGroupId]);
+
   const pending = mutation.status === 'creating' || mutation.status === 'refreshing';
+  const interactionDisabled = disabled || pending;
   useEffect(() => {
     onPendingChange(pending);
   }, [onPendingChange, pending]);
@@ -110,7 +120,7 @@ export function InlineCategoryCreator({
   };
 
   const submit = async () => {
-    if (createLockedRef.current || pending) return;
+    if (createLockedRef.current || interactionDisabled) return;
     const error = nameError(form.name);
     if (error !== undefined) {
       setForm({ ...form, error });
@@ -138,9 +148,11 @@ export function InlineCategoryCreator({
     }
 
     createLockedRef.current = true;
+    onPendingChange(true);
     setMutation({ status: 'creating' });
     try {
       const category = await createCategory(input.data);
+      if (!activeRef.current) return;
       onCreated(category);
       createLockedRef.current = false;
       if (category.level === 'group') {
@@ -150,6 +162,7 @@ export function InlineCategoryCreator({
     } catch (error: unknown) {
       if (!activeRef.current) return;
       createLockedRef.current = false;
+      onPendingChange(false);
       setMutation({ status: 'failed', message: errorMessage(error) });
     }
   };
@@ -160,7 +173,7 @@ export function InlineCategoryCreator({
   };
 
   const cancel = () => {
-    if (pending) return;
+    if (interactionDisabled) return;
     onCancel();
   };
 
@@ -189,12 +202,12 @@ export function InlineCategoryCreator({
             label="Group name"
             value={form.name}
             error={form.error}
-            editable={!pending}
+            editable={!interactionDisabled}
             onChangeText={(name) => setForm({ ...form, name, error: undefined })}
           />
           <KindPicker
             kind={form.categoryKind}
-            disabled={pending}
+            disabled={interactionDisabled}
             onChange={(categoryKind) => setForm({ ...form, categoryKind })}
           />
         </View>
@@ -205,7 +218,7 @@ export function InlineCategoryCreator({
             label="Leaf name"
             value={form.name}
             error={form.error}
-            editable={!pending}
+            editable={!interactionDisabled}
             onChangeText={(name) => setForm({ ...form, name, error: undefined })}
           />
           <View className="gap-2">
@@ -217,7 +230,7 @@ export function InlineCategoryCreator({
                   size="compact"
                   variant={form.groupId === group.id ? 'primary' : 'secondary'}
                   accessibilityState={{ selected: form.groupId === group.id }}
-                  disabled={pending}
+                  disabled={interactionDisabled}
                   onPress={() => setForm({ ...form, groupId: group.id, error: undefined })}
                 >
                   {group.name}
@@ -236,7 +249,7 @@ export function InlineCategoryCreator({
         <Button
           size="compact"
           variant="secondary"
-          disabled={pending}
+          disabled={interactionDisabled}
           onPress={() => void retryRefresh()}
         >
           Retry category refresh
@@ -248,10 +261,10 @@ export function InlineCategoryCreator({
         </Text>
       ) : (
         <View className="flex-row gap-2">
-          <Button disabled={pending} onPress={() => void submit()}>
+          <Button disabled={interactionDisabled} onPress={() => void submit()}>
             {form.kind === 'group' ? 'Create group' : 'Create leaf'}
           </Button>
-          <Button variant="secondary" disabled={pending} onPress={cancel}>
+          <Button variant="secondary" disabled={interactionDisabled} onPress={cancel}>
             Cancel
           </Button>
         </View>

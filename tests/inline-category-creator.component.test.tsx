@@ -79,6 +79,7 @@ function renderCreator(
     <InlineCategoryCreator
       groups={groups()}
       intent={{ kind: 'group' }}
+      disabled={false}
       createCategory={jest.fn(async () => createdGroup())}
       refreshCategories={jest.fn(async () => undefined)}
       onCreated={jest.fn()}
