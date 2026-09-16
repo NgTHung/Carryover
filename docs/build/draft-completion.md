@@ -105,4 +105,8 @@ revision, and follow-up commit before repeating it.
 | Rapid input and lifecycle | PENDING |
 | Failures and follow-up commits | PENDING |
 
-CAPTURE-004 stays In Progress until the required native evidence is available.
+CAPTURE-004 was marked Done on 2026-09-16 at your request. The local gate was
+rerun successfully at revision 21d26f2: 107 Jest suites and 578 tests, 12 Python
+tests, TypeScript, web export, iOS JavaScript export, and taskroot validation.
+The native matrix remains PENDING. Task closure does not establish an iPhone
+pass or change the candidate identity above.
