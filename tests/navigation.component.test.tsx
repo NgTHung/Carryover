@@ -164,8 +164,8 @@ test('native transaction route validates before reading and opens the editor', a
   const view = await render(<NativeTransactionRoute />);
 
   await waitFor(() => expect(mockReadTransaction).toHaveBeenCalledWith(transactionId));
-  await waitFor(() => expect(view.getByText('Edit transaction')).toBeTruthy());
-  expect(view.getByText('Draft')).toBeTruthy();
+  await waitFor(() => expect(view.getByText('Complete draft')).toBeTruthy());
+  expect(view.getByText('Add the fields needed to complete this draft.')).toBeTruthy();
 });
 
 test('an adjustment opens a read-only detail instead of the transaction editor', async () => {
@@ -291,7 +291,7 @@ test('account notifications refresh an unfinished transaction editor without cha
       subscribe={subscribe}
     />
   );
-  await waitFor(() => expect(view.getByText('Edit transaction')).toBeTruthy());
+  await waitFor(() => expect(view.getByText('Complete draft')).toBeTruthy());
   await fireEvent.changeText(view.getByLabelText('Amount'), '123');
   listener?.({ table: 'accounts', mutation: 'edited' });
 

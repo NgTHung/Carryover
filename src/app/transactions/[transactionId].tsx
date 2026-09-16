@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams, type Href } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { resolvePhoto as nativeResolvePhoto } from '../../photos/photo-access';
 import {
   getTransactionEditorData,
   subscribeLedgerChanges,
@@ -8,6 +9,7 @@ import {
 import { loadTransactionRoute, parseTransactionRoute } from '../../ui/transactions/load-transaction-route';
 import { TransactionEditor } from '../../ui/transactions/TransactionEditor';
 import { TransactionAdjustmentDetail } from '../../ui/transactions/TransactionAdjustmentDetail';
+import type { PhotoThumbnailResolver } from '../../ui/photos/PhotoThumbnail';
 import {
   TransactionRouteView,
   type TransactionRouteState,
@@ -19,14 +21,18 @@ type RouteState = TransactionRouteState | {
   transaction: Awaited<ReturnType<TransactionEditorData['readTransaction']>> & {};
   groups: Awaited<ReturnType<TransactionEditorData['listActiveCategoryGroups']>>;
   accounts: Awaited<ReturnType<TransactionEditorData['listActiveAccounts']>>;
+  accountRefreshError?: string;
+  categoryRefreshError?: string;
 };
 
 export default function TransactionRouteScreen({
   data = getTransactionEditorData(),
   subscribe = subscribeLedgerChanges,
+  resolvePhoto = nativeResolvePhoto,
 }: {
   data?: TransactionEditorData;
   subscribe?: typeof subscribeLedgerChanges;
+  resolvePhoto?: PhotoThumbnailResolver;
 }) {
   const { transactionId } = useLocalSearchParams<{
     transactionId?: string | string[];
@@ -35,10 +41,25 @@ export default function TransactionRouteScreen({
     const parsed = parseTransactionRoute(transactionId);
     return parsed.status === 'invalid' ? parsed : { status: 'loading' };
   });
+  const routeRequestRef = useRef(0);
+  const mountedRef = useRef(false);
   const accountRefreshRequestRef = useRef(0);
+  const categoryRefreshRequestRef = useRef(0);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      routeRequestRef.current += 1;
+      accountRefreshRequestRef.current += 1;
+      categoryRefreshRequestRef.current += 1;
+    };
+  }, []);
 
   useEffect(() => {
     const parsed = parseTransactionRoute(transactionId);
+    const routeRequest = routeRequestRef.current + 1;
+    routeRequestRef.current = routeRequest;
     if (parsed.status === 'invalid') {
       setState(parsed);
       return;
@@ -49,7 +70,7 @@ export default function TransactionRouteScreen({
 
     void loadTransactionRoute(parsed.transactionId, data.readTransaction)
       .then(async (result) => {
-        if (cancelled) return;
+        if (cancelled || routeRequest !== routeRequestRef.current) return;
         if (result.status === 'invalid') {
           setState(result);
         } else if (result.status === 'unavailable') {
@@ -59,7 +80,7 @@ export default function TransactionRouteScreen({
             data.listActiveCategoryGroups(),
             data.listActiveAccounts(),
           ]);
-          if (cancelled) return;
+          if (cancelled || routeRequest !== routeRequestRef.current) return;
           setState({
             status: 'ready',
             transaction: result.transaction,
@@ -69,7 +90,7 @@ export default function TransactionRouteScreen({
         }
       })
       .catch((error: unknown) => {
-        if (cancelled) return;
+        if (cancelled || routeRequest !== routeRequestRef.current) return;
         setState({
           status: 'error',
           message: error instanceof Error ? error.message : String(error),
@@ -81,24 +102,90 @@ export default function TransactionRouteScreen({
     };
   }, [data, transactionId]);
 
+  const refreshAccounts = useCallback(() => {
+    const routeRequest = routeRequestRef.current;
+    const request = accountRefreshRequestRef.current + 1;
+    accountRefreshRequestRef.current = request;
+    void data.listActiveAccounts()
+      .then((accounts) => {
+        if (
+          !mountedRef.current ||
+          routeRequest !== routeRequestRef.current ||
+          request !== accountRefreshRequestRef.current
+        ) return;
+        setState((current) =>
+          current.status === 'ready'
+            ? { ...current, accounts, accountRefreshError: undefined }
+            : current
+        );
+      })
+      .catch((error: unknown) => {
+        if (
+          !mountedRef.current ||
+          routeRequest !== routeRequestRef.current ||
+          request !== accountRefreshRequestRef.current
+        ) return;
+        setState((current) =>
+          current.status === 'ready'
+            ? {
+                ...current,
+                accountRefreshError: error instanceof Error ? error.message : String(error),
+              }
+            : current
+        );
+      });
+  }, [data]);
+
+  const refreshCategories = useCallback(() => {
+    const routeRequest = routeRequestRef.current;
+    const request = categoryRefreshRequestRef.current + 1;
+    categoryRefreshRequestRef.current = request;
+    void data.listActiveCategoryGroups()
+      .then((groups) => {
+        if (
+          !mountedRef.current ||
+          routeRequest !== routeRequestRef.current ||
+          request !== categoryRefreshRequestRef.current
+        ) return;
+        setState((current) =>
+          current.status === 'ready'
+            ? { ...current, groups, categoryRefreshError: undefined }
+            : current
+        );
+      })
+      .catch((error: unknown) => {
+        if (
+          !mountedRef.current ||
+          routeRequest !== routeRequestRef.current ||
+          request !== categoryRefreshRequestRef.current
+        ) return;
+        setState((current) =>
+          current.status === 'ready'
+            ? {
+                ...current,
+                categoryRefreshError: error instanceof Error ? error.message : String(error),
+              }
+            : current
+        );
+      });
+  }, [data]);
+
   useEffect(
     () => {
       let active = true;
-      return subscribe((change) => {
-        if (change.table !== 'accounts') return;
-        const request = accountRefreshRequestRef.current + 1;
-        accountRefreshRequestRef.current = request;
-        void data.listActiveAccounts()
-          .then((accounts) => {
-            if (!active || request !== accountRefreshRequestRef.current) return;
-            setState((current) =>
-              current.status === 'ready' ? { ...current, accounts } : current
-            );
-          })
-          .catch(() => undefined);
+      const unsubscribe = subscribe((change) => {
+        if (!active) return;
+        if (change.table === 'accounts') refreshAccounts();
+        if (change.table === 'categories') refreshCategories();
       });
+      return () => {
+        active = false;
+        accountRefreshRequestRef.current += 1;
+        categoryRefreshRequestRef.current += 1;
+        unsubscribe();
+      };
     },
-    [data, subscribe]
+    [refreshAccounts, refreshCategories, subscribe]
   );
 
   if (state.status === 'ready') {
@@ -114,10 +201,16 @@ export default function TransactionRouteScreen({
     }
     return (
       <TransactionEditor
+        key={state.transaction.id}
         transaction={state.transaction}
         groups={state.groups}
         accounts={state.accounts}
         data={data}
+        resolvePhoto={resolvePhoto}
+        accountRefreshError={state.accountRefreshError}
+        onRetryAccountRefresh={refreshAccounts}
+        categoryRefreshError={state.categoryRefreshError}
+        onRetryCategoryRefresh={refreshCategories}
         onDone={() => router.replace('/transactions' as Href)}
       />
     );

@@ -128,7 +128,7 @@ test('opens a transaction URL and provides a reliable route home', async () => {
     />
   );
 
-  await waitFor(() => expect(view.getByText('Edit transaction')).toBeTruthy());
+  await waitFor(() => expect(view.getByText('Complete draft')).toBeTruthy());
   expect(mockReadTransaction).toHaveBeenCalledWith(transactionId);
   expect(mockReadAccounts).toHaveBeenCalledTimes(1);
 
