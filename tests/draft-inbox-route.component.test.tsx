@@ -41,6 +41,10 @@ jest.mock('../src/ui/ledger-access', () => ({
   subscribeLedgerChanges: jest.fn(),
 }));
 
+jest.mock('../src/ui/notifications/DraftNudgeControl', () => ({
+  DraftNudgeControl: () => null,
+}));
+
 function draft(id: string): DraftTransaction {
   return {
     id,

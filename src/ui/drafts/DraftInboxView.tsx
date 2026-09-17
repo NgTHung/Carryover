@@ -5,6 +5,7 @@
  * SQLite read, list interaction, or explicit empty and error states.
  */
 import { FlatList, Text, View } from 'react-native';
+import type { ReactNode } from 'react';
 import { Link } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -27,13 +28,14 @@ function NavigationActions() {
   );
 }
 
-function Header() {
+function Header({ reminderControl }: { reminderControl?: ReactNode }) {
   return (
     <View className="gap-4 bg-ground-light px-5 pb-4 pt-4 dark:bg-ground-dark">
       <View className="gap-1">
         <Text className="text-eyebrow font-semibold tracking-widest text-need-light dark:text-need-dark">CAPTURE</Text>
         <Text accessibilityRole="header" className="text-title font-bold text-ink-light dark:text-ink-dark">Drafts</Text>
       </View>
+      {reminderControl}
       <NavigationActions />
     </View>
   );
@@ -41,14 +43,16 @@ function Header() {
 
 function Message({
   state,
+  reminderControl,
   onRetry,
 }: {
   state: Extract<DraftInboxLoadState, { status: 'loading' | 'error' }>;
+  reminderControl?: ReactNode;
   onRetry: () => void;
 }) {
   return (
     <SafeAreaView className="flex-1 bg-ground-light dark:bg-ground-dark" edges={['top', 'bottom']}>
-      <Header />
+      <Header reminderControl={reminderControl} />
       <View className="flex-1 gap-3 px-5 py-8">
         {state.status === 'loading' ? (
           <Text className="text-body text-muted-light dark:text-muted-dark">Loading drafts…</Text>
@@ -67,19 +71,21 @@ function Message({
 
 export function DraftInboxView({
   state,
+  reminderControl,
   resolvePhoto,
   revision = 0,
   onOpenDraft,
   onRetry,
 }: {
   state: DraftInboxLoadState;
+  reminderControl?: ReactNode;
   resolvePhoto: PhotoThumbnailResolver;
   revision?: number;
   onOpenDraft: (draftId: string) => void;
   onRetry: () => void;
 }) {
   if (state.status === 'loading' || state.status === 'error') {
-    return <Message state={state} onRetry={onRetry} />;
+    return <Message state={state} reminderControl={reminderControl} onRetry={onRetry} />;
   }
 
   return (
@@ -89,7 +95,7 @@ export function DraftInboxView({
         data={state.drafts}
         keyExtractor={(draft) => draft.id}
         contentContainerClassName="gap-2 bg-ground-light pb-8 dark:bg-ground-dark"
-        ListHeaderComponent={<Header />}
+        ListHeaderComponent={<Header reminderControl={reminderControl} />}
         ListEmptyComponent={
           <View className="gap-3 px-5 py-8">
             <Text className="text-body text-muted-light dark:text-muted-dark">No active drafts.</Text>

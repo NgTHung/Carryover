@@ -7,6 +7,7 @@ import {
   subscribeLedgerChanges,
 } from '../ui/ledger-access';
 import { DraftInboxView } from '../ui/drafts/DraftInboxView';
+import { DraftNudgeControl } from '../ui/notifications/DraftNudgeControl';
 import type { PhotoThumbnailResolver } from '../ui/photos/PhotoThumbnail';
 import type { DraftInboxData } from '../data/draft-inbox';
 import {
@@ -31,6 +32,7 @@ export default function DraftsRoute({
   return (
     <DraftInboxView
       state={state}
+      reminderControl={<DraftNudgeControl />}
       resolvePhoto={resolvePhoto}
       revision={photoRevision}
       onRetry={retry}
