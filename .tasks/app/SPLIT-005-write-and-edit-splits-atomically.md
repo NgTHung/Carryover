@@ -7,7 +7,7 @@ type: "Feature"
 parent: "app:SPLIT-001"
 milestone: "0.5.0"
 depends_on: ["app:SPLIT-003", "app:SPLIT-004"]
-last_updated: "2026-09-13"
+last_updated: "2026-09-17"
 ---
 
 ## Summary

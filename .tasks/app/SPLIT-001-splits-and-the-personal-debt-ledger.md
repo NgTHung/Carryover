@@ -9,7 +9,7 @@ depends_on: ["CAPTURE-001"]
 risk: "High"
 impact: "Four invariants live in this stage. Getting the remainder or the settlement direction wrong corrupts both the debt ledger and every month-over-month comparison."
 tags: ["split", "settlements", "epic"]
-last_updated: 2026-09-13
+last_updated: 2026-09-17
 ---
 
 ## Summary

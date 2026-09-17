@@ -61,7 +61,7 @@ Do not implement contacts, allocation functions, migrations, settlement persiste
 
 Commit: docs(split): resolve boundary contract promises
 
-Exit: the accepted rules and any remaining product decision are explicit. Do not begin allocation or persistence code while a required decision remains open.
+Exit: the accepted rules and the account limitation are explicit. Do not begin allocation or persistence code while a required decision remains open.
 
 Resolved Decision A, payer edits and remainders:
 
@@ -190,12 +190,12 @@ Exit: both payer kinds, both settlement directions, netting, chronological ties,
 
 Decision B is settled as a debt-ledger-only policy. Use the following table as the literal-invariant contract and record its account limitation beside it. Do not imply it accurately records settlement cash movements.
 
-| Operation | Account effect under the current model | Spending and reports | Receivable and snapshot |
+| Operation | Account effect under the v1 model | Spending and reports | Receivable and snapshot |
 | --- | --- | --- | --- |
 | You pay a split expense | Deduct the full transaction from the selected account | Charge only your share to spending, category, quality, and burn | Add contact shares as receivables, subject to netting |
 | Contact pays a split expense | No account movement | Charge your share exactly once | Add only your obligation to that payer; no receivable for third-party shares |
-| Either settlement direction | No account change under the literal invariant | No expense, income, spending, or burn effect | Recompute the contact position and owedToYou; publish after commit |
-| Settlement correction or deletion | Same unresolved cash limitation as creation | No report or budget contribution | Recompute from effective history; no incremental cached balance edits |
+| Either settlement direction | No account movement under the debt-ledger-only policy | No expense, income, spending, or burn effect | Recompute the contact position and owedToYou; publish after commit |
+| Settlement correction or deletion | Same ledger-only account limitation as creation | No report or budget contribution | Recompute from effective history; no incremental cached balance edits |
 | Split amount/payer/participant edit or removal | Reproject the revised transaction's account effect | Recompute affected own-share reports | Replay affected contact histories and publish only after commit |
 | Failed mutation | No change | No change | No mutation notification or new snapshot from the rejected operation |
 
@@ -205,7 +205,7 @@ Read stored month config. Settlement records must not contribute to current-peri
 
 Require one atomic mutation boundary for transaction, payer, share, and affected-history checks. Retain existing post-commit notification and snapshot publication. A storage publication failure is a saved-ledger refresh failure, not a reason to submit the settlement again. The widget reads the published snapshot and performs no debt or budget calculation.
 
-Update docs/spec/carryover-v1.md so its statement that the rest is a receivable applies specifically when you paid. Correct any design/footer wording that implies a contact-paid transaction creates your claim against other contacts. Keep the budget implementation as the sole source of budget arithmetic.
+docs/spec/carryover-v1.md now states that the rest is a receivable only when you paid, and that a contact-paid transaction creates what you owe its payer. The design and spec contain no wording that creates your claim against other contacts. Keep the budget implementation as the sole source of budget arithmetic.
 
 Commit: docs(split): define account and snapshot effects
 
@@ -216,8 +216,8 @@ Exit: the account limitation or revised authorized requirement is explicit, ever
 1. Check each S and L example with integer-only arithmetic independent of any future implementation. Verify exact totals, positive stored amounts, deterministic ordering, per-contact conservation, and rejection without mutation. Record the inputs and outputs in section 6.1 so they can become tests.
 2. Review every acceptance criterion against the coverage table below. Link to the final contract sections and decisions from this task; do not check criteria merely because this plan exists.
 3. Review the final design, spec, parent epic, milestone, and SPLIT-003 through SPLIT-008 together. Update summaries and criteria where required, with last_updated set to the edit date. Run taskroot validate immediately after each task refinement, then taskroot list.
-4. Run the focused baseline command below. Its result protects existing assumptions but does not prove the proposed split arithmetic or settlement engine. No new implementation or test suite is required just to restate design text.
-5. Run git diff --check and review changed-line counts. Keep each coherent stage under the repository's 800-line limit; target a total design change below that limit. Keep docs/DESIGN.md concise because it already has 579 lines. Avoid unrelated visual redesign or documentation cleanup.
+4. Run the focused baseline command below. Its result protects existing assumptions but does not prove the future split arithmetic or settlement engine. No new implementation or test suite is required just to restate design text.
+5. Run git diff --check and review changed-line counts. Keep each coherent stage under the repository's 800-line limit; target a total design change below that limit. Keep section 6.1 concise and avoid unrelated visual redesign or documentation cleanup.
 6. Record verification and resolved decisions in this task. Only when the prerequisite is satisfied and all four criteria have evidence, check them, validate, run taskroot done app:SPLIT-002, validate again, and inspect taskroot show app:SPLIT-002. Leave dependent features unstarted.
 
 Commit: docs(split): verify boundary contract and implementation handoff
@@ -242,7 +242,7 @@ Implementation ownership:
 | SPLIT-007 | Persist and correct settlements with atomic replay, duplicate-submission protection, and snapshot refresh. Database integration tests prove the settled account/snapshot policy and saved-but-refresh-failed recovery. |
 | SPLIT-008 | Connect the accepted form state, visible errors, explicit cancellations, payer consequences, archived-contact settlement, and People actions. Component and iPhone checks cover keyboard, retry, navigation, and restart. |
 
-Resolve the sequencing issue in the handoff: SPLIT-006 currently depends on SPLIT-005, while SPLIT-005 must validate edits against settlement history. Keep SPLIT-005's initial stage explicit that settlement writes are not yet available. SPLIT-006 introduces shared replay and integrates it into existing split mutations before SPLIT-007 exposes settlement writes. Refine SPLIT-005/006 criteria to show that ownership; do not introduce a circular dependency or implement replay twice. Existing imported or manually seeded settlement rows must fail closed until replay protection is wired.
+Sequencing decision: SPLIT-006 depends on SPLIT-005, while SPLIT-005 must validate edits against settlement history. SPLIT-005's initial stage keeps settlement writes unavailable and fails closed for existing or seeded settlement rows. SPLIT-006 introduces one shared replay policy and integrates it into existing split mutations before SPLIT-007 exposes settlement writes. SPLIT-005/006 criteria record that ownership; no circular dependency or duplicate replay implementation is allowed.
 
 Suggested later test files, not files to create in SPLIT-002: tests/split-allocation.logic.test.ts, tests/split-edits.logic.test.ts, tests/split-persistence.database.test.ts, tests/contact-balances.logic.test.ts, tests/settlement-allocation.logic.test.ts, tests/settlements.database.test.ts, and tests/settlement-snapshot.integration.database.test.ts. Reuse current account, share, report, money, and snapshot suites where they already own a behavior.
 

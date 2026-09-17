@@ -5,7 +5,7 @@ status: To Do
 priority: "Medium"
 type: "Milestone"
 milestone: "0.5.0"
-last_updated: 2026-09-13
+last_updated: 2026-09-17
 ---
 
 ## Summary

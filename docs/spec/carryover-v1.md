@@ -44,13 +44,13 @@ A second axis records quality as need, want, or regret. It is a fixed enum so it
 
 ### Splits and debts
 
-Participants are local contacts with a nullable user id. Nobody else needs an account for v1, and the nullable field is the hook that lets a real account claim the history later.
+Splits are allowed only on expenses with a known positive amount. Participants are local contacts with a nullable user id. Nobody else needs an account for v1, and the nullable field is the hook that lets a real account claim the history later.
 
-The payer lives on the transaction as `payer_contact_id`, nullable, where null means you. Invariant 3 sends the remainder dong to the payer and `settlements.direction` already supports `i_paid_them`, so a payer was assumed before it could be named. It sits on the transaction rather than on a split row because exactly one participant paid, and it is nullable so the common case stays free of a join.
+The payer lives on the transaction as `payer_contact_id`, nullable, where null means you. Invariant 3 sends the integer remainder dong to the payer and `settlements.direction` supports `i_paid_them`, so a payer was assumed before it could be named. It sits on the transaction rather than on a split row because exactly one participant paid, and it is nullable so the common case stays free of a join. The split contract in [the design](../DESIGN.md#61-split-entry) defines accepted input, allocation, and history transitions.
 
-The budget charges your own share only. The rest is a receivable shown beside the discretionary figure and never counted as spending.
+The budget charges your own share for spending and reports. When you pay, the account projection deducts the full transaction amount and the other participants' shares become receivables. When a contact pays, your own share contributes to spending and you owe that payer; other participants' shares create no receivable involving you.
 
-Balances per contact are derived from unsettled shares. A settlement is its own record, applied oldest first, so partial payments and netting work by construction. A repayment is never income. Treating it as income double counts and corrupts every comparison between periods.
+Balances per contact are derived by chronological replay of active shares and settlements. A settlement is its own record, applied oldest first with deterministic ties, so partial payments and opposite obligations remain reproducible. Overpayment, wrong-direction payment, and payment before a supporting obligation are rejected. A settlement is debt-ledger-only in v1: it does not move accounts, touch the budget, or become income. See [the design contract](../DESIGN.md#61-split-entry) for the account limitation and history rules.
 
 ### Capture
 
