@@ -21,6 +21,8 @@ export const DRAFT_NUDGE_HOUR = 20;
 export const DRAFT_NUDGE_MINUTE = 0;
 export const DRAFT_NUDGE_TITLE = 'Complete your drafts';
 export const DRAFT_NUDGE_BODY = 'Open Drafts to add unknown amounts';
+export const DRAFT_NUDGE_DEFAULT_ACTION_IDENTIFIER =
+  'expo.modules.notifications.actions.DEFAULT';
 
 export const DRAFT_NUDGE_PAYLOAD: DraftNudgePayload = {
   kind: DRAFT_NUDGE_KIND,
@@ -77,7 +79,7 @@ export function isOwnedDraftNudgeData(
   );
 }
 
-function samePayload(data: unknown): boolean {
+export function isValidDraftNudgePayload(data: unknown): data is DraftNudgePayload {
   if (!isRecord(data)) return false;
   return (
     data.kind === DRAFT_NUDGE_PAYLOAD.kind &&
@@ -93,7 +95,7 @@ export function isMatchingDraftNudgeRequest(
     request.identifier === DRAFT_NUDGE_SCHEDULE.identifier &&
     request.content.title === DRAFT_NUDGE_SCHEDULE.title &&
     request.content.body === DRAFT_NUDGE_SCHEDULE.body &&
-    samePayload(request.content.data) &&
+    isValidDraftNudgePayload(request.content.data) &&
     request.content.sound === 'none' &&
     request.content.badge === null &&
     request.trigger.kind === 'daily' &&

@@ -66,7 +66,7 @@ function mapPermission(
 }
 
 function mapSound(sound: Notifications.NotificationContent['sound']): DraftNudgeNotificationSound {
-  if (sound === null) return 'none';
+  if (sound === null || (sound as unknown) === false) return 'none';
   return sound === 'default' ? 'default' : 'custom';
 }
 
@@ -216,7 +216,7 @@ export const notificationAdapter: DraftNudgeAdapter = {
 
   readLastResponse() {
     const response = Notifications.getLastNotificationResponse();
-    return response === null ? null : mapResponse(response);
+    return response === null || response === undefined ? null : mapResponse(response);
   },
 
   clearLastResponse() {

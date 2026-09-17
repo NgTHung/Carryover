@@ -14,6 +14,7 @@ import {
   useLedgerMigrations,
 } from '../ui/ledger-access';
 import { MigrationStatus } from '../ui/MigrationStatus';
+import { DraftNudgeLifecycle } from '../ui/notifications/DraftNudgeLifecycle';
 
 export default function RootLayout() {
   const { success, error } = useLedgerMigrations();
@@ -33,5 +34,10 @@ export default function RootLayout() {
     return <MigrationStatus message="Applying the ledger schema…" />;
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <>
+      <DraftNudgeLifecycle />
+      <Stack screenOptions={{ headerShown: false }} />
+    </>
+  );
 }

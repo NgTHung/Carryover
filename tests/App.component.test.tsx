@@ -21,6 +21,10 @@ jest.mock('expo-status-bar', () => ({
   StatusBar: () => null,
 }));
 
+jest.mock('../src/ui/notifications/DraftNudgeLifecycle', () => ({
+  DraftNudgeLifecycle: () => null,
+}));
+
 import NativeRootLayout from '../src/app/_layout';
 import WebRootLayout from '../src/app/_layout.web';
 

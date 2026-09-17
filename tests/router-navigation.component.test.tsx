@@ -74,6 +74,14 @@ jest.mock('../src/data/database', () => ({
   },
 }));
 
+jest.mock('../src/ui/notifications/DraftNudgeLifecycle', () => ({
+  DraftNudgeLifecycle: () => null,
+}));
+
+jest.mock('../src/ui/notifications/DraftNudgeControl', () => ({
+  DraftNudgeControl: () => null,
+}));
+
 jest.mock('../src/ui/QualityChip', () => ({
   QualityChip: ({ quality }: { quality: string }) => {
     const { Text } = require('react-native');

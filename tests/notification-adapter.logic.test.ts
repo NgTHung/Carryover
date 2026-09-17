@@ -245,6 +245,31 @@ test('normalizes request content and preserves unrelated scheduled shapes', asyn
   expect(mapScheduledRequest).toBeDefined();
 });
 
+test('normalizes the silent boolean form into no sound', () => {
+  const request = {
+    identifier: DRAFT_NUDGE_IDENTIFIER,
+    content: {
+      title: DRAFT_NUDGE_TITLE,
+      body: DRAFT_NUDGE_BODY,
+      data: DRAFT_NUDGE_PAYLOAD,
+      sound: false,
+      badge: null,
+    },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+      repeats: true,
+      dateComponents: {
+        hour: 20,
+        minute: 0,
+        isLeapMonth: false,
+        isRepeatedDay: false,
+      },
+    },
+  } as unknown as Notifications.NotificationRequest;
+
+  expect(mapScheduledRequest(request).content.sound).toBe('none');
+});
+
 test('cancels only the requested native identifier and propagates failures', async () => {
   await notificationAdapter.cancelScheduled('owned-duplicate');
   expect(mockCancel).toHaveBeenCalledWith('owned-duplicate');
