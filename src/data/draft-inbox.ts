@@ -5,7 +5,7 @@
  * retained photo is no longer available, so this boundary selects one table
  * and leaves labels and files to the surfaces that need them.
  */
-import { and, asc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 
 import type { LedgerDatabase } from './atomic';
 import { activeRowFilter } from './soft-delete';
@@ -31,6 +31,24 @@ export function createDraftInboxData<TResultKind extends 'sync' | 'async'>(
   db: LedgerDatabase<TResultKind>
 ) {
   return {
+    async hasUnknownDrafts(): Promise<boolean> {
+      const rows = await db
+        .select({ id: transactions.id })
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.status, 'draft'),
+            isNull(transactions.amount),
+            activeRowFilter(transactions.deletedAt)
+          )
+        )
+        .$dynamic()
+        .limit(1)
+        .all();
+
+      return rows.length > 0;
+    },
+
     async readActiveDrafts(): Promise<DraftTransaction[]> {
       const rows = await db
         .select()

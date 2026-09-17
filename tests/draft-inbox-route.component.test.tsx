@@ -82,7 +82,7 @@ function appState(): DraftInboxAppState & {
 function repository(
   readActiveDrafts: DraftInboxData<'sync'>['readActiveDrafts']
 ): DraftInboxData<'sync'> {
-  return { readActiveDrafts };
+  return { readActiveDrafts, hasUnknownDrafts: jest.fn(async () => true) };
 }
 
 function availablePhotoResolver(): PhotoThumbnailResolver {

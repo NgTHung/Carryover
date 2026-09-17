@@ -138,3 +138,61 @@ test('the public draft read is active-only and performs no write or photo work',
     database.close();
   }
 });
+
+test('hasUnknownDrafts finds one active null amount across periods without joins or writes', async () => {
+  const database = openMigratedDatabase();
+  try {
+    const queries: string[] = [];
+    const proxy = createProxyDatabase(database, {
+      afterQuery: (query) => {
+        queries.push(query);
+      },
+    });
+    const categories = createCategoryData(proxy);
+    const transactions = createTransactionData(proxy, categories);
+    const inbox = createDraftInboxData(proxy);
+    const bankId = idFor(database, "SELECT id FROM accounts WHERE name = 'Bank'");
+
+    const historicalUnknown = await transactions.createTransaction({
+      accountId: bankId,
+      direction: 'expense',
+      status: 'draft',
+      amount: null,
+      categoryId: null,
+      photoKey: null,
+      occurredAt: firstOccurredAt,
+    });
+    await transactions.createTransaction({
+      accountId: bankId,
+      direction: 'income',
+      status: 'draft',
+      amount: 12_000,
+      categoryId: null,
+      photoKey: null,
+      occurredAt: secondOccurredAt,
+    });
+    await transactions.createTransaction({
+      accountId: bankId,
+      direction: 'income',
+      status: 'complete',
+      amount: 1_000,
+      categoryId: null,
+      photoKey: null,
+      occurredAt: thirdOccurredAt,
+    });
+
+    queries.length = 0;
+    assert.equal(await inbox.hasUnknownDrafts(), true);
+    assert.equal(queries.length, 1);
+    assert.match(queries[0] ?? '', /select/i);
+    assert.match(queries[0] ?? '', /amount.*is null/i);
+    assert.match(queries[0] ?? '', /limit/i);
+    assert.doesNotMatch(queries[0] ?? '', /join|accounts|categories|\b(insert|update|delete)\b/i);
+
+    await transactions.softDeleteTransaction(historicalUnknown.id);
+    queries.length = 0;
+    assert.equal(await inbox.hasUnknownDrafts(), false);
+  } finally {
+    database.close();
+  }
+});
