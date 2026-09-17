@@ -45,16 +45,16 @@ export function parseDraftNudgeResponse(
 }
 
 export type DraftNudgeResponseDeduper = {
-  accept: (intent: DraftNudgeNavigationIntent) => boolean;
+  hasHandled: (intent: DraftNudgeNavigationIntent) => boolean;
+  markHandled: (intent: DraftNudgeNavigationIntent) => void;
 };
 
 export function createDraftNudgeResponseDeduper(): DraftNudgeResponseDeduper {
   const handled = new Set<string>();
   return {
-    accept(intent) {
-      if (handled.has(intent.deliveryId)) return false;
+    hasHandled: (intent) => handled.has(intent.deliveryId),
+    markHandled(intent) {
       handled.add(intent.deliveryId);
-      return true;
     },
   };
 }

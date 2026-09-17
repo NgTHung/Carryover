@@ -47,7 +47,9 @@ test('deduplicates retained and live deliveries but keeps later days distinct', 
   const nextDay = parseDraftNudgeResponse(response({ deliveredAt: 1_757_086_400_000 }));
   if (first === undefined || nextDay === undefined) throw new Error('Expected valid intents');
 
-  expect(deduper.accept(first)).toBe(true);
-  expect(deduper.accept({ ...first })).toBe(false);
-  expect(deduper.accept(nextDay)).toBe(true);
+  expect(deduper.hasHandled(first)).toBe(false);
+  expect(deduper.hasHandled({ ...first })).toBe(false);
+  deduper.markHandled(first);
+  expect(deduper.hasHandled({ ...first })).toBe(true);
+  expect(deduper.hasHandled(nextDay)).toBe(false);
 });

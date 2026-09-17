@@ -5,10 +5,21 @@ an unknown amount. The reminder is one repeating 20:00 local request. It opens
 the fixed Drafts inbox, preserves unrelated notification requests, and is
 removed when no unknown drafts remain.
 
-The tested implementation revision is `4e49b38`. The native dependency and
+The original tested implementation revision is `4e49b38`. The native dependency and
 app configuration are present in that revision. There is no iPhone, signed
 IPA, or macOS runner result in this workspace, so native delivery and device
 navigation remain pending.
+
+On 2026-09-17, a follow-up regression test reproduced a retained notification
+tap being lost when the root remounted before navigation was ready. The fix
+marks a delivery handled only after Drafts is visible. All 12 reminder
+component tests, 3 response logic tests, and TypeScript checks pass after the
+fix. The component tests also verify that a native cleanup failure does not
+cause a confirmed delivery to navigate again after a remount.
+
+The latest successful CI run inspected on 2026-09-17 built `6d96910`, which
+predates the reminder implementation. [That build](https://github.com/NgTHung/Carryover/actions/runs/34760114672)
+does not verify this feature. A new candidate must include the navigation fix.
 
 ## Candidate identity
 

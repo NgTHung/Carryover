@@ -18,7 +18,11 @@ Use one daily local notification to remind you about unknowns without requiring 
 
 Follow [the CAPTURE-006 execution plan](../../docs/plans/CAPTURE-006.md) for contextual permission, unknown eligibility across periods, one daily schedule, duplicate and failure recovery, startup and foreground reconciliation, inbox navigation, staged commits, and iPhone verification.
 
-CAPTURE-005 is Done and taskroot reports this task ready. Keep CAPTURE-006 To Do until implementation starts. The plan defaults to 20:00 local time and requests permission from Drafts. Native delivery and navigation require evidence from a CI-built iPhone candidate.
+CAPTURE-005 is Done. Reminder implementation and local verification are complete. The reminder runs at 20:00 local time and requests permission from Drafts. CAPTURE-006 remains In Progress until native delivery and navigation have evidence from a CI-built iPhone candidate.
+
+## Progress
+
+See [the reminder verification record](../../docs/build/draft-nudge.md) for local results and pending device checks. A navigation recovery fix keeps a retained notification tap retryable across root remounts until Drafts is visible. Regression tests cover remount recovery and duplicate prevention when native response cleanup fails.
 
 ## Acceptance Criteria
 

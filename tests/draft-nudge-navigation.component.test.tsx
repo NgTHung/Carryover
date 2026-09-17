@@ -233,3 +233,39 @@ test('retains a navigation intent after a router failure and retries on foregrou
     expect.any(Error)
   );
 });
+
+test('recovers a retained tap after remounting before navigation is ready', async () => {
+  const harness = navigationHarness(response(1_700_000_000_401));
+  const view = await render(
+    <DraftNudgeLifecycle service={harness.service} navigationReady={false} pathname="/" />
+  );
+  expect(mockPush).not.toHaveBeenCalled();
+  await view.unmount();
+
+  const remounted = await render(
+    <DraftNudgeLifecycle service={harness.service} navigationReady pathname="/" />
+  );
+  await waitFor(() => expect(mockPush).toHaveBeenCalledTimes(1));
+  await remounted.rerender(
+    <DraftNudgeLifecycle service={harness.service} navigationReady pathname="/drafts" />
+  );
+  expect(harness.clearLastResponse).toHaveBeenCalledTimes(1);
+});
+
+test('does not navigate again after a confirmed tap when native clearing fails', async () => {
+  jest.spyOn(console, 'error').mockImplementation(() => undefined);
+  const harness = navigationHarness(response(1_700_000_000_501));
+  harness.clearLastResponse.mockImplementation(() => {
+    throw new Error('native clear unavailable');
+  });
+  const view = await render(
+    <DraftNudgeLifecycle service={harness.service} navigationReady pathname="/drafts" />
+  );
+  expect(harness.clearLastResponse).toHaveBeenCalledTimes(1);
+  await view.unmount();
+
+  await render(
+    <DraftNudgeLifecycle service={harness.service} navigationReady pathname="/" />
+  );
+  expect(mockPush).not.toHaveBeenCalled();
+});

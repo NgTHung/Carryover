@@ -42,7 +42,11 @@ export function DraftNudgeLifecycle({
 
   const receive = useCallback((response: DraftNudgeResponse | null): void => {
     const next = parseDraftNudgeResponse(response);
-    if (next === undefined || !processResponseDeduper.accept(next)) return;
+    if (
+      next === undefined ||
+      processResponseDeduper.hasHandled(next) ||
+      pendingIntentRef.current?.deliveryId === next.deliveryId
+    ) return;
     pendingIntentRef.current = next;
     setIntent(next);
   }, []);
@@ -70,6 +74,8 @@ export function DraftNudgeLifecycle({
   }, []);
 
   const confirmNavigation = useCallback((next: DraftNudgeNavigationIntent): void => {
+    // A tap stays retryable across root remounts until Drafts is visible.
+    processResponseDeduper.markHandled(next);
     try {
       const retained = parseDraftNudgeResponse(service.readLastResponse());
       if (retained?.deliveryId === next.deliveryId) {
