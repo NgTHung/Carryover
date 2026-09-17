@@ -1,13 +1,13 @@
 ---
 id: "CAPTURE-006"
 title: "Nudge while unknown drafts exist"
-status: "To Do"
+status: In Progress
 priority: "Medium"
 type: "Feature"
 parent: "app:CAPTURE-001"
 milestone: "0.4.0"
 depends_on: ["app:CAPTURE-005"]
-last_updated: "2026-09-17"
+last_updated: 2026-09-17
 ---
 
 ## Summary
