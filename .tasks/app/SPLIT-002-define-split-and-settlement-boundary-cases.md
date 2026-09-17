@@ -1,7 +1,7 @@
 ---
 id: "SPLIT-002"
 title: "Define split and settlement boundary cases"
-status: In Progress
+status: Done
 priority: "High"
 type: "Design"
 parent: "app:SPLIT-001"
@@ -16,10 +16,10 @@ Resolve the existing split form promise against positive integer money before im
 
 ## Acceptance Criteria
 
-- [ ] The contract covers empty, zero, fractional, excessive, and unsafe raw input, too many participants for positive shares, unknown amounts, participant and amount changes, payer changes, and payer edits, including accepted, pending, cancelled, and failed-save transitions.
-- [ ] The contract defines positive integer equal and weighted allocation, exact conservation, deterministic payer remainder, safe BigInt bounds, and rejection that preserves the last accepted allocation.
-- [ ] The contract defines both payer directions, per-contact opposite debts, chronological oldest-first settlement allocation and ties, partial settlement, overpayment, wrong-direction and before-obligation rejection, and atomic history edits or deletions.
-- [ ] The contract defines account, report, and snapshot effects, including full account deduction when you pay, own-share spending, contact-paid debt, debt-ledger-only settlements that do not move budget or income, frozen month config, and post-commit publication.
+- [x] The contract covers empty, zero, fractional, excessive, and unsafe raw input, too many participants for positive shares, unknown amounts, participant and amount changes, payer changes, and payer edits, including accepted, pending, cancelled, and failed-save transitions.
+- [x] The contract defines positive integer equal and weighted allocation, exact conservation, deterministic payer remainder, safe BigInt bounds, and rejection that preserves the last accepted allocation.
+- [x] The contract defines both payer directions, per-contact opposite debts, chronological oldest-first settlement allocation and ties, partial settlement, overpayment, wrong-direction and before-obligation rejection, and atomic history edits or deletions.
+- [x] The contract defines account, report, and snapshot effects, including full account deduction when you pay, own-share spending, contact-paid debt, debt-ledger-only settlements that do not move budget or income, frozen month config, and post-commit publication.
 
 ## Execution Plan
 
@@ -29,7 +29,7 @@ Produce a split and settlement contract that gives you an exact result for each 
 
 ### Readiness and scope
 
-SPLIT-002 is In Progress with its acceptance criteria still open. Its prerequisite, CAPTURE-001, is Done. Capture work and device verification remain outside this task.
+SPLIT-002 is Done with all acceptance criteria evidenced below. Its prerequisite, CAPTURE-001, is Done. Capture work and device verification remain outside this task.
 
 The task was started after taskroot confirmed that CAPTURE-001 was complete. Closing capture work remains outside this task.
 
@@ -218,7 +218,7 @@ Exit: the account limitation or revised authorized requirement is explicit, ever
 3. Review the final design, spec, parent epic, milestone, and SPLIT-003 through SPLIT-008 together. Update summaries and criteria where required, with last_updated set to the edit date. Run taskroot validate immediately after each task refinement, then taskroot list.
 4. Run the focused baseline command below. Its result protects existing assumptions but does not prove the future split arithmetic or settlement engine. No new implementation or test suite is required just to restate design text.
 5. Run git diff --check and review changed-line counts. Keep each coherent stage under the repository's 800-line limit; target a total design change below that limit. Keep section 6.1 concise and avoid unrelated visual redesign or documentation cleanup.
-6. Record verification and resolved decisions in this task. Only when the prerequisite is satisfied and all four criteria have evidence, check them, validate, run taskroot done app:SPLIT-002, validate again, and inspect taskroot show app:SPLIT-002. Leave dependent features unstarted.
+6. Record verification and resolved decisions in this task. The prerequisite is satisfied, all four criteria have evidence, and taskroot has completed app:SPLIT-002 after the final validation and show inspection. Leave dependent features unstarted.
 
 Commit: docs(split): verify boundary contract and implementation handoff
 
@@ -256,6 +256,21 @@ git diff --check
 git diff --stat
 ```
 
-## Planning Verification
+## Verification
 
-On 2026-09-17, taskroot validation passed for 87 tasks with no warnings. The four focused baseline suites above passed all 21 tests. Independent integer checks confirmed the equal and weighted examples, payer-edit divisibility, safe-maximum split, and selected ledger totals. All 33 scenario IDs are present, and git diff --check passed. Planning changed no application code, task lifecycle status, or acceptance checkboxes. New split and settlement behavior remains unimplemented and unverified.
+On 2026-09-17, the four focused baseline logic suites passed all 21 tests:
+
+```text
+npm run test:logic -- --runInBand --runTestsByPath tests/budget.logic.test.ts tests/account-balances.logic.test.ts tests/money-validation.logic.test.ts tests/snapshot-source.logic.test.ts
+```
+
+An independent BigInt check passed representative equal and weighted allocations,
+the safe maximum split, payer-edit divisibility, oldest-first settlement allocation,
+and opposite-debt netting. The contract records all S01-S17 and L01-L16 scenarios,
+with exact totals and rejection behavior. `taskroot validate` passed with 87 tasks
+and no warnings. `git diff --check` passed, and the design change stayed below the
+repository's 800-line limit. No application code, native dependency, migration, or
+executable split test was added. Decision A accepts payer edits only when the
+weighted remainder is exact. Decision B accepts debt-ledger-only settlements and
+records their account limitation. Downstream implementation tasks remain
+unstarted.
