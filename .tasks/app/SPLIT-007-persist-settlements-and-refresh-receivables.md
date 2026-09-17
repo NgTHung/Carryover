@@ -12,11 +12,11 @@ last_updated: "2026-09-13"
 
 ## Summary
 
-Record settlements through a validated data boundary and refresh contact reads and the published receivable.
+Record debt-ledger-only settlements through a validated data boundary and refresh contact reads and the published receivable without moving accounts or budget figures.
 
 ## Acceptance Criteria
 
-- [ ] Settlement writes validate the contact, positive integer amount, direction, date, and allocation constraints atomically.
-- [ ] Settlement correction and soft deletion follow the resolved history policy without creating expense or income transactions.
+- [ ] Settlement writes validate the contact, positive integer amount, direction, date, chronological allocation, and overpayment constraints atomically.
+- [ ] Settlement correction and soft deletion follow the resolved history policy without creating account movements, expense transactions, or income transactions.
 - [ ] Reads and the existing snapshot publication path refresh after mutations; settlements leave budget figures and spending or income reports unchanged.
 - [ ] Real SQLite tests cover partial settlement, both directions, failed writes, repeated submission protection, correction, and snapshot invariants.

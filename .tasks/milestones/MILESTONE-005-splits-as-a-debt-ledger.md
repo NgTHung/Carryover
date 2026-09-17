@@ -10,7 +10,7 @@ last_updated: 2026-09-13
 
 ## Summary
 
-Stage 4. Contacts, split entry, derived per-person balances, settlements, and the People screen. Splitting is a ledger problem, not a budgeting one. The budget charges your share and the rest is a receivable.
+Stage 4. Contacts, split entry, derived per-person balances, settlements, and the People screen. Splitting is a ledger problem, not a budgeting one. The budget charges your own share for spending, the account projection follows the payer, and only a contact share from an expense you paid is a receivable. Settlements are debt-ledger-only in v1.
 
 ## Exit Criteria
 

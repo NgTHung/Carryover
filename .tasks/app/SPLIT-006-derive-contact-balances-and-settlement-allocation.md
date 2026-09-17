@@ -12,11 +12,11 @@ last_updated: "2026-09-13"
 
 ## Summary
 
-Derive what each contact owes or is owed from ledger rows so balances cannot drift from edited history.
+Derive what each contact owes or is owed from ledger rows so balances cannot drift from edited history. Own the shared replay validator that SPLIT-005 integrates before SPLIT-007 exposes settlement writes.
 
 ## Acceptance Criteria
 
 - [ ] Pure functions derive receivables and amounts you owe from active shares, payer identity, and settlements, including opposite debts.
 - [ ] Partial settlements allocate oldest first with stable tie ordering and follow the documented netting and overpayment rules.
-- [ ] History edits and soft deletion produce the documented result without storing a second running contact balance.
+- [ ] History edits and soft deletion use the same replay policy as settlement allocation, produce the documented result without storing a second running contact balance, and replace SPLIT-005's fail-closed handoff before settlement writes are exposed.
 - [ ] Tests prove exact integer allocation and stable results for equal timestamps, opposite debts, both settlement directions, and edited history.

@@ -16,7 +16,7 @@ Put share arithmetic in pure functions that follow the resolved contract. The sp
 
 ## Acceptance Criteria
 
-- [ ] Equal and weighted allocation produce positive integer shares totaling the transaction amount, with division remainder assigned to the payer.
-- [ ] Editing any share, including the payer share, or changing participants, payer, or amount follows the documented deterministic redistribution rules.
-- [ ] All amount arithmetic uses integer operations and safe bounds; rejected input leaves the last valid allocation intact.
+- [ ] Equal and weighted allocation produce positive safe-integer shares totaling the transaction amount, with division remainder assigned to the payer, or reject a zero-share result without changing the accepted allocation.
+- [ ] Editing any share, including the payer share, or changing participants, payer, or amount follows the documented deterministic redistribution rules, including exact weighted divisibility for payer edits.
+- [ ] All amount and weight arithmetic uses BigInt internally with safe bounds; invalid raw input leaves the last accepted allocation intact until correction or cancellation.
 - [ ] Tests cover both payer kinds, uneven division, payer edits, weight changes, minimal amounts, unsafe bounds, and repeated identical inputs.

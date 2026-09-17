@@ -17,6 +17,6 @@ Connect the tested split and settlement APIs to draft completion, transaction ed
 ## Acceptance Criteria
 
 - [ ] Split entry has editable amount fields, a payer choice, inline contact creation, and Equally and Shares actions that leave fields editable using SPLIT-004.
-- [ ] The form explains your receivable or what you owe, preserves valid input on failure, and follows the resolved boundary rules without a remainder repair step.
+- [ ] The form explains your receivable or what you owe, preserves the last accepted allocation and visible raw input on failure, and follows the resolved boundary rules without a remainder repair step.
 - [ ] People shows derived balances, contact history, and partial settlement controls for both directions; saved corrections refresh the list and Home.
 - [ ] Component tests cover payer changes and partial settlement; an iPhone check verifies keyboard access, restart persistence, and the complete split-to-settlement flow.

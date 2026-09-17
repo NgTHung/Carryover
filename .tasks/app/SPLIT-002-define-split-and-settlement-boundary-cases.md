@@ -1,13 +1,13 @@
 ---
 id: "SPLIT-002"
 title: "Define split and settlement boundary cases"
-status: "To Do"
+status: In Progress
 priority: "High"
 type: "Design"
 parent: "app:SPLIT-001"
 milestone: "0.5.0"
 depends_on: ["app:CAPTURE-001"]
-last_updated: "2026-09-17"
+last_updated: 2026-09-17
 ---
 
 ## Summary
@@ -16,24 +16,24 @@ Resolve the existing split form promise against positive integer money before im
 
 ## Acceptance Criteria
 
-- [ ] Examples define empty, fractional, excessive, and unsafe input, too many participants for positive shares, payer changes, and editing the payer field.
-- [ ] The contract explains how every accepted split sums exactly and how integer division remainder reaches the payer without silently accepting invalid money.
-- [ ] Examples define contact-paid transactions, opposite debts, partial settlements, deterministic oldest-first ties, overpayment, and edits or deletions after settlement.
-- [ ] The contract defines account and snapshot effects while preserving the existing rule that settlements never change budget figures or become income; any incompatible promise is resolved in the task criteria before code.
+- [ ] The contract covers empty, zero, fractional, excessive, and unsafe raw input, too many participants for positive shares, unknown amounts, participant and amount changes, payer changes, and payer edits, including accepted, pending, cancelled, and failed-save transitions.
+- [ ] The contract defines positive integer equal and weighted allocation, exact conservation, deterministic payer remainder, safe BigInt bounds, and rejection that preserves the last accepted allocation.
+- [ ] The contract defines both payer directions, per-contact opposite debts, chronological oldest-first settlement allocation and ties, partial settlement, overpayment, wrong-direction and before-obligation rejection, and atomic history edits or deletions.
+- [ ] The contract defines account, report, and snapshot effects, including full account deduction when you pay, own-share spending, contact-paid debt, debt-ledger-only settlements that do not move budget or income, frozen month config, and post-commit publication.
 
 ## Execution Plan
 
 Planning date: 2026-09-17.
 
-Produce a split and settlement contract that gives you an exact result for each accepted operation and explains each rejection. SPLIT-002 delivers design decisions and worked examples. SPLIT-003 through SPLIT-008 implement those decisions. This plan records proposed rules; it does not make them settled product behavior.
+Produce a split and settlement contract that gives you an exact result for each accepted operation and explains each rejection. SPLIT-002 delivers the settled design decisions and worked examples. SPLIT-003 through SPLIT-008 implement those decisions.
 
 ### Readiness and scope
 
-SPLIT-002 remains To Do with all acceptance criteria unchecked. Its prerequisite, CAPTURE-001, is To Do. CAPTURE-002 through CAPTURE-005 are Done, but CAPTURE-006 is In Progress. Do not infer that the capture epic is complete from its implemented code, remove the dependency, or start SPLIT-002 as part of planning.
+SPLIT-002 is In Progress with its acceptance criteria still open. Its prerequisite, CAPTURE-001, is Done. Capture work and device verification remain outside this task.
 
-You can refine this plan while capture work continues. Before executing it, inspect taskroot context again and start SPLIT-002 only when its dependency is satisfied. Closing capture work remains outside this task.
+The task was started after taskroot confirmed that CAPTURE-001 was complete. Closing capture work remains outside this task.
 
-The final contract belongs in docs/DESIGN.md section 6.1, as required by this task. Update the split paragraphs in docs/spec/carryover-v1.md and related task criteria where they promise incompatible behavior. Keep the detailed planning and proposed decisions here until resolved.
+The final contract belongs in docs/DESIGN.md section 6.1. Update the split paragraphs in docs/spec/carryover-v1.md and related task criteria where they promise incompatible behavior. Keep the detailed rationale and implementation handoff here.
 
 Do not implement contacts, allocation functions, migrations, settlement persistence, or screens in SPLIT-002. Do not add dependencies or change budget arithmetic. Existing tests establish the baseline; downstream tasks own executable coverage of the new rules.
 
