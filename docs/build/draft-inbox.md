@@ -5,7 +5,8 @@ same transaction in the existing editor, and rebuilding the inbox after a
 database restart. Local checks cover exact integer amounts, unknown drafts,
 photo fallbacks, committed mutation refresh, period income maintenance,
 rollback, snapshot retry, and file-backed recovery. Native fields remain
-pending until the exact candidate runs on an iPhone.
+pending after the user-directed task closure on 2026-09-17 and can be filled
+when the exact candidate runs on an iPhone.
 
 Do not treat a Linux check or an iOS JavaScript export as device evidence. Use
 one development IPA built from the tested implementation revision. Keep the
@@ -103,5 +104,6 @@ revision, and follow-up commit before repeating it.
 | Failures and follow-up commits | PENDING |
 
 There is no Mac, iOS simulator, IPA artifact, or attached iPhone in this
-working environment. The native matrix is therefore intentionally unresolved,
-and CAPTURE-005 remains In Progress until a device candidate is observed.
+working environment. The native matrix is therefore intentionally unresolved.
+The user directed CAPTURE-005 to close on 2026-09-17 with these checks pending,
+so none of the pending fields should be treated as passing device evidence.
