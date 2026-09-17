@@ -5,7 +5,7 @@ import {
   render,
   waitFor,
 } from '@testing-library/react-native';
-import { ExpoRoot } from 'expo-router';
+import { ExpoRoot, router } from 'expo-router';
 import { getMockContext } from 'expo-router/testing-library';
 
 import type { Transaction } from '../src/data/transaction-validation';
@@ -19,6 +19,8 @@ const mockReadAccounts = jest.fn();
 const mockReadAccountBalances = jest.fn();
 const mockReadMonthSummary = jest.fn();
 const mockReadCommitmentOverview = jest.fn();
+const mockReadActiveDrafts = jest.fn();
+const mockSoftDeleteTransaction = jest.fn();
 
 jest.mock('drizzle-orm/expo-sqlite/migrator', () => ({
   useMigrations: (...args: unknown[]) => mockUseMigrations(...args),
@@ -37,6 +39,9 @@ jest.mock('../src/data/database', () => ({
     editTransaction: jest.fn(),
     completeDraft: jest.fn(),
     softDeleteTransaction: jest.fn(),
+  },
+  draftInboxData: {
+    readActiveDrafts: (...args: unknown[]) => mockReadActiveDrafts(...args),
   },
   capturedDraftData: {
     createCapturedDraft: jest.fn(),
@@ -63,6 +68,9 @@ jest.mock('../src/data/database', () => ({
   },
   manualTransactionData: {
     createTransaction: jest.fn(),
+    editTransaction: jest.fn(),
+    completeDraft: jest.fn(),
+    softDeleteTransaction: (...args: unknown[]) => mockSoftDeleteTransaction(...args),
   },
 }));
 
@@ -118,6 +126,8 @@ beforeEach(() => {
     unpaidTotal: { status: 'available', amount: 0 },
     items: [],
   });
+  mockReadActiveDrafts.mockResolvedValue([transaction]);
+  mockSoftDeleteTransaction.mockResolvedValue(undefined);
 });
 
 test('opens a transaction URL and provides a reliable route home', async () => {
@@ -137,6 +147,40 @@ test('opens a transaction URL and provides a reliable route home', async () => {
   });
 
   await waitFor(() => expect(view.getByText('Per day unavailable')).toBeTruthy());
+});
+
+test('returns from a draft edit without stacking another inbox', async () => {
+  const view = await render(
+    <ExpoRoot context={getMockContext('./src/app')} location="/" />
+  );
+  await waitFor(() => expect(view.getByText('Per day unavailable')).toBeTruthy());
+
+  await act(async () => {
+    fireEvent.press(view.getByText('Drafts'));
+  });
+  await waitFor(() =>
+    expect(view.getByTestId(`draft-row-${transactionId}`)).toBeTruthy()
+  );
+
+  await act(async () => {
+    fireEvent.press(view.getByTestId(`draft-row-${transactionId}`));
+  });
+  await waitFor(() => expect(view.getByText('Complete draft')).toBeTruthy());
+  await act(async () => {
+    fireEvent.press(view.getByRole('button', { name: 'Delete' }));
+  });
+  await act(async () => {
+    fireEvent.press(view.getByRole('button', { name: 'Delete transaction' }));
+  });
+  await waitFor(() => expect(view.getByTestId('draft-inbox')).toBeTruthy());
+
+  await act(async () => {
+    router.back();
+  });
+  await waitFor(() =>
+    expect(view.getByRole('header', { name: 'Home' })).toBeTruthy()
+  );
+  expect(mockSoftDeleteTransaction).toHaveBeenCalledWith(transactionId);
 });
 
 test('keeps a direct transaction URL behind the migration gate', async () => {

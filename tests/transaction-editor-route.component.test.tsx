@@ -25,12 +25,14 @@ const photoKey = 'photos/v1/55555555-5555-4555-8555-555555555555.jpg' as PhotoKe
 
 const mockUseLocalSearchParams = jest.fn();
 const mockReplace = jest.fn();
+const mockDismissTo = jest.fn();
 const mockUsePreventRemove = jest.fn();
 
 jest.mock('expo-router', () => ({
   Link: ({ children }: { children: ReactNode }) => children,
   router: {
     replace: (...args: unknown[]) => mockReplace(...args),
+    dismissTo: (...args: unknown[]) => mockDismissTo(...args),
   },
   useLocalSearchParams: (...args: unknown[]) => mockUseLocalSearchParams(...args),
 }));
@@ -336,7 +338,7 @@ test('shows a saved state when route navigation fails and retries navigation onl
 
 test('returns completed drafts to the inbox and retries navigation without another write', async () => {
   mockUseLocalSearchParams.mockReturnValue({ transactionId: firstId, from: 'drafts' });
-  mockReplace.mockImplementationOnce(() => {
+  mockDismissTo.mockImplementationOnce(() => {
     throw new Error('Navigation unavailable');
   });
   const data = editorData();
@@ -347,10 +349,11 @@ test('returns completed drafts to the inbox and retries navigation without anoth
   await fireEvent.press(view.getByRole('button', { name: 'Groceries' }));
   await fireEvent.press(view.getByRole('button', { name: 'Complete' }));
 
-  await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/drafts'));
+  await waitFor(() => expect(mockDismissTo).toHaveBeenCalledWith('/drafts'));
+  expect(mockReplace).not.toHaveBeenCalled();
   expect(view.getByRole('button', { name: 'Back to drafts' })).toBeTruthy();
   await fireEvent.press(view.getByRole('button', { name: 'Back to drafts' }));
-  expect(mockReplace).toHaveBeenCalledTimes(2);
+  expect(mockDismissTo).toHaveBeenCalledTimes(2);
   expect(data.completeDraft).toHaveBeenCalledTimes(1);
 });
 

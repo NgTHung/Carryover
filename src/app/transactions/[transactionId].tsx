@@ -25,6 +25,14 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function navigateToReturnRoute(returnRoute: TransactionReturnRoute): void {
+  if (returnRoute.navigation === 'dismissTo') {
+    router.dismissTo(returnRoute.destination as Href);
+    return;
+  }
+  router.replace(returnRoute.destination as Href);
+}
+
 type RouteState = TransactionRouteState | {
   status: 'ready';
   transaction: Awaited<ReturnType<TransactionEditorData['readTransaction']>> & {};
@@ -129,7 +137,7 @@ export default function TransactionRouteScreen({
   useEffect(() => {
     if (writePending || !navigationIntent) return;
     try {
-      router.replace(returnRoute.destination as Href);
+      navigateToReturnRoute(returnRoute);
     } catch (error: unknown) {
       setNavigationIntent(false);
       setNavigationError(errorMessage(error));
@@ -244,7 +252,7 @@ export default function TransactionRouteScreen({
         <TransactionAdjustmentDetail
           transaction={state.transaction}
           account={account}
-          onDone={() => router.replace(returnRoute.destination as Href)}
+          onDone={() => navigateToReturnRoute(returnRoute)}
         />
       );
     }
@@ -262,9 +270,9 @@ export default function TransactionRouteScreen({
         onRetryCategoryRefresh={refreshCategories}
         onWritePending={updateWritePending}
         navigationError={navigationError}
-          onRetryNavigation={retryNavigation}
-          returnLabel={returnRoute.label}
-          onDone={queueNavigation}
+        onRetryNavigation={retryNavigation}
+        returnLabel={returnRoute.label}
+        onDone={queueNavigation}
       />
     );
   }

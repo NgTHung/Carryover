@@ -62,7 +62,12 @@ function Message({
       <Text className="text-body text-muted-light dark:text-muted-dark" selectable>
         {detail}
       </Text>
-      <Link href={returnRoute.destination as Href} replace asChild>
+      <Link
+        href={returnRoute.destination as Href}
+        replace={returnRoute.navigation === 'replace'}
+        dismissTo={returnRoute.navigation === 'dismissTo'}
+        asChild
+      >
         <Button variant="secondary">{returnRoute.label}</Button>
       </Link>
       <HomeRouteLink />

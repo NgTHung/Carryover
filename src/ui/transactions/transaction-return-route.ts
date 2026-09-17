@@ -7,11 +7,13 @@
 export const TRANSACTION_RETURN_ROUTE = {
   destination: '/transactions',
   label: 'Back to transactions',
+  navigation: 'replace',
 } as const;
 
 export const DRAFT_RETURN_ROUTE = {
   destination: '/drafts',
   label: 'Back to drafts',
+  navigation: 'dismissTo',
 } as const;
 
 export type TransactionReturnRoute =
