@@ -15,7 +15,7 @@ widget disabled for this run.
 
 | Field | Result |
 | --- | --- |
-| Tested implementation revision | `44aec6ca0629b83a87a9304a143a8f6850b47f4c` |
+| Tested implementation revision | `acdf9c37c79727e4489a726975854d33f861ba98` |
 | GitHub Actions workflow URL | PENDING |
 | IPA artifact | PENDING |
 | Development build number | PENDING |
@@ -59,8 +59,9 @@ cases.
 | Draft mutation and snapshot integration, 5 tests | PASS |
 | File-backed restart recovery, 1 test | PASS |
 | Draft inbox, route, Home, and editor components, 35 tests | PASS |
+| Draft return real-router regression | PASS |
 | Return-route parser, 5 tests | PASS |
-| Full Jest gate, 113 suites and 607 tests | PASS |
+| Full Jest gate, 113 suites and 608 tests | PASS |
 | Python gate, 12 tests | PASS |
 | TypeScript check | PASS |
 | Web export | PASS |
@@ -68,7 +69,7 @@ cases.
 | Taskroot validation, 87 tasks and 0 warnings | PASS |
 | Git whitespace check | PASS |
 
-The local gate was run at revision `44aec6ca0629b83a87a9304a143a8f6850b47f4c`:
+The local gate was run at revision `acdf9c37c79727e4489a726975854d33f861ba98`:
 
 ```text
 npm run typecheck
