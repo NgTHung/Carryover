@@ -4,6 +4,10 @@ Date: 2026-09-17
 
 Task: [Nudge while unknown drafts exist](../../.tasks/app/CAPTURE-006-nudge-while-unknown-drafts-exist.md)
 
+## Verification timing update
+
+On 2026-09-17, you deferred device verification until all features are implemented. Stage 5 iPhone checks now belong to build:BUILD-005. CAPTURE-006 can close on local implementation evidence while every unobserved native result remains PENDING in docs/build/draft-nudge.md. This decision supersedes the device-before-closure requirement below.
+
 ## Outcome and readiness
 
 You can enable one daily local reminder from Drafts when unknowns exist. It opens the draft inbox. Resolving the last unknown cancels future reminders. Permission denial and notification failures leave capture, partial saves, completion, and deletion usable.

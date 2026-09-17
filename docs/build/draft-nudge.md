@@ -115,4 +115,6 @@ Keep the widget disabled for the normal candidate.
 | Larger text, VoiceOver, scrolling, and safe-area controls | PENDING |
 | Installed signing and App Group identity | PENDING |
 
-The CI-built iPhone candidate is required before CAPTURE-006 can be closed.
+On 2026-09-17, you deferred iPhone checks until all features are implemented.
+The CI-built iPhone matrix is now required by build:BUILD-005 before release,
+not by CAPTURE-006 implementation closure. All unobserved results remain PENDING.

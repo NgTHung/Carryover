@@ -9,7 +9,7 @@ depends_on: ["UI-003"]
 risk: "High"
 impact: "Draft rot is the most likely way this app dies: forty unfilled captures and a remaining figure you no longer believe. The unknown badge and the nudge are core, not polish."
 tags: ["capture", "drafts", "epic"]
-last_updated: 2026-09-13
+last_updated: 2026-09-17
 ---
 
 ## Summary
@@ -19,6 +19,10 @@ Stage 3 completes capture before the UI overhaul. CAPTURE-002 through CAPTURE-00
 Capture is a photo plus an optional amount on a pre-focused numpad, one tap to skip, closing in about two seconds. Completing a draft needs an amount and a leaf category and nothing else. Reuse shared controls and keep presentation changes for the later overhaul.
 
 Test capture and draft persistence locally with Jest, real SQLite, and React Native Testing Library. Check camera permissions, photo library access, persistence across restart, and keyboard behavior on the iPhone after a CI build. Follow `docs/app-stack-and-testing.md` when splitting this stage.
+
+## Deferred device verification
+
+On 2026-09-17, you deferred iPhone checks until all features are implemented. build:BUILD-005 owns the native capture, completion, inbox, and reminder matrices, including capture timing and photo-size measurements. Device evidence remains pending and is required before release; it does not block continued feature implementation.
 
 ## Exit Criteria
 
