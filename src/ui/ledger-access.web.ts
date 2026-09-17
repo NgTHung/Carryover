@@ -20,6 +20,7 @@ export const readTransaction = unavailable;
 export const getCaptureLedgerData = unavailable;
 export const getTransactionListData = unavailable;
 export const getDraftInboxData = unavailable;
+export const getDraftNudgeData = unavailable;
 export const getMonthSummaryData = unavailable;
 export const subscribeLedgerChanges = unavailable;
 export const getTransactionEditorData = unavailable;

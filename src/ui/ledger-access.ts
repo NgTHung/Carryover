@@ -131,6 +131,14 @@ export function getDraftInboxData(): DraftInboxData<'sync'> {
   return draftInboxData;
 }
 
+export type DraftNudgeData = {
+  hasUnknownDrafts: () => Promise<boolean>;
+};
+
+export function getDraftNudgeData(): DraftNudgeData {
+  return draftInboxData;
+}
+
 const monthSummaryData = { readMonthSummary: readCommittedMonthSummary };
 
 export function getMonthSummaryData() {

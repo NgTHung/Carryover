@@ -67,6 +67,50 @@ export type DraftNudgeResponse = {
 
 export type DraftNudgeResponseListener = (response: DraftNudgeResponse) => void;
 
+export type DraftNudgeEligibility =
+  | { status: 'unknown' }
+  | { status: 'has-unknowns' }
+  | { status: 'none' };
+
+export type DraftNudgeServiceState =
+  | {
+      status: 'checking';
+      eligibility: DraftNudgeEligibility;
+      operation: 'startup' | 'ledger-change' | 'foreground' | 'retry' | 'permission';
+    }
+  | {
+      status: 'idle';
+      eligibility: { status: 'none' };
+      reason: 'no-unknowns';
+    }
+  | {
+      status: 'permission-required';
+      eligibility: { status: 'has-unknowns' };
+      permission: Extract<DraftNudgePermission, { status: 'requestable' }>;
+    }
+  | {
+      status: 'denied';
+      eligibility: { status: 'has-unknowns' };
+      permission: Extract<DraftNudgePermission, { status: 'denied' }>;
+    }
+  | {
+      status: 'enabled';
+      eligibility: { status: 'has-unknowns' };
+      permission: Extract<DraftNudgePermission, { status: 'allowed' }>;
+    }
+  | {
+      status: 'unavailable';
+      eligibility: DraftNudgeEligibility;
+      operation: 'permission' | 'notifications';
+      message: string;
+    }
+  | {
+      status: 'error';
+      eligibility: DraftNudgeEligibility;
+      operation: 'ledger' | 'permission' | 'notifications';
+      message: string;
+    };
+
 export type DraftNudgeAdapter = {
   inspectPermission: () => Promise<DraftNudgePermission>;
   requestPermission: () => Promise<DraftNudgePermission>;
