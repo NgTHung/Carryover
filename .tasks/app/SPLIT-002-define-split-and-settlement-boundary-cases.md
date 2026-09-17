@@ -42,7 +42,7 @@ Do not implement contacts, allocation functions, migrations, settlement persiste
 | Source | Established behavior and implication |
 | --- | --- |
 | CONTEXT.md and AGENTS.md | Positive integer VND, payer remainder, own-share spending, settlements excluded from budget figures and income, frozen month config, and snapshot-only widget reads constrain every decision. |
-| docs/DESIGN.md section 6.1 | Promises editable shares, exact totals, weighted redistribution, preservation of the last typed payer value, and no validation errors or blocked completion. Those promises cannot all hold for arbitrary input. |
+| docs/DESIGN.md section 6.1 | Defines editable shares, exact totals, weighted redistribution, accepted payer edits, pending invalid input, chronological settlement replay, and the v1 account limitation. |
 | src/data/money-validation.ts and src/money/currency.ts | Whole-dong text parses through BigInt before safe numeric conversion. Reuse positiveVndInputSchema, CURRENCY_EXPONENT, CURRENCY_SCALE, and MAX_VND_AMOUNT. |
 | src/data/schema.ts | Contacts, payer identity, positive share rows, and directional settlements already exist. Settlements have no account reference or stored allocation links. |
 | src/data/payer.ts | Payer is a discriminated union. A null stored contact ID means you, not an unknown payer. |
@@ -63,23 +63,23 @@ Commit: docs(split): resolve boundary contract promises
 
 Exit: the accepted rules and any remaining product decision are explicit. Do not begin allocation or persistence code while a required decision remains open.
 
-Decision A, payer edits and remainders:
+Resolved Decision A, payer edits and remainders:
 
 For a transaction of 100 VND with three equal weights, typing a payer share of 33 leaves 67 for two contacts. Whole-dong division produces 33 each and a remainder of 1. Giving that remainder to the payer makes their share 34, which changes the typed value. Giving it to a contact breaks the payer-remainder rule.
 
-Proposed resolution: accept a payer edit only when the remaining amount divides exactly under the other participants' weights and every resulting share is positive. Retain rejected text for correction while preserving the last accepted allocation. A payer edit of 34 succeeds as 34, 33, 33. With one other participant, every positive edit that leaves a positive share succeeds.
+Resolution: accept a payer edit only when the remaining amount divides exactly under the other participants' weights and every resulting share is positive. Retain rejected text for correction while preserving the last accepted allocation. A payer edit of 34 succeeds as 34, 33, 33. With one other participant, every positive edit below the total succeeds.
 
-Replace SPLIT-001's unconditional payer-input criterion with: Every share remains editable; an accepted payer edit preserves the typed amount and redistributes the remainder exactly by the other participants' current weights; an incompatible edit preserves the last accepted allocation and explains why it cannot be applied.
+SPLIT-001 now records: Every share remains editable; an accepted payer edit preserves the typed amount and redistributes the remainder exactly by the other participants' current weights; an incompatible edit preserves the last accepted allocation and explains why it cannot be applied.
 
-Replace the design promise of no validation errors or blocked completion with: Accepted allocations always total exactly; invalid pending input requires correction or explicit cancellation before completion. There is no manual remainder repair step. Do not silently clamp, round, or save older values beneath invalid visible text.
+The contract replaces the promise of no validation errors or blocked completion with: Accepted allocations always total exactly; invalid pending input requires correction or explicit cancellation before completion. There is no manual remainder repair step. Do not silently clamp, round, or save older values beneath invalid visible text.
 
-Decision B, account balances and settlements:
+Resolved Decision B, account balances and settlements:
 
 Start with 1,000 VND in bank and no reserves. You pay 100, with your share 40 and Linh's share 60. The current code reports bank and carryover balance 900, spending 40, and, once implemented, a receivable of 60. If Linh pays you 60 into bank, an accurate cash projection becomes 960. The current budget engine therefore changes carryover balance, discretionary, and per day.
 
 The literal settlement invariant permits a debt-ledger-only settlement: clear the receivable while bank and budget figures stay at 900. That leaves the recorded account short of actual cash by 60. This is a material product limitation, not an arithmetic detail. Automatically writing an adjustment or income transaction does not resolve the invariant conflict.
 
-The design review must explicitly resolve this tension before closing SPLIT-002. Keep the current invariant as the constraint for this plan. Do not silently adopt cash-moving settlements, add an account selector, or introduce a second budget projection. If you accept debt-ledger-only settlements, document their account limitation in the contract and acceptance criteria. If settlements must update actual bank/cash balances, obtain an explicit change to the conflicting product requirement and refine affected tasks before code. This plan does not authorize changing that invariant.
+Resolution: accept debt-ledger-only settlements for v1 and document the account limitation in docs/DESIGN.md section 6.1 and the acceptance criteria. Do not adopt cash-moving settlements, add an account selector, or introduce a second budget projection. A separate account operation such as Reconcile is required when recorded account cash must catch up with physical cash.
 
 Also clarify the existing phrase that the budget charges your share: own-share spending and burn already coexist with full cash deduction when you paid. A contact-paid share contributes spending without reducing your account balance. Do not claim the current discretionary calculation deducts only your share.
 
@@ -95,9 +95,9 @@ Write a compact contract in section 6.1, with stable example IDs from the matrix
 6. Use positive safe integer calculator weights, initially one per participant. Equally sets all weights to one and allocates. Shares changes a weight and allocates. A failed weight change preserves the prior weights and allocation. No hidden allocation mode or field lock remains after either action.
 7. Weights are editor calculator state, not stored money or inferred from rounded shares. Manual edits leave weights unchanged. Reopening a saved split restores its saved amounts and initializes calculator weights to one; it does not recalculate until you invoke an allocation action.
 
-Allocation rules to resolve and document:
+Allocation rules:
 
-| Operation | Proposed deterministic rule |
+| Operation | Deterministic rule |
 | --- | --- |
 | Equal or weighted allocation | Let T be the total and W the sum of weights. Give each non-payer integer quotient T times their weight divided by W. Give the payer T minus the sum of those shares. Reject if any share is not positive. |
 | Edit a non-payer share | Preserve the typed valid amount and all other non-payer amounts. Set the payer share to the total minus their sum. Reject if the payer would receive zero or less. |
@@ -111,7 +111,7 @@ Allocation rules to resolve and document:
 
 All multiplication, sums, division, and remainder operations use BigInt internally. Convert to number only after checking the final safe range. Persist and serialize safe integer amounts; do not serialize BigInt or intermediate monetary fractions. Read the currency scale from the shared constants. A total large enough for the participant count can still fail weighted allocation because a low-weight participant would receive zero. Reject instead of inventing minimum shares that change the stated weighting.
 
-| Example | Input or action | Expected proposal |
+| Example | Input or action | Expected result |
 | --- | --- | --- |
 | S01 | Total 450001; you, Linh, Minh; equal; you pay | Shares 150001, 150000, 150000. All sum exactly. |
 | S02 | Same total and weights; Linh pays | Shares in the same participant order: 150000, 150001, 150000. |
@@ -137,11 +137,11 @@ Commit: docs(split): specify editable integer share cases
 
 Exit: each form action has a complete accepted/rejected transition, and every accepted numeric example conserves the total with positive shares.
 
-### Stage 3: Specify the personal debt ledger and history
+### Stage 3: Settle the personal debt ledger and history
 
 Define obligations only between you and each contact. If you paid, each contact owes their share. If a contact paid, you owe that payer your own share. Other contacts' shares remain part of the transaction allocation but do not create debts involving you. Do not turn a third participant's share into your receivable or your liability.
 
-Proposed netting and allocation procedure:
+Netting and allocation procedure:
 
 1. Derive contact positions from active source transactions, active shares, and active settlements. Keep positive amounts and explicit direction. A cleared position is a separate state, not a stored zero settlement. Do not persist a running contact balance.
 2. Replay events chronologically per contact. Order by occurred_at ascending, then transaction before settlement for an equal time, then created_at ascending, then stable ID in ascending binary order. For multiple obligations from a transaction, use participant ID as the final stable key. Never use contact names, UI ranking, database return order, or updated_at as a tie-breaker.
@@ -151,7 +151,7 @@ Proposed netting and allocation procedure:
 6. Derive allocations during replay using stable source identities. The current schema has no allocation table, so do not assume stored foreign keys from settlements to shares. Reserve a schema change for a demonstrated need in the implementing task.
 7. Sum only residual receivables across contacts for owedToYou. A debt you owe a different contact cannot reduce that sum. Check aggregate safe bounds as well as individual amounts.
 
-History policy to specify:
+History policy:
 
 Allow edits to amount, payer, participants, occurred_at, and shares, split removal, and transaction soft deletion only if replay of every affected contact remains valid. Evaluate the full proposed change atomically. Preserve all original rows if it would leave any settlement unallocated or allocated in the wrong direction. Moving a transaction between contacts must validate both the old and new contact histories.
 
@@ -161,7 +161,7 @@ A settlement correction replaces its effective amount, direction, contact, date,
 
 Soft-deleting a contact hides them from new split selection but retains their identity, history, and outstanding position. Existing debts can still be settled and corrected. Reject new obligations to deleted contacts. Duplicate names remain separate identities throughout netting and settlement.
 
-| Example | Events in order | Expected proposal |
+| Example | Events in order | Expected result |
 | --- | --- | --- |
 | L01 | You pay 100; own share 40, Linh 60 | Linh owes you 60. Own spending is 40. |
 | L02 | Linh pays 100; own share 40, Linh 35, Minh 25 | You owe Linh 40. You have no receivable from Minh and owe nobody else's share. |
@@ -188,7 +188,7 @@ Exit: both payer kinds, both settlement directions, netting, chronological ties,
 
 ### Stage 4: Define account, report, and snapshot effects
 
-Finish Decision B before treating this stage as settled. Use the following table as the literal-invariant proposal and record its account limitation beside it. Do not imply it accurately records settlement cash movements.
+Decision B is settled as a debt-ledger-only policy. Use the following table as the literal-invariant contract and record its account limitation beside it. Do not imply it accurately records settlement cash movements.
 
 | Operation | Account effect under the current model | Spending and reports | Receivable and snapshot |
 | --- | --- | --- | --- |
