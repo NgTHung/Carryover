@@ -280,14 +280,22 @@ six on screen.
 ### 6.1 Split entry
 
 Split is the rarest thing this screen does and the easiest to make annoying. The
-earlier design asked for a live remainder that had to reach exactly zero. That is
-rejected. It puts arithmetic in front of you at the worst possible moment, and it
-lets the form sit in a state you have to repair before Done. Invariant 2 says
-shares sum to the amount exactly, so the interface makes that true by construction
-instead of checking it afterwards and complaining.
+editor keeps every share editable, but it never hides invalid money or silently
+changes an accepted value. The rules below separate raw text, pure allocation, and
+storage validation so the form can stay quick without weakening the ledger.
 
-There are no modes. Every share is an editable amount field from the moment the
-section opens.
+A split is allowed only on an expense with a known positive amount. A known-amount
+draft may have a split, but an unknown draft keeps `amount = null` and writes no
+shares or receivable. Income, transfer, and adjustment transactions cannot have a
+split. Completing a draft and saving its split is one atomic operation.
+
+Participants are identified by ID. You appears exactly once, each contact appears at
+most once, and the payer must be one of the selected participants. Duplicate contact
+names are valid because IDs, not names, define identity. Opening the editor selects
+only you and creates no stored rows. A saved split has one positive share per
+participant, including you. Removing the last contact returns the transaction to an
+unsplit expense paid by you. Removing yourself is not allowed. Removing the payer
+contact requires selecting another payer first.
 
 ```
   ⌄ Split
@@ -308,36 +316,204 @@ section opens.
 
 **Rules:**
 
-- **The payer's share is the balance.** It is the transaction amount minus every
-  other share, recomputed on each keystroke. The shares therefore sum exactly no
-  matter what is typed, and every remainder dong lands on the payer without a
-  special case, which is invariant 3 holding by construction rather than by rule.
-- **Typing in the payer's own field is allowed** and means "this is my share". The
-  app writes the difference into the other fields, divided by their current
-  weights. The last thing you typed always survives. With one other person this is
-  the whole interaction: state your share, done.
-- **`Equally` and `Shares` are actions, not states.** They compute amounts, write
-  them into the fields, and step aside. Nothing locks afterwards. `Shares` reveals
-  a small weight stepper per row for "I had two beers", and each step rewrites the
-  amounts immediately, so the steppers are a calculator for the fields rather than
-  a second way to enter money.
-- **No remainder readout, no validation error, no blocked Done.** The split cannot
-  be in a wrong state, so there is nothing to warn about.
-- **Contacts rank by recency and frequency**, the same rule as the category grid,
-  and nothing is preselected except you. `+` opens an inline name field, so
-  creating a contact costs one tap exactly like `+ New` does for a category.
-- The footer states the consequence in the app's own vocabulary: `You're owed
-  ₫300,000` when you paid, `You owe Linh ₫150,000` when someone else did. It is a
-  receivable, never a number that moves the hero (§9).
+- **Money input is whole-dong text.** Trim surrounding whitespace and allow leading
+  zeros. Empty text is unfinished input, never zero. Reject zero, signs, decimal or
+  exponent notation, grouping separators, other non-digits, and values above
+  `MAX_VND_AMOUNT`. Total and share fields use the existing positive VND parser.
+  Weight fields use positive safe integers and reject zero, fractional, unsafe, and
+  overflowing values.
+- **Raw text is separate from the accepted allocation.** The editor has accepted,
+  editing-invalid, and saving states. Invalid text stays visible as pending input,
+  while the last accepted allocation and stored rows remain unchanged. Save requires
+  visible values to match an accepted allocation. Cancel restores the accepted
+  value, and a failed save retains the input for correction. The app never clamps,
+  rounds, or saves an older value underneath invalid visible text.
+- **The payer receives the integer remainder.** For total `T`, participant weights
+  `wᵢ`, and weight sum `W`, allocate each non-payer `floor(T × wᵢ / W)`. Set the payer
+  share to `T` minus the sum of those non-payer shares. Reject the whole allocation
+  if any resulting share is not positive or any final value is outside the safe
+  integer range. All multiplication, sums, division, and remainder operations use
+  `BigInt`; convert only checked final values to numbers.
+- **`Equally` and `Shares` are actions, not modes.** `Equally` sets every calculator
+  weight to one and allocates. `Shares` changes a positive integer weight and
+  allocates. A failed weight change preserves the prior weights and allocation.
+  Manual amount edits do not change weights. Weights are editor calculator state,
+  not stored money and not inferred from rounded shares. Reopening a saved split
+  restores saved amounts, initializes weights to one, and does not recalculate until
+  an allocation action runs. Row order never changes results by participant ID.
+- **Editing a non-payer share preserves the edit.** Keep the typed positive amount
+  and all other non-payer amounts, then set the payer to the total minus their sum.
+  Reject when the payer would be zero or negative, or when another visible value is
+  invalid. Adding a contact gives it weight one and recalculates all shares. Reject
+  the selection change if any share would be zero. Removing a non-payer removes its
+  weight and recalculates the remaining participants.
+- **Editing the payer share has a divisibility rule.** Let `R = T - payer input`.
+  The input is accepted only when `R × wᵢ` divides exactly by the sum of non-payer
+  weights for every non-payer and every resulting share is positive. This preserves
+  the typed payer value without giving a remainder dong to a contact. With one
+  other participant, every positive payer input below `T` succeeds. An incompatible
+  input stays pending and explains that the remainder cannot be allocated exactly.
+- **Changing payer is an allocation action.** It uses the current weights and makes
+  the new payer the remainder recipient, so it can replace manual values. Show the
+  resulting amounts before save. Reject an unknown or unselected payer. Changing the
+  total preserves accepted non-payer amounts and recomputes the payer; reject a
+  non-positive payer result. `Remove split` resets payer to you and removes share
+  rows atomically, subject to the history rules below. Explain that this can change
+  account projection, spending, and receivables.
+- **The footer describes the ledger direction.** When you paid, show the residual
+  receivable from each contact. When a contact paid, show what you owe that payer.
+  A third participant's share never becomes your receivable or your liability.
+  Contact selection still uses recency and frequency ranking, with only you selected
+  initially. `+` creates a contact inline.
+
+Examples for the pure allocation and editor state:
+
+| ID | Input or action | Accepted result |
+| --- | --- | --- |
+| S01 | Total 450001; you, Linh, Minh; equal; you pay | You 150001, Linh 150000, Minh 150000. |
+| S02 | Same total and weights; Linh pays | You 150000, Linh 150001, Minh 150000. |
+| S03 | Total 100; weights 1, 2, 3; you pay | You 17, Linh 33, Minh 50. |
+| S04 | Total 3; three equal participants; add a fourth | Initial shares are 1, 1, 1. Adding the fourth is rejected and selection and shares stay unchanged. |
+| S05 | Total 3; weights 1, 1, 100; first participant pays | Reject because a non-payer receives zero, even though total equals participant count. |
+| S06 | Clear a share, or type 0, -1, 1.5, 1e3, 1,000, or Infinity | Keep raw text pending and accepted shares unchanged. Do not save or reinterpret it. |
+| S07 | Type 9007199254740992 | Reject above `MAX_VND_AMOUNT` before number conversion. |
+| S08 | Type surrounding spaces and leading zeros around 0010 | Accept as integer 10 when the allocation remains valid. Formatting never changes money. |
+| S09 | Total 100; shares 34, 33, 33; edit Linh to 40, then 67 | First result is You 27, Linh 40, Minh 33. Reject 67 because the payer would be zero. |
+| S10 | Total 100; equal weights; edit payer to 33, then 34 | Reject 33 because 67 cannot divide across two equal contacts. Accept 34, 33, 33. |
+| S11 | Total 100; two participants; edit payer to 37, then 100 | Accept 37 and 63. Reject 100 because the other share would be zero. |
+| S12 | Total 100; manual shares 27, 40, 33; change payer to Linh | Reallocate to You 33, Linh 34, Minh 33 and show that payer action replaced manual values. |
+| S13 | Shares 34, 33, 33; increase total to 101, then edit payer to 66 | Total change gives 35, 33, 33. Reject 66 because the remaining 35 does not divide across equal contacts; retain total 101 and the accepted allocation. |
+| S14 | Unknown amount with contacts selected in an unfinished editor | Keep amount null and unknown. Persist no shares or receivable. |
+| S15 | Total `MAX_VND_AMOUNT`; two equal participants; you pay | You 4503599627370496, contact 4503599627370495. The integer sum equals the total. |
+| S16 | Missing own participant, duplicate ID, or payer absent from participants | Reject at the data boundary even when supplied shares sum correctly. |
+| S17 | Total 101; you pay; other weights 2 and 3; edit payer to 36, then 35 | Accept 36, 26, 39. Reject 35 because 66 cannot divide exactly in ratio 2:3. |
+
+Run accepted cases again with permuted row order and fresh allocations. Results by
+participant ID must match. Downstream tests also cover known-amount drafts, income,
+transfer, adjustment, zero-weight, fractional-weight, unsafe-weight, and overflow
+rejection cases.
 
 The `Paid by` row depends on `transactions.payer_contact_id`, nullable, where null
-means you. The spec carries it.
+means you. The spec carries it. The form may show a pending error, but it never
+blocks a valid allocation with a manual remainder repair step.
 
 Alternatives considered and rejected: a drag-to-divide stacked bar, which is the
 fastest uneven split but degrades past three people, is fiddly at exact VND, and
 needs a typed fallback that amounts to this design anyway; and a your-share-only
 field, which is faster still but cannot express unequal debts between two
 contacts, trading correctness for speed against the core priority.
+
+#### Debt ledger and settlement history
+
+The split creates obligations only between you and each contact. If you paid, each
+contact owes you their share. If a contact paid, you owe that payer your own share.
+Other contacts' shares remain part of the allocation but create no debt involving
+you. A debt you owe one contact never reduces a receivable from another contact.
+
+The ledger derives positions from active source transactions, active shares, and
+active settlements. It stores positive amounts and explicit directions, not running
+contact balances. A cleared position is a separate state from a stored zero
+settlement. Replay each contact independently in this order:
+
+1. Sort by `occurred_at` ascending, then put a transaction before a settlement at
+   the same time, then sort by `created_at` ascending, then by stable ID in ascending
+   binary order. For multiple obligations from one transaction, participant ID is
+   the final stable key. Never use contact names, UI order, database row order, or
+   `updated_at` as a tie-breaker.
+2. When an obligation arrives, offset it against that contact's oldest outstanding
+   opposite obligations. Preserve any residual in its original direction and
+   chronology. Never net across contacts and never create a synthetic cash
+   settlement.
+3. At a settlement event, allocate its positive amount against the oldest
+   outstanding obligations in its stated direction. `they_paid_me` consumes a
+   receivable. `i_paid_them` consumes what you owe. Validate the prefix at that
+   point in history, not against a future or current-only total.
+4. Reject overpayment, wrong-direction payment, and payment before a sufficient
+   obligation exists. Do not cap an amount, create credit, or consume a future
+   expense. Sum only residual receivables across contacts for `owedToYou`, and
+   check aggregate safe bounds as well as individual amounts.
+
+History remains editable only while valid settlement history remains valid. Amount,
+payer, participant, occurred-at, and share edits, split removal, and transaction
+soft deletion replay every affected contact atomically. Moving a transaction between
+contacts checks both histories. If a settlement would become unallocated or point in
+the wrong direction, reject the whole change, preserve the original rows, and name
+the blocking settlement. Correct or soft-delete that settlement first, then retry.
+Never cascade-delete a valid settlement or turn it into income.
+
+A settlement correction replaces its effective amount, direction, contact, date, or
+note under the same replay validation. Soft deletion removes its effect and replays
+the remaining history. A later settlement becoming invalid rejects the entire
+operation. Note or quality edits that do not affect financial history remain
+available. Settlement allocation is derived from stable source identities; the
+current schema does not assume a stored settlement-to-share allocation table.
+
+Soft-deleting a contact hides them from new split selection but retains their ID,
+history, and outstanding position. Existing debts can still be settled and
+corrected. New obligations to deleted contacts are rejected. Duplicate names stay
+separate identities throughout replay.
+
+| ID | Events in order | Result |
+| --- | --- | --- |
+| L01 | You pay 100; own share 40, Linh 60 | Linh owes you 60. Own spending is 40. |
+| L02 | Linh pays 100; own share 40, Linh 35, Minh 25 | You owe Linh 40. You have no receivable from Minh and owe nobody else's share. |
+| L03 | Linh owes you 60, then you owe Linh 25 | Offset 25 against the oldest receivable. Linh owes you 35. |
+| L04 | Linh owes you 60; you owe Minh 25 | `owedToYou` is 60. Keep the 25 owed to Minh separate. |
+| L05 | Linh owes 60 from T1 and 40 from T2; settlement 70 | Allocate 60 to T1 and 10 to T2. Residual receivable is 30. |
+| L06 | T1 and T2 have equal occurred and created times; T1 ID sorts first; settlement 50 | Consume T1 first. Reversing database row order gives the same allocation. |
+| L07 | You owe Linh 40; `i_paid_them` settlement 15 | You owe Linh 25. Own spending stays 40. |
+| L08 | Net receivable 35; try `they_paid_me` 36 or `i_paid_them` 10 | Reject both and preserve history. A settlement of 35 clears the position. |
+| L09 | Linh owes 60; `they_paid_me` 50; edit share to 40 or delete its transaction | Reject because 10 or 50 of the settlement would lack backing. |
+| L10 | Same history; edit original share to 70 with a valid full split | Accept. Residual receivable becomes 20 and spending uses the revised own share. |
+| L11 | Linh owes 60; settlements 40 then 20; edit first settlement to 50 | Reject because the later settlement can no longer allocate its full 20. |
+| L12 | Linh owes 60; `they_paid_me` 50; delete the settlement | Restore receivable to 60 without writing income or an expense. |
+| L13 | Linh owes 100; settlement 60; later you owe Linh 80 | Net the remaining 40. You owe Linh 40. Replay the earlier settlement before netting. |
+| L14 | Settlement occurs before the expense that would support it | Reject, even when today's aggregate would cover the amount. |
+| L15 | Move an expense after its supporting settlement, or change payer/contact | Replay affected histories and reject unsupported settlements atomically. |
+| L16 | Soft-delete Linh while she owes you 60 | Keep historical identity and receivable readable, keep settlement available, and exclude Linh from new selection. |
+
+Exact-time transaction and settlement ties, direction reversal, equal timestamps
+after correction, no-op corrections, duplicate operation identities, and storage
+reopening belong in the downstream verification inventory. A retried operation must
+remain distinct from two intentionally different settlements with identical fields.
+
+#### Account, report, and snapshot effects
+
+The v1 settlement is a debt-ledger event only. It does not move bank or cash, write
+income, or alter any budget number. This preserves the existing invariant even
+though it means the account projection does not automatically record cash received
+from a settlement. For example, from 1,000 VND in bank, you paying a 100 VND split
+with own share 40 and Linh share 60 leaves the account and carryover at 900, reports
+spending of 40, and a receivable of 60. Recording Linh's 60 VND settlement clears the
+receivable but leaves the account and budget at 900. It does not turn the settlement
+into income or write an automatic adjustment. Use a separate account operation such
+as Reconcile when the recorded account must catch up with physical cash.
+
+| Operation | Account effect | Spending and reports | Receivable and snapshot |
+| --- | --- | --- | --- |
+| You pay a split expense | Deduct the full transaction amount from the selected account. | Charge only your share to spending, category, quality, and burn. | Add contact shares as receivables, subject to replay netting. |
+| A contact pays a split expense | No account movement. | Charge your share exactly once. | Add only what you owe that payer. Third-party shares create no claim. |
+| Either settlement direction | No account movement. | No expense, income, spending, or burn effect. | Recompute the contact position and `owedToYou`, then publish after commit. |
+| Settlement correction or deletion | Same ledger-only account limitation. | No report or budget contribution. | Recompute from effective history. Do not edit a cached balance incrementally. |
+| Split amount, payer, participant, or share edit, or split removal | Reproject the revised transaction according to its payer. | Recompute affected own-share reports. | Replay affected contact histories and publish only after commit. |
+| Failed mutation | No change. | No change. | No mutation notification or new snapshot. |
+
+For a settlement-only comparison, hold the clock, other ledger rows, reserves, and
+horizon fixed. `balanceTotal`, `reservedUnpaid`, `discretionary`, `horizonDate`,
+`daysToHorizon`, `perDay`, `runwayDays`, `spentThisMonth`,
+`regrettedThisMonth`, and `unloggedDrafts` must remain equal. Only `owedToYou` and
+`updatedAt` may change. A date rollover or unrelated mutation is not a settlement
+effect.
+
+Read `month_config` from its stored snapshot. Settlements do not contribute to
+current-period actual income or alter past opening balances, income totals,
+reserves, or horizons. Historical transaction edits can change live reports through
+their own-share reads, while stored configuration totals remain frozen.
+
+Transaction, payer, share, and affected-history checks use one atomic mutation
+boundary. Publish the snapshot only after commit. A publication failure means the
+saved ledger needs refresh; it is not a reason to submit the settlement again. The
+widget reads the published snapshot and performs no debt or budget calculation.
 
 ---
 
