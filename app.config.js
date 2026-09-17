@@ -48,6 +48,12 @@ const plugins = [
       barcodeScannerEnabled: false,
     },
   ],
+  [
+    'expo-notifications',
+    {
+      enableBackgroundRemoteNotifications: false,
+    },
+  ],
 ];
 if (development) {
   // The default exp+carryover scheme also belongs to the release app.

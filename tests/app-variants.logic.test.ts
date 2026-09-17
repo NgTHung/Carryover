@@ -54,6 +54,12 @@ test('default and explicit release preserve the installed app identity', () => {
           barcodeScannerEnabled: false,
         },
       ],
+      [
+        'expo-notifications',
+        {
+          enableBackgroundRemoteNotifications: false,
+        },
+      ],
       './plugins/with-release-pods',
     ],
   });
@@ -83,6 +89,12 @@ test.each(['0', '1'])('development isolates installation and launch with widget=
           microphonePermission: false,
           recordAudioAndroid: false,
           barcodeScannerEnabled: false,
+        },
+      ],
+      [
+        'expo-notifications',
+        {
+          enableBackgroundRemoteNotifications: false,
         },
       ],
       ['expo-dev-client', { addGeneratedScheme: false }],
